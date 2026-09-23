@@ -26,6 +26,41 @@ class NewsItem:
     relevance_categories: list[str] = field(default_factory=list)
     duplicate_sources: list[str] = field(default_factory=list)
     duplicate_urls: list[str] = field(default_factory=list)
+    # Optional discovery metadata. Existing RSS callers and positional fields remain compatible.
+    candidate_id: str = ""
+    discovery_method: str = ""
+    source_url: str = ""
+    source_native_id: str = ""
+    document_type: str = ""
+    content_hash: str = ""
+    etag: str = ""
+    last_modified: str = ""
+    change_kind: str = "new"
+    primary_url: str = ""
+    discovery_lead_url: str = ""
+    provenance: list[str] = field(default_factory=list)
+    duplicate_of: str = ""
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    source_status: str = ""
+    source_error: str = ""
+    source_native_metadata: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def canonical_url(self) -> str:
+        return self.url
+
+    @property
+    def publisher(self) -> str:
+        return self.source
+
+    @property
+    def publication_time(self) -> datetime | None:
+        return self.published_at
+
+    @property
+    def discovered_time(self) -> datetime:
+        return self.collected_at
 
     @property
     def fingerprint(self) -> str:

@@ -1,0 +1,17 @@
+{
+  "cik": "9999999999",
+  "name": "Example Issuer Inc.",
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "9999999999-26-000001",
+        "9999999999-26-000001",
+        "9999999999-26-000002"
+      ],
+      "form": ["8-K", "8-K", "10-K"],
+      "filingDate": ["2026-09-22", "2026-09-22", "2026-09-21"],
+      "primaryDocument": ["example8k.htm", "example8k.htm", "example10k.htm"],
+      "primaryDocDescription": ["Current report", "Duplicate row", "Annual report"]
+    }
+  }
+}

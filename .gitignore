@@ -5,3 +5,5 @@ __pycache__/
 .env
 state/seen.json
 state/seen.json.tmp
+state/discovery.json
+state/discovery.json.tmp

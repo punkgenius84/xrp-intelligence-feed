@@ -1,4 +1,4 @@
-# XRP Intelligence Feed — v0.2 Source Intelligence
+# XRP Intelligence Feed — v0.3 Discovery Foundation
 
 A free, modular XRP/XRPL source intelligence feed. No paid APIs, API keys, or AI services are required.
 
@@ -7,6 +7,18 @@ A free, modular XRP/XRPL source intelligence feed. No paid APIs, API keys, or AI
 Enabled registry sources are collected as RSS, normalized into NewsItem, deduplicated against JSON state, entity-matched using configured aliases, classified by source authority tier, and deterministically scored for relevance. The relevance score describes topical relevance only; it does not predict XRP price or market direction.
 
 The pipeline does not publish to Discord yet. discord/webhook.py remains isolated for a later delivery phase.
+
+## v0.3 discovery foundation
+
+The discovery package provides a bounded HTTPS client, a small strategy interface, candidate normalization, dispatch, and a separate fail-closed JSON state file. `DiscoveryCandidate` extends the existing `NewsItem`, so discovery results use the same entity detection, source-quality classification, relevance scoring, and deduplication path rather than creating a second intelligence pipeline.
+
+The first adapter is SEC EDGAR company-submissions discovery. It uses the SEC documented submissions JSON endpoint for explicitly allowlisted issuer CIKs and filing forms. It does not crawl EDGAR or follow arbitrary filing links. Filing URLs are constructed from validated SEC CIK, accession number, and primary-document fields. SEC requests use the identifiable `XRPIntelligenceFeed/0.3` User-Agent; configure `SEC_CONTACT_EMAIL` in the environment to include an actual contact address. No identity is fabricated.
+
+`config/discovery_sources.json` contains the SEC source configuration. The shipped issuer CIK allowlist is empty, so the adapter reports `not_configured` and makes no SEC requests until real issuer CIKs are deliberately added. Filing forms are also explicitly configured and can be narrowed. At most five issuer requests are made per run, spaced at least one second apart. The HTTP client enforces HTTPS, request timeouts, response-size and redirect bounds, conditional ETag/Last-Modified requests, and bounded retries for timeouts, 429, and selected 5xx responses.
+
+Discovery state is stored locally in `state/discovery.json`, separately from the existing `state/seen.json`. It records per-request validators, successful fetch time, watermarks, and candidate first/last-seen metadata, with deterministic age/count retention and atomic writes. Corrupt state fails closed and is preserved. Both discovery state files are git-ignored. GitHub Actions cache integration for discovery state is deferred to Phase 4; the existing workflow and v0.2 cache behavior are unchanged in this phase.
+
+SEC submissions metadata identifies that a filing exists; it does not include the filing text in this adapter. Relevance therefore reflects the issuer/form metadata available from the submissions record until a separately approved phase adds bounded document-content inspection. This phase does not add Federal Register, Congress, GDELT, Ripple/XRPL monitors, page or sitemap monitoring, or Discord delivery.
 
 ## Source registry
 
