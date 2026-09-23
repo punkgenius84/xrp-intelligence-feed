@@ -1,0 +1,4 @@
+{
+  "publish_score": 35,
+  "weights": {"high_keyword": 15, "medium_keyword": 7, "context_keyword": 4, "primary_source_bonus": 20, "multiple_entity_bonus": 8, "title_match_bonus": 5}
+}

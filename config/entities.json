@@ -1,0 +1,7 @@
+{
+  "assets": {"XRP": ["XRP", "XRP Ledger", "XRPL"], "RLUSD": ["RLUSD", "Ripple USD"]},
+  "companies": {"Ripple": ["Ripple", "Ripple Labs", "Ripple Payments", "RippleNet"]},
+  "regulators": {"SEC": ["SEC", "Securities and Exchange Commission"], "CFTC": ["CFTC", "Commodity Futures Trading Commission"], "Federal Reserve": ["Federal Reserve", "Federal Reserve Board"], "OCC": ["OCC", "Office of the Comptroller of the Currency"], "FDIC": ["FDIC", "Federal Deposit Insurance Corporation"]},
+  "government": {"White House": ["White House"], "Treasury": ["Treasury Department", "U.S. Treasury"]},
+  "finance": {"Payments": ["cross-border payments", "payment settlement", "payments"], "Tokenization": ["tokenization", "tokenized", "real world assets", "RWA"]}
+}

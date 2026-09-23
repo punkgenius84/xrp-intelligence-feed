@@ -1,0 +1,5 @@
+{
+  "high": ["XRP", "XRPL", "Ripple", "RLUSD"],
+  "medium": ["SEC", "CFTC", "stablecoin", "ETF", "settlement", "payments"],
+  "context": ["ODL", "Ripple Payments", "RippleNet", "tokenization", "custody", "licensing"]
+}
