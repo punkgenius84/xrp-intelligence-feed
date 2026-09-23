@@ -1,3 +1,9 @@
 {
-  "feeds": []
+  "schema_version": 1,
+  "sources": [
+    {"source_id":"sec-press-releases","name":"U.S. Securities and Exchange Commission","authority_tier":1,"category":"regulatory","url":"https://www.sec.gov/news/pressreleases.rss","entity_coverage":["XRP","Ripple","SEC","CFTC"],"enabled":true,"collection_type":"rss"},
+    {"source_id":"cftc-general-press-releases","name":"U.S. Commodity Futures Trading Commission","authority_tier":1,"category":"regulatory","url":"https://www.cftc.gov/RSS/RSSGP/rssgp.xml","entity_coverage":["XRP","Ripple","CFTC","SEC"],"enabled":true,"collection_type":"rss"},
+    {"source_id":"occ-news-releases","name":"Office of the Comptroller of the Currency","authority_tier":1,"category":"regulatory","url":"https://www.occ.gov/rss/occ_news.xml","entity_coverage":["Ripple","RLUSD","OCC","Payments"],"enabled":true,"collection_type":"rss"},
+    {"source_id":"federal-reserve-press-releases","name":"Federal Reserve Board","authority_tier":1,"category":"central_bank","url":"https://www.federalreserve.gov/feeds/press_all.xml","entity_coverage":["Ripple","RLUSD","Federal Reserve","Payments"],"enabled":true,"collection_type":"rss"}
+  ]
 }

@@ -17,6 +17,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore deduplication state
+        uses: actions/cache/restore@v4
+        with:
+          path: state/seen.json
+          key: xrp-seen-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            xrp-seen-${{ github.ref_name }}-
       - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
       - run: python main.py
+      - name: Save deduplication state
+        uses: actions/cache/save@v4
+        with:
+          path: state/seen.json
+          key: xrp-seen-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
