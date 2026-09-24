@@ -1,5 +1,5 @@
 {
   "high": ["XRP", "XRPL", "Ripple", "RLUSD"],
   "medium": ["SEC", "CFTC", "stablecoin", "ETF", "settlement", "payments"],
-  "context": ["ODL", "Ripple Payments", "RippleNet", "tokenization", "custody", "licensing"]
+  "context": ["ODL", "Ripple Payments", "RippleNet", "tokenization", "custody", "licensing", "GENIUS Act", "BSA", "AML/CFT", "virtual currency", "payment stablecoin", "digital asset service provider"]
 }

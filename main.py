@@ -102,9 +102,11 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         for result in discovery_results:
             federal_register_progress = result.pagination.get("federal_register_terms")
             ofac_progress = result.pagination.get("ofac_recent_actions")
+            fincen_progress = result.pagination.get("fincen_press_releases")
             if result.state_updates or (isinstance(federal_register_progress, dict)
                                         and bool(federal_register_progress)) or (
-                    isinstance(ofac_progress, dict) and bool(ofac_progress)):
+                    isinstance(ofac_progress, dict) and bool(ofac_progress)) or (
+                    isinstance(fincen_progress, dict) and bool(fincen_progress)):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:

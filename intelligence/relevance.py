@@ -27,16 +27,18 @@ def _classify(item, combined: str) -> list[str]:
             or (_contains(combined, "ODL") and bool(entities & {"Ripple", "XRP"}))):
         categories.append("ripple_payments_network")
 
-    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC"})
+    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
+        "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
         "designation", "designations", "designates", "removal", "removals", "delisting",
     ))
     digital_or_payment = any(_contains(combined, term) for term in (
         "digital asset", "cryptocurrency", "crypto", "stablecoin", "payment", "payments",
-        "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
+        "payment stablecoin", "virtual currency", "digital asset service provider",
+        "genius act", "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
     ))
     if regulatory and action and digital_or_payment:
         categories.append("relevant_regulatory_digital_asset_payments")

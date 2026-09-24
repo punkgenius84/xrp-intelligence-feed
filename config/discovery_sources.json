@@ -50,6 +50,17 @@
       "enabled": true,
       "lookback_days": 60,
       "max_items_per_feed": 50
+    },
+    {
+      "source_id": "fincen-press-releases",
+      "name": "Financial Crimes Enforcement Network",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "fincen_press_releases",
+      "source_url": "https://www.fincen.gov/news/press-releases",
+      "enabled": true,
+      "lookback_days": 60,
+      "max_items": 50
     }
   ]
 }
