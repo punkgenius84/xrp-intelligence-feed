@@ -25,6 +25,24 @@ class DiscoveryHttpError(RuntimeError):
         self.status_code = status_code
 
 
+@dataclass(slots=True)
+class HttpAttemptBudget:
+    """Shared cap on outbound HTTP sends across one or more client GETs."""
+
+    maximum: int
+    used: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.maximum) is not int or self.maximum < 1:
+            raise ValueError("HTTP attempt budget must be a positive integer")
+
+    def consume(self) -> None:
+        if self.used >= self.maximum:
+            raise DiscoveryHttpError("HTTP outbound-attempt budget exhausted",
+                                     kind="attempt_budget_exhausted")
+        self.used += 1
+
+
 def _retry_after(value: str | None, maximum: float) -> float:
     if not value:
         return 0.0
@@ -72,7 +90,8 @@ class BoundedHttpClient:
             raise DiscoveryHttpError("Only absolute HTTPS URLs are allowed", kind="invalid_url")
 
     def get(self, url: str, *, etag: str = "", last_modified: str = "",
-            expected_content_types: tuple[str, ...] = ()) -> HttpResponse:
+            expected_content_types: tuple[str, ...] = (),
+            attempt_budget: HttpAttemptBudget | None = None) -> HttpResponse:
         self._https_url(url)
         original_host = urlsplit(url).hostname.casefold()
         headers = {"User-Agent": self.user_agent, "Accept-Encoding": "gzip, deflate"}
@@ -86,6 +105,9 @@ class BoundedHttpClient:
         attempts = 0
         while True:
             self._https_url(current_url)
+            if attempt_budget is not None:
+                # Count each actual session send, including retries and redirects.
+                attempt_budget.consume()
             try:
                 response = self.session.get(
                     current_url, headers=headers, timeout=self.timeout, stream=True,

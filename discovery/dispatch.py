@@ -10,6 +10,8 @@ from discovery.federal_register import (FederalRegisterDiscovery,
                                          validate_federal_register_source)
 from discovery.fincen_press_releases import (FinCENPressReleasesDiscovery,
                                               validate_fincen_source)
+from discovery.treasury_press_releases import (TreasuryPressReleasesDiscovery,
+                                                validate_treasury_source)
 from discovery.ofac_recent_actions import (OFACRecentActionsDiscovery,
                                            validate_ofac_source)
 from discovery.sec_edgar import SECEdgarDiscovery, validate_sec_source
@@ -40,6 +42,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "ofac_recent_actions_html": validate_ofac_source,
             "cftc_rss": validate_cftc_source,
             "fincen_press_releases": validate_fincen_source,
+            "treasury_press_releases": validate_treasury_source,
         }.get(method)
         if validator is None:
             raise DiscoveryRegistryError(f"{label}: unsupported discovery_method {method!r}")
@@ -75,6 +78,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return CFTCRSSDiscovery(source, **kwargs)
     if method == "fincen_press_releases":
         return FinCENPressReleasesDiscovery(source, **kwargs)
+    if method == "treasury_press_releases":
+        return TreasuryPressReleasesDiscovery(source, **kwargs)
     raise DiscoveryDispatchError(
         f"Unsupported discovery_method {method!r} for {source.get('source_id', 'unknown source')}"
     )

@@ -61,6 +61,17 @@
       "enabled": true,
       "lookback_days": 60,
       "max_items": 50
+    },
+    {
+      "source_id": "treasury-press-releases",
+      "name": "U.S. Department of the Treasury",
+      "authority_tier": 1,
+      "category": "government",
+      "discovery_method": "treasury_press_releases",
+      "source_url": "https://home.treasury.gov/news/press-releases",
+      "enabled": true,
+      "lookback_days": 60,
+      "max_items": 50
     }
   ]
 }
