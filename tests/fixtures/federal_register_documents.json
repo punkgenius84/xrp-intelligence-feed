@@ -1,0 +1,33 @@
+{
+  "count": 3,
+  "total_pages": 1,
+  "results": [
+    {
+      "document_number": "2026-12345",
+      "title": "Federal Reserve Proposes Requirements for Stablecoin Issuers",
+      "publication_date": "2026-09-22",
+      "type": "Proposed Rule",
+      "abstract": "The proposal addresses payment stablecoin reserve and custody requirements.",
+      "excerpts": "This excerpt must not replace a supplied abstract.",
+      "agencies": [{"name": "Federal Reserve System", "raw_name": "Board of Governors"}],
+      "html_url": "https://www.federalregister.gov/documents/2026/09/22/2026-12345/federal-reserve-stablecoin-proposal",
+      "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2026-09-22/pdf/2026-12345.pdf"
+    },
+    {
+      "document_number": "2026-12346",
+      "title": "National Park Visitor Center Operating Hours",
+      "publication_date": "2026-09-22",
+      "type": "Notice",
+      "abstract": null,
+      "excerpts": "Operating hours for a visitor center are listed here.",
+      "agencies": ["National Park Service"],
+      "html_url": "https://www.federalregister.gov/documents/2026/09/22/2026-12346/visitor-center-hours"
+    },
+    {
+      "title": "Malformed record without native Federal Register identity",
+      "publication_date": "2026-09-22",
+      "type": "Rule",
+      "html_url": "https://www.federalregister.gov/documents/2026/09/22/not-an-id/record"
+    }
+  ]
+}

@@ -14,6 +14,21 @@
       "contact_email_env": "SEC_CONTACT_EMAIL",
       "application_name": "XRPIntelligenceFeed/0.3",
       "max_issuers_per_run": 5
+    },
+    {
+      "source_id": "federal-register-api",
+      "name": "Federal Register",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "federal_register_api",
+      "source_url": "https://www.federalregister.gov/api/v1/",
+      "enabled": true,
+      "search_terms": ["digital assets", "stablecoin"],
+      "agencies": [],
+      "document_types": ["RULE", "PRORULE", "NOTICE"],
+      "lookback_days": 7,
+      "page_size": 10,
+      "max_pages": 2
     }
   ]
 }

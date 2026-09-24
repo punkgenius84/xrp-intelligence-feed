@@ -56,10 +56,10 @@ def response(payload=None, *, status=200, headers=None):
 
 def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
     configured = load_discovery_sources()
-    assert len(configured) == 1
-    assert configured[0]["source_id"] == "sec-edgar-submissions"
-    assert configured[0]["issuer_ciks"] == []
-    assert configured[0]["filing_forms"] == ["8-K", "10-K", "10-Q", "S-1", "S-3"]
+    sec = next(source for source in configured if source["source_id"] == "sec-edgar-submissions")
+    assert sec["issuer_ciks"] == []
+    assert sec["filing_forms"] == ["8-K", "10-K", "10-Q", "S-1", "S-3"]
+    assert len(configured) == 2
 
 
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():

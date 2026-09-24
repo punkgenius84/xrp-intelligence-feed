@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from discovery.base import DiscoveryResult, DiscoveryStrategy
+from discovery.federal_register import (FederalRegisterDiscovery,
+                                         validate_federal_register_source)
 from discovery.sec_edgar import SECEdgarDiscovery, validate_sec_source
 
 
@@ -26,8 +28,15 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
         label = f"sources[{index}]"
         if not isinstance(source, dict):
             raise DiscoveryRegistryError(f"{label} must be an object")
+        method = source.get("discovery_method")
+        validator = {
+            "sec_submissions": validate_sec_source,
+            "federal_register_api": validate_federal_register_source,
+        }.get(method)
+        if validator is None:
+            raise DiscoveryRegistryError(f"{label}: unsupported discovery_method {method!r}")
         try:
-            validate_sec_source(source)
+            validator(source)
         except ValueError as exc:
             raise DiscoveryRegistryError(f"{label}: {exc}") from exc
         source_id = source["source_id"]
@@ -50,6 +59,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
     method = source.get("discovery_method")
     if method == "sec_submissions":
         return SECEdgarDiscovery(source, **kwargs)
+    if method == "federal_register_api":
+        return FederalRegisterDiscovery(source, **kwargs)
     raise DiscoveryDispatchError(
         f"Unsupported discovery_method {method!r} for {source.get('source_id', 'unknown source')}"
     )
