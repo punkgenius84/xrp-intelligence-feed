@@ -39,6 +39,17 @@
       "source_url": "https://ofac.treasury.gov/recent-actions",
       "enabled": true,
       "lookback_days": 7
+    },
+    {
+      "source_id": "cftc-press-releases",
+      "name": "U.S. Commodity Futures Trading Commission",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "cftc_rss",
+      "source_url": "https://www.cftc.gov/RSS/index.htm",
+      "enabled": true,
+      "lookback_days": 60,
+      "max_items_per_feed": 50
     }
   ]
 }

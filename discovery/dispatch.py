@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from discovery.base import DiscoveryResult, DiscoveryStrategy
+from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.federal_register import (FederalRegisterDiscovery,
                                          validate_federal_register_source)
 from discovery.ofac_recent_actions import (OFACRecentActionsDiscovery,
@@ -35,6 +36,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "sec_submissions": validate_sec_source,
             "federal_register_api": validate_federal_register_source,
             "ofac_recent_actions_html": validate_ofac_source,
+            "cftc_rss": validate_cftc_source,
         }.get(method)
         if validator is None:
             raise DiscoveryRegistryError(f"{label}: unsupported discovery_method {method!r}")
@@ -66,6 +68,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return FederalRegisterDiscovery(source, **kwargs)
     if method == "ofac_recent_actions_html":
         return OFACRecentActionsDiscovery(source, **kwargs)
+    if method == "cftc_rss":
+        return CFTCRSSDiscovery(source, **kwargs)
     raise DiscoveryDispatchError(
         f"Unsupported discovery_method {method!r} for {source.get('source_id', 'unknown source')}"
     )

@@ -63,6 +63,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "sec-edgar-submissions",
         "federal-register-api",
         "ofac-recent-actions",
+        "cftc-press-releases",
     }
 
 
