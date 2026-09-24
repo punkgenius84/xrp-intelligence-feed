@@ -130,3 +130,41 @@ def test_discovery_state_save_failure_does_not_permanently_mark_candidate_seen(
     _, fresh, _ = main.run_pipeline(**args)
     assert fresh == [candidate]
     assert seen.load()
+
+
+def test_federal_register_pagination_only_update_persists_through_pipeline(tmp_path, monkeypatch):
+    progress = {
+        "digital assets": {
+            "boundary_document_number": "2026-00100",
+            "deep_page_hint": 5,
+            "lookback_days": 7,
+            "frontier_status": "active",
+        }
+    }
+    result = DiscoveryResult(
+        "federal-register-api", "federal_register_api", "success", fetched_at=STAMP,
+        pagination={"requests_made": 4, "federal_register_terms": progress},
+    )
+    monkeypatch.setattr(main, "collect_source", lambda source, state: result)
+    discovery = JsonDiscoveryState(tmp_path / "discovery.json")
+    main.run_pipeline(
+        sources=[], state=JsonState(str(tmp_path / "seen.json")),
+        discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
+    )
+    saved = discovery.load()["sources"]["federal-register-api"]["pagination"]
+    assert saved["federal_register_terms"] == progress
+
+
+def test_partial_federal_register_result_without_completed_progress_does_not_persist_cursor(
+        tmp_path, monkeypatch):
+    result = DiscoveryResult(
+        "federal-register-api", "federal_register_api", "partial", fetched_at=STAMP,
+        errors=["partial response"], pagination={"requests_made": 4},
+    )
+    monkeypatch.setattr(main, "collect_source", lambda source, state: result)
+    discovery = JsonDiscoveryState(tmp_path / "discovery.json")
+    main.run_pipeline(
+        sources=[], state=JsonState(str(tmp_path / "seen.json")),
+        discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
+    )
+    assert "federal-register-api" not in discovery.load()["sources"]

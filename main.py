@@ -100,7 +100,9 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         score_relevance(item)
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates:
+            federal_register_progress = result.pagination.get("federal_register_terms")
+            if result.state_updates or (isinstance(federal_register_progress, dict)
+                                        and bool(federal_register_progress)):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:

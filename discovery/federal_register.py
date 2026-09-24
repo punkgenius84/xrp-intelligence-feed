@@ -30,6 +30,8 @@ _FIELDS = (
 )
 _FEDERAL_REGISTER_HOSTS = {"www.federalregister.gov", "federalregister.gov"}
 _PDF_HOSTS = _FEDERAL_REGISTER_HOSTS | {"www.govinfo.gov"}
+_SHALLOW_PAGES = 2
+_MAX_DEEP_PAGES = 2
 
 
 def validate_federal_register_source(source: object) -> dict[str, Any]:
@@ -71,7 +73,7 @@ def validate_federal_register_source(source: object) -> dict[str, Any]:
         raise ValueError(f"document_types must contain only {sorted(_DOCUMENT_TYPES)}")
     if len(set(document_types)) != len(document_types):
         raise ValueError("document_types must not contain duplicates")
-    for key, low, high in (("lookback_days", 1, 90), ("page_size", 1, 100), ("max_pages", 1, 3)):
+    for key, low, high in (("lookback_days", 1, 90), ("page_size", 1, 100), ("max_pages", 2, 2)):
         value = source[key]
         if type(value) is not int or not low <= value <= high:
             raise ValueError(f"{key} must be an integer from {low} to {high}")
@@ -198,7 +200,6 @@ class FederalRegisterDiscovery:
         return candidate
 
     def collect(self, state: dict[str, Any] | None = None) -> DiscoveryResult:
-        del state  # The shared seen-state deduplicates stable Federal Register document IDs.
         fetched_at = self.now()
         if fetched_at.tzinfo is None:
             fetched_at = fetched_at.replace(tzinfo=timezone.utc)
@@ -210,8 +211,46 @@ class FederalRegisterDiscovery:
         candidates: dict[str, DiscoveryCandidate] = {}
         errors: list[str] = []
         requests_made = 0
+        state_sources = state.get("sources", {}) if isinstance(state, dict) else {}
+        source_state = state_sources.get(self.source_id, {}) if isinstance(state_sources, dict) else {}
+        stored_pagination = source_state.get("pagination", {}) if isinstance(source_state, dict) else {}
+        term_state = (stored_pagination.get("federal_register_terms", {})
+                      if isinstance(stored_pagination, dict) else {})
+        if not isinstance(term_state, dict):
+            term_state = {}
+        next_term_state: dict[str, dict[str, Any]] = {
+            key: dict(value) for key, value in term_state.items()
+            if isinstance(key, str) and isinstance(value, dict)
+        }
+        any_term_complete = False
         for term in self.source["search_terms"]:
-            for page in range(1, self.source["max_pages"] + 1):
+            has_saved_term = term in term_state
+            previous = term_state.get(term, {})
+            previous = dict(previous) if isinstance(previous, dict) else {}
+            saved_boundary = previous.get("boundary_document_number")
+            hint = previous.get("deep_page_hint", 3)
+            lookback = previous.get("lookback_days", self.source["lookback_days"])
+            frontier_status = previous.get("frontier_status", "active")
+            valid_boundary = (saved_boundary is None or
+                              (isinstance(saved_boundary, str)
+                               and bool(_DOCUMENT_NUMBER_RE.fullmatch(saved_boundary))))
+            if (not valid_boundary or type(hint) is not int or hint < 2
+                    or type(lookback) is not int or frontier_status not in {"active", "boundary_expired"}
+                    or (has_saved_term and lookback != self.source["lookback_days"])):
+                errors.append(f"Invalid Federal Register pagination state for term {term!r}; refusing to reset its boundary")
+                next_term_state[term] = previous
+                continue
+            valid_boundary = isinstance(saved_boundary, str)
+
+            page_rows: dict[int, list[str]] = {}
+            term_complete = True
+            total_pages: int | None = None
+            total_pages_trustworthy = True
+
+            def request_page(page: int) -> bool:
+                nonlocal requests_made, total_pages, total_pages_trustworthy, term_complete
+                if total_pages is not None and page > total_pages:
+                    return True
                 query_url = self._query_url(term, page, cutoff.isoformat())
                 requests_made += 1
                 try:
@@ -219,32 +258,154 @@ class FederalRegisterDiscovery:
                     payload = json.loads(response.content.decode("utf-8"))
                     if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
                         raise ValueError("Federal Register API response must contain a results list")
-                    rows = payload["results"]
-                    if not rows:
-                        break
-                    for row in rows:
+                    reported_pages = payload.get("total_pages")
+                    if type(reported_pages) is int and reported_pages >= 0:
+                        if total_pages is None:
+                            total_pages = reported_pages
+                        elif total_pages != reported_pages:
+                            total_pages_trustworthy = False
+                    elif "total_pages" in payload:
+                        total_pages_trustworthy = False
+                    ids: list[str] = []
+                    for row in payload["results"]:
                         try:
                             candidate = self._candidate(row, query_url, fetched_at)
                         except (ValueError, TypeError) as exc:
                             errors.append(str(exc))
+                            term_complete = False
                             continue
                         candidates.setdefault(candidate.source_native_id, candidate)
-                    total_pages = payload.get("total_pages")
-                    if type(total_pages) is int and page >= total_pages:
-                        break
+                        ids.append(candidate.source_native_id)
+                    page_rows[page] = ids
+                    return True
                 except DiscoveryHttpError as exc:
                     errors.append(f"{exc.kind}" + (f" (HTTP {exc.status_code})" if exc.status_code else ""))
-                    break
                 except (UnicodeError, json.JSONDecodeError, ValueError, TypeError) as exc:
                     errors.append(str(exc) or "Malformed Federal Register API response")
+                term_complete = False
+                return False
+
+            # Refresh the first two pages on every run; avoid asking for pages
+            # the API has explicitly said do not exist.
+            for page in range(1, _SHALLOW_PAGES + 1):
+                if total_pages is not None and page > total_pages:
                     break
+                if not request_page(page):
+                    break
+
+            if not term_complete:
+                next_term_state[term] = previous
+                continue
+
+            ids_in_order = [identity for page in sorted(page_rows) for identity in page_rows[page]]
+            progress = dict(previous)
+            progress["lookback_days"] = self.source["lookback_days"]
+            if not valid_boundary:
+                if ids_in_order:
+                    # Page two is the normal seed boundary; if the API has
+                    # fewer than two pages, use the oldest available result.
+                    seed_page = max(page for page, ids in page_rows.items() if ids)
+                    progress.update({
+                        "boundary_document_number": page_rows[seed_page][-1],
+                        "deep_page_hint": seed_page + 1,
+                        "frontier_status": "active",
+                    })
+                else:
+                    progress.update({"deep_page_hint": 3, "frontier_status": "active"})
+                next_term_state[term] = progress
+                any_term_complete = True
+                continue
+
+            boundary_found_shallow = saved_boundary in ids_in_order
+            if previous.get("frontier_status") == "boundary_expired" and not boundary_found_shallow:
+                next_term_state[term] = progress
+                any_term_complete = True
+                continue
+
+            if (not boundary_found_shallow and total_pages_trustworthy
+                    and total_pages is not None and hint > total_pages):
+                progress["frontier_status"] = "boundary_expired"
+                next_term_state[term] = progress
+                any_term_complete = True
+                continue
+
+            deep_start = hint
+            deep_pages: list[int] = []
+            shallow_boundary_page = None
+            if boundary_found_shallow:
+                shallow_boundary_page = next(
+                    page for page, ids in page_rows.items() if saved_boundary in ids
+                )
+                # Pages 1–2 were already fully processed, so continue just
+                # beyond the positively located shallow boundary rather than
+                # trusting an obsolete, deeper page hint.
+                deep_start = max(_SHALLOW_PAGES + 1, shallow_boundary_page + 1)
+            for page in range(deep_start, deep_start + _MAX_DEEP_PAGES):
+                if total_pages is not None and page > total_pages:
+                    break
+                if not request_page(page):
+                    break
+                deep_pages.append(page)
+
+            if not term_complete:
+                next_term_state[term] = previous
+                continue
+
+            progress["frontier_status"] = "active"
+
+            all_ids = [identity for page in sorted(page_rows) for identity in page_rows[page]]
+            if saved_boundary in all_ids:
+                boundary_index = all_ids.index(saved_boundary)
+                rows_beyond = all_ids[boundary_index + 1:]
+                if boundary_found_shallow and not deep_pages:
+                    # Shallow rows alone may locate the boundary, but the
+                    # approved frontier only advances after deep processing.
+                    rows_beyond = []
+                if rows_beyond:
+                    new_boundary = rows_beyond[-1]
+                    new_boundary_page = next(
+                        page for page in sorted(page_rows, reverse=True)
+                        if new_boundary in page_rows[page]
+                    )
+                    progress["boundary_document_number"] = new_boundary
+                    progress["deep_page_hint"] = new_boundary_page + 1
+                else:
+                    found_page = next(page for page, ids in page_rows.items() if saved_boundary in ids)
+                    if boundary_found_shallow:
+                        progress["deep_page_hint"] = deep_pages[-1] + 1 if deep_pages else deep_start
+                    else:
+                        progress["deep_page_hint"] = max(hint, found_page + 1)
+                progress["frontier_status"] = "active"
+            else:
+                # The hint can move, but the document-number boundary cannot.
+                # If the API says the hinted page is now outside the result,
+                # freeze this frontier instead of silently rebasing it.
+                exhausted_results = bool(
+                    deep_pages and total_pages_trustworthy and total_pages is not None
+                    and max(deep_pages) >= total_pages
+                )
+                if (total_pages_trustworthy and total_pages is not None
+                        and (hint > total_pages or exhausted_results)):
+                    progress["frontier_status"] = "boundary_expired"
+                else:
+                    completed_deep = len(deep_pages)
+                    if completed_deep:
+                        proposed_hint = hint + min(completed_deep, _MAX_DEEP_PAGES)
+                        if total_pages_trustworthy and total_pages is not None:
+                            proposed_hint = min(proposed_hint, total_pages)
+                        progress["deep_page_hint"] = max(3, proposed_hint)
+            next_term_state[term] = progress
+            any_term_complete = True
 
         ordered = sorted(candidates.values(), key=lambda item: (
             item.published_at or fetched_at, item.source_native_id,
         ), reverse=True)
         status = "partial" if errors and ordered else "failed" if errors else "success"
+        pagination: dict[str, Any] = {"requests_made": requests_made}
+        if any_term_complete:
+            pagination["federal_register_terms"] = next_term_state
         return DiscoveryResult(
             self.source_id, self.discovery_method, status, candidates=ordered,
             fetched_at=fetched_at, errors=errors,
-            pagination={"requests_made": requests_made},
+            pagination=pagination,
         )

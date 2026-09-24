@@ -8,7 +8,7 @@ import pytest
 from discovery.dispatch import DiscoveryRegistryError, load_discovery_sources, validate_discovery_sources
 from discovery.federal_register import (FEDERAL_REGISTER_API_URL, FEDERAL_REGISTER_API_ROOT,
                                         FederalRegisterDiscovery, validate_federal_register_source)
-from discovery.http import HttpResponse
+from discovery.http import DiscoveryHttpError, HttpResponse
 from storage.database import JsonState
 from storage.discovery_state import JsonDiscoveryState
 
@@ -169,18 +169,249 @@ def test_malformed_api_response_and_missing_identity_are_reported():
 
 
 def test_pagination_is_bounded_even_when_api_claims_many_pages():
-    payload = fixture_payload()
-    payload["total_pages"] = 5000
-    http = FakeHttp([api_response(payload) for _ in range(6)])
-    source = fr_source(search_terms=["digital assets", "stablecoin"], max_pages=3)
-    result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect()
-    assert len(http.calls) == 6
-    assert result.pagination["requests_made"] == 6
-    assert len(result.candidates) == 2
+    source = fr_source(search_terms=["digital assets", "stablecoin"])
+    state = fr_state("2026-00101", 3)
+    state["sources"]["federal-register-api"]["pagination"]["federal_register_terms"]["stablecoin"] = {
+        "boundary_document_number": "2026-00201",
+        "deep_page_hint": 3,
+        "lookback_days": 7,
+        "frontier_status": "active",
+    }
+    http = FakeHttp([api_response(fr_payload([], 5000)) for _ in range(8)])
+    result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect(state)
+    assert len(http.calls) == 8
+    assert result.pagination["requests_made"] == 8
     pages = [parse_qs(urlsplit(url).query)["page"][0] for url, _ in http.calls]
-    assert pages == ["1", "2", "3", "1", "2", "3"]
+    assert pages == ["1", "2", "3", "4", "1", "2", "3", "4"]
     assert all(urlsplit(url).scheme == "https" and urlsplit(url).hostname == "www.federalregister.gov"
                for url, _ in http.calls)
+
+
+def fr_document(number):
+    return {
+        "document_number": number,
+        "title": f"Digital asset notice {number}",
+        "publication_date": "2026-09-22",
+        "type": "NOTICE",
+        "abstract": "Digital asset policy notice.",
+        "html_url": f"https://www.federalregister.gov/documents/2026/09/22/{number}/notice",
+    }
+
+
+def fr_payload(numbers, total_pages=10):
+    return {"total_pages": total_pages, "results": [fr_document(number) for number in numbers]}
+
+
+def fr_state(boundary, hint, *, status="active", lookback=7):
+    return {
+        "sources": {
+            "federal-register-api": {
+                "pagination": {
+                    "federal_register_terms": {
+                        "digital assets": {
+                            "boundary_document_number": boundary,
+                            "deep_page_hint": hint,
+                            "lookback_days": lookback,
+                            "frontier_status": status,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+def page_numbers(http):
+    return [int(parse_qs(urlsplit(url).query)["page"][0]) for url, _ in http.calls]
+
+
+def test_boundary_on_expected_page_advances_only_after_boundary_is_found():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 8)),
+        api_response(fr_payload(["2026-00002"], 8)),
+        api_response(fr_payload(["2026-00100", "2026-00101"], 8)),
+        api_response(fr_payload(["2026-00102"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 3),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2, 3, 4]
+    assert progress["boundary_document_number"] == "2026-00102"
+    assert progress["deep_page_hint"] == 5
+
+
+def test_initial_frontier_uses_oldest_available_page_and_next_page_hint():
+    http = FakeHttp([api_response(fr_payload(["2026-00100", "2026-00101"], 1))])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect()
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1]
+    assert progress["boundary_document_number"] == "2026-00101"
+    assert progress["deep_page_hint"] == 2
+
+
+def test_boundary_on_page_one_advances_through_successful_shallow_and_deep_pages():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00100", "2026-00101"], 8)),
+        api_response(fr_payload(["2026-00102"], 8)),
+        api_response(fr_payload(["2026-00103"], 8)),
+        api_response(fr_payload(["2026-00104"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 12, status="boundary_expired"),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2, 3, 4]
+    assert {item.source_native_id for item in result.candidates} >= {
+        "2026-00101", "2026-00102", "2026-00103", "2026-00104",
+    }
+    assert progress["boundary_document_number"] == "2026-00104"
+    assert progress["deep_page_hint"] == 5
+
+
+def test_boundary_shifted_deeper_advances_hint_without_advancing_boundary():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 9)),
+        api_response(fr_payload(["2026-00002"], 9)),
+        api_response(fr_payload(["2026-00101"], 9)),
+        api_response(fr_payload(["2026-00102"], 9)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 3),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert progress["boundary_document_number"] == "2026-00100"
+    assert progress["deep_page_hint"] == 5
+    assert page_numbers(http) == [1, 2, 3, 4]
+
+
+def test_boundary_is_eventually_rediscovered_after_hint_recovery():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 9)),
+        api_response(fr_payload(["2026-00002"], 9)),
+        api_response(fr_payload(["2026-00100", "2026-00103"], 9)),
+        api_response(fr_payload(["2026-00104"], 9)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 5),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2, 5, 6]
+    assert progress["boundary_document_number"] == "2026-00104"
+    assert progress["deep_page_hint"] == 7
+
+
+def test_api_total_pages_below_hint_marks_boundary_expired_without_rebasing():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 4)),
+        api_response(fr_payload(["2026-00002"], 4)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 5),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2]
+    assert progress["boundary_document_number"] == "2026-00100"
+    assert progress["deep_page_hint"] == 5
+    assert progress["frontier_status"] == "boundary_expired"
+
+
+def test_invalid_persisted_hint_fails_closed_without_reseeding_boundary():
+    http = FakeHttp([])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 0),
+    )
+    assert result.status == "failed"
+    assert not http.calls
+    assert "federal_register_terms" not in result.pagination
+    assert "refusing to reset its boundary" in result.errors[0]
+
+
+def test_expired_frontier_continues_shallow_refresh_without_deep_requests():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 8)),
+        api_response(fr_payload(["2026-00002"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 5, status="boundary_expired"),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2]
+    assert progress["boundary_document_number"] == "2026-00100"
+    assert progress["frontier_status"] == "boundary_expired"
+
+
+def test_expired_boundary_rediscovered_shallow_restarts_search_after_shallow_pages():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00100", "2026-00101"], 8)),
+        api_response(fr_payload(["2026-00102"], 8)),
+        api_response(fr_payload(["2026-00103"], 8)),
+        api_response(fr_payload(["2026-00104"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 12, status="boundary_expired"),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert page_numbers(http) == [1, 2, 3, 4]
+    assert progress["frontier_status"] == "active"
+    assert progress["boundary_document_number"] == "2026-00104"
+
+
+def test_shallow_boundary_match_does_not_advance_without_successful_deep_page():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00100", "2026-00101"], 2)),
+        api_response(fr_payload(["2026-00102"], 2)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 12, status="boundary_expired"),
+    )
+    progress = result.pagination["federal_register_terms"]["digital assets"]
+    assert progress["boundary_document_number"] == "2026-00100"
+    assert progress["deep_page_hint"] == 3
+    assert page_numbers(http) == [1, 2]
+
+
+def test_deep_request_failure_does_not_return_pagination_progress():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 8)),
+        api_response(fr_payload(["2026-00002"], 8)),
+        api_response(fr_payload(["2026-00101"], 8)),
+        DiscoveryHttpError("network failed", kind="request"),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 3),
+    )
+    assert result.status == "partial"
+    assert "federal_register_terms" not in result.pagination
+    assert page_numbers(http) == [1, 2, 3, 4]
+
+
+def test_malformed_deep_response_keeps_candidates_but_does_not_advance_progress():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 8)),
+        api_response(fr_payload(["2026-00002"], 8)),
+        api_response(fr_payload(["2026-00100", "2026-00101", "bad-row"], 8)),
+        api_response(fr_payload(["2026-00102"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 3),
+    )
+    assert result.status == "partial"
+    assert any(item.source_native_id == "2026-00101" for item in result.candidates)
+    assert "federal_register_terms" not in result.pagination
+
+
+def test_duplicate_documents_on_overlapping_pages_keep_one_candidate():
+    http = FakeHttp([
+        api_response(fr_payload(["2026-00001"], 8)),
+        api_response(fr_payload(["2026-00002"], 8)),
+        api_response(fr_payload(["2026-00100", "2026-00101"], 8)),
+        api_response(fr_payload(["2026-00101", "2026-00102"], 8)),
+    ])
+    result = FederalRegisterDiscovery(fr_source(), http=http, now=lambda: STAMP).collect(
+        fr_state("2026-00100", 3),
+    )
+    assert sum(item.source_native_id == "2026-00101" for item in result.candidates) == 1
 
 
 def test_external_result_urls_are_never_fetched_or_used_as_candidate_urls():
