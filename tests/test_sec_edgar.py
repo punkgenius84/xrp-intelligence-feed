@@ -59,7 +59,11 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
     sec = next(source for source in configured if source["source_id"] == "sec-edgar-submissions")
     assert sec["issuer_ciks"] == []
     assert sec["filing_forms"] == ["8-K", "10-K", "10-Q", "S-1", "S-3"]
-    assert len(configured) == 2
+    assert {source["source_id"] for source in configured} == {
+        "sec-edgar-submissions",
+        "federal-register-api",
+        "ofac-recent-actions",
+    }
 
 
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():

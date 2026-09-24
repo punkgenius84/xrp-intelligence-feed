@@ -29,6 +29,16 @@
       "lookback_days": 7,
       "page_size": 10,
       "max_pages": 2
+    },
+    {
+      "source_id": "ofac-recent-actions",
+      "name": "U.S. Department of the Treasury Office of Foreign Assets Control",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "ofac_recent_actions_html",
+      "source_url": "https://ofac.treasury.gov/recent-actions",
+      "enabled": true,
+      "lookback_days": 7
     }
   ]
 }

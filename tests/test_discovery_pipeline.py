@@ -168,3 +168,20 @@ def test_partial_federal_register_result_without_completed_progress_does_not_per
         discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
     )
     assert "federal-register-api" not in discovery.load()["sources"]
+
+
+def test_ofac_pagination_only_update_persists_through_pipeline(tmp_path, monkeypatch):
+    progress = {"boundary_id": "20260922", "boundary_date": "2026-09-22",
+                "deep_page_hint": 3, "lookback_days": 7}
+    result = DiscoveryResult(
+        "ofac-recent-actions", "ofac_recent_actions_html", "success", fetched_at=STAMP,
+        pagination={"requests_made": 1, "ofac_recent_actions": progress},
+    )
+    monkeypatch.setattr(main, "collect_source", lambda source, state: result)
+    discovery = JsonDiscoveryState(tmp_path / "discovery.json")
+    main.run_pipeline(
+        sources=[], state=JsonState(str(tmp_path / "seen.json")),
+        discovery_sources=[{"source_id": "ofac-recent-actions"}], discovery_state=discovery,
+    )
+    saved = discovery.load()["sources"]["ofac-recent-actions"]["pagination"]
+    assert saved["ofac_recent_actions"] == progress
