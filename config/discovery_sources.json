@@ -10,7 +10,13 @@
       "source_url": "https://data.sec.gov/submissions/",
       "enabled": true,
       "issuer_ciks": [],
-      "filing_forms": ["8-K", "10-K", "10-Q", "S-1", "S-3"],
+      "filing_forms": [
+        "8-K",
+        "10-K",
+        "10-Q",
+        "S-1",
+        "S-3"
+      ],
       "contact_email_env": "SEC_CONTACT_EMAIL",
       "application_name": "XRPIntelligenceFeed/0.3",
       "max_issuers_per_run": 5
@@ -23,9 +29,16 @@
       "discovery_method": "federal_register_api",
       "source_url": "https://www.federalregister.gov/api/v1/",
       "enabled": true,
-      "search_terms": ["digital assets", "stablecoin"],
+      "search_terms": [
+        "digital assets",
+        "stablecoin"
+      ],
       "agencies": [],
-      "document_types": ["RULE", "PRORULE", "NOTICE"],
+      "document_types": [
+        "RULE",
+        "PRORULE",
+        "NOTICE"
+      ],
       "lookback_days": 7,
       "page_size": 10,
       "max_pages": 2
@@ -71,6 +84,16 @@
       "source_url": "https://home.treasury.gov/news/press-releases",
       "enabled": true,
       "lookback_days": 60,
+      "max_items": 50
+    },
+    {
+      "source_id": "fdic-press-releases",
+      "name": "Federal Deposit Insurance Corporation",
+      "authority_tier": 1,
+      "category": "government",
+      "discovery_method": "fdic_press_releases",
+      "source_url": "https://www.fdic.gov/news/press-releases",
+      "enabled": true,
       "max_items": 50
     }
   ]

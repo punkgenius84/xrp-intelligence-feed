@@ -8,6 +8,7 @@ from discovery.base import DiscoveryResult, DiscoveryStrategy
 from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.federal_register import (FederalRegisterDiscovery,
                                          validate_federal_register_source)
+from discovery.fdic_press_releases import FDICPressReleasesDiscovery, validate_fdic_source
 from discovery.fincen_press_releases import (FinCENPressReleasesDiscovery,
                                               validate_fincen_source)
 from discovery.treasury_press_releases import (TreasuryPressReleasesDiscovery,
@@ -42,6 +43,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "ofac_recent_actions_html": validate_ofac_source,
             "cftc_rss": validate_cftc_source,
             "fincen_press_releases": validate_fincen_source,
+            "fdic_press_releases": validate_fdic_source,
             "treasury_press_releases": validate_treasury_source,
         }.get(method)
         if validator is None:
@@ -78,6 +80,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return CFTCRSSDiscovery(source, **kwargs)
     if method == "fincen_press_releases":
         return FinCENPressReleasesDiscovery(source, **kwargs)
+    if method == "fdic_press_releases":
+        return FDICPressReleasesDiscovery(source, **kwargs)
     if method == "treasury_press_releases":
         return TreasuryPressReleasesDiscovery(source, **kwargs)
     raise DiscoveryDispatchError(

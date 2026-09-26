@@ -66,7 +66,8 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "cftc-press-releases",
         "fincen-press-releases",
         "treasury-press-releases",
-    }
+        "fdic-press-releases",
+     }
 
 
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():
