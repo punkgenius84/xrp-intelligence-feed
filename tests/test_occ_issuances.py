@@ -60,4 +60,4 @@ def test_malformed_archive_fails_closed():
 
 def test_candidate_identity_uses_native_occ_id():
     result=OCCYearlyIssuancesDiscovery(source(),http=FakeHttp([response(FIXTURE.read_bytes()),response(FIXTURE.read_bytes())]),now=lambda:STAMP).collect()
-    assert all(x.candidate_id.startswith(OCC_SOURCE_ID+":NR 2026-") for x in result.candidates)
+    assert {x.source_native_id for x in result.candidates} == {"NR 2026-80", "NR 2026-69", "OCC 2026-28", "OCC 2026-24"}
