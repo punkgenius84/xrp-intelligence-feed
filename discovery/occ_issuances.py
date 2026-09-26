@@ -102,6 +102,7 @@ class _OCCArchiveParser(HTMLParser):
         if tag == "a" and self._link is not None:
             if self._row is not None:
                 if not self._row["native_id"]:
+                    if not self._row["native_id"]:
                     self._row["native_id"] = self._link["native_id"]
                 self._row["url"] = self._link["url"]
                 self._row["title"] = " ".join(self._link["title"].split())
