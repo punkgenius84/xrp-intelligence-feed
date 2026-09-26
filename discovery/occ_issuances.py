@@ -101,7 +101,8 @@ class _OCCArchiveParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "a" and self._link is not None:
             if self._row is not None:
-                self._row["native_id"] = self._link["native_id"]
+                if not self._row["native_id"]:
+                    self._row["native_id"] = self._link["native_id"]
                 self._row["url"] = self._link["url"]
                 self._row["title"] = " ".join(self._link["title"].split())
             self._link = None
