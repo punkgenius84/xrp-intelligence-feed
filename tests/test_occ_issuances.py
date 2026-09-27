@@ -29,7 +29,7 @@ def test_registry_and_dispatch():
     occ=next(x for x in configured if x["source_id"]==OCC_SOURCE_ID)
     assert occ==source()
     result=collect_source(occ,http=FakeHttp([response(FIXTURE.read_bytes()),response(FIXTURE.read_bytes())]),now=lambda:STAMP)
-    assert result.status=="success" and len(result.candidates)==2
+    assert result.status=="success" and len(result.candidates)==4
     assert result.candidates[0].source_native_id=="NR 2026-80"
 
 @pytest.mark.parametrize("changes",[{"source_url":"https://evil.example/occ"},{"enabled":1},{"max_years":3},{"lookback_days":0},{"document_types":["bulletin"]}])
