@@ -95,6 +95,19 @@
       "source_url": "https://www.fdic.gov/news/press-releases",
       "enabled": true,
       "max_items": 50
+    },
+    {
+      "source_id": "occ-issuances",
+      "name": "Office of the Comptroller of the Currency",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "occ_yearly_issuances",
+      "source_url": "https://www.occ.gov/news-events/newsroom/news-issuances-by-year",
+      "enabled": true,
+      "lookback_days": 60,
+      "max_items": 50,
+      "max_years": 2,
+      "document_types": ["news_release", "bulletin"]
     }
   ]
 }
