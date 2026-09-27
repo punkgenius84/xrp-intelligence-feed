@@ -107,7 +107,21 @@
       "lookback_days": 60,
       "max_items": 50,
       "max_years": 2,
-      "document_types": ["news_release", "bulletin"]
+      "document_types": [
+        "news_release",
+        "bulletin"
+      ]
+    },
+    {
+      "source_id": "federal-reserve-board-rss",
+      "name": "Board of Governors of the Federal Reserve System",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "federal_reserve_rss",
+      "source_url": "https://www.federalreserve.gov/feeds/feeds.htm",
+      "enabled": true,
+      "lookback_days": 60,
+      "max_items_per_feed": 50
     }
   ]
 }
