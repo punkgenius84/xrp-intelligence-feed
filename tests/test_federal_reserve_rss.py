@@ -100,10 +100,10 @@ def test_same_release_seen_in_multiple_fed_feeds_is_deduplicated_with_provenance
     configured = load_discovery_sources()
     fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
     result = collect_source(fed, http=http, now=lambda: STAMP)
-    candidates = [item for item in result.candidates if item.source_native_id == "fed-2026-09-24-stablecoin"]
+    candidates = [item for item in result.candidates if item.source_native_id == "bcreg20260924a"]
     assert len(candidates) == 1
     candidate = candidates[0]
-    assert candidate.candidate_id == f"{SOURCE_ID}:fed-2026-09-24-stablecoin"
+    assert candidate.candidate_id == f"{SOURCE_ID}:bcreg20260924a"
     assert len(candidate.provenance) == 7
     assert candidate.source_native_metadata["feed_ids"] == (
         "all,bcreg,enforcement,monetary,orders,other"
@@ -116,10 +116,10 @@ def test_federal_reserve_release_identity_and_date_are_preserved_without_article
     configured = load_discovery_sources()
     fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
     result = collect_source(fed, http=http, now=lambda: STAMP)
-    candidate = next(item for item in result.candidates if item.source_native_id == "fed-2026-09-24-stablecoin")
+    candidate = next(item for item in result.candidates if item.source_native_id == "bcreg20260924a")
     assert candidate.title.startswith("Federal Reserve Board requests public comment")
     assert candidate.published_at == datetime(2026, 9, 24, 16, 0, tzinfo=timezone.utc)
-    assert candidate.url == "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm"
+    assert candidate.url == "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm"
     assert candidate.document_type == "Federal Reserve Board Press Release"
     assert len(http.calls) == 6
 
