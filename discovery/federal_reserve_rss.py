@@ -100,7 +100,7 @@ def _article_identity(value: object) -> tuple[str, str] | None:
     ):
         return None
     native_id = match.group(1)
-    return native_id, f"https://www.federalreserve.gov/newsevents/pressreleases/{native_id}.htm"
+    return native_id, f"https://www.federalreserve.gov{parts.path}"
 
 
 def _publication_time(value: object) -> datetime:
