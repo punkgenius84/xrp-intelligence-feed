@@ -91,28 +91,15 @@ def _parse_date(value: object) -> date:
     raise ValueError("missing or invalid publication date")
 
 
-def _is_listing(classes: set[str]) -> bool:
-    combined = " ".join(classes).casefold().replace("_", "-")
-    return "view" in classes and "press" in combined and "release" in combined
-
-
-def _is_date_field(classes: set[str]) -> bool:
-    for value in classes:
-        folded = value.casefold()
-        if ((folded.startswith("views-field-") or folded.startswith("field--name-"))
-                and ("date" in folded or "created" in folded)):
-            return True
-    return False
-
-
-def _is_category_field(classes: set[str]) -> bool:
-    return any((value.casefold().startswith(("views-field-", "field--name-"))
-                and any(term in value.casefold() for term in ("category", "type", "news")))
-               for value in classes)
-
-
 class _FinCENListingParser(HTMLParser):
-    """Read only views rows inside the FinCEN Press Releases Drupal listing."""
+    """Read only fincen-news-article rows inside the FinCEN listing container.
+
+    Real markup (Drupal 10 "news releases" block): a ``table-with-filters
+    fincen-filter-form`` div holds the filter form, the article rows and the
+    pager. Each row is ``div.fincen-news-article`` whose meta div reads
+    ``<time datetime=...>MM/DD/YYYY</time> | Category`` and whose title div
+    holds the only link that identifies the release.
+    """
 
     _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
              "meta", "param", "source", "track", "wbr"}
@@ -121,16 +108,14 @@ class _FinCENListingParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.rows: list[dict[str, Any]] = []
         self.listing_found = False
-        self.content_found = False
         self._stack: list[str] = []
         self._listing_depth: int | None = None
-        self._content_depth: int | None = None
         self._row: dict[str, Any] | None = None
         self._row_depth: int | None = None
-        self._date_depth: int | None = None
-        self._category_depth: int | None = None
-        self._title_field_depth: int | None = None
-        self._anchor: dict[str, str] | None = None
+        self._meta_depth: int | None = None
+        self._time_depth: int | None = None
+        self._title_depth: int | None = None
+        self._anchor: dict[str, Any] | None = None
 
     @staticmethod
     def _classes(attrs: list[tuple[str, str | None]]) -> set[str]:
@@ -140,33 +125,26 @@ class _FinCENListingParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         depth = len(self._stack) + 1
         classes = self._classes(attrs)
-        if tag in {"div", "section"} and self._listing_depth is None and _is_listing(classes):
+        if (tag == "div" and self._listing_depth is None
+                and {"table-with-filters", "fincen-filter-form"} <= classes):
             self.listing_found = True
             self._listing_depth = depth
-        if (self._listing_depth is not None and tag in {"div", "section"}
-                and "view-content" in classes):
-            self.content_found = True
-            self._content_depth = depth
-        if (self._content_depth is not None and self._row is None
-                and tag in {"div", "article", "li"} and "views-row" in classes):
-            self._row = {"anchors": [], "date": "", "category": ""}
+        elif (self._listing_depth is not None and self._row is None
+                and tag == "div" and "fincen-news-article" in classes):
+            self._row = {"anchors": [], "datetime": "", "time_text": "", "meta_text": ""}
             self._row_depth = depth
-        if self._row is not None:
-            if _is_date_field(classes):
-                self._date_depth = depth
-            if _is_category_field(classes):
-                self._category_depth = depth
-            if any(value.casefold() == "views-field-title" for value in classes):
-                self._title_field_depth = depth
-            if tag == "time" and self._date_depth is not None:
-                datetime_value = next((value or "" for key, value in attrs
-                                       if key.casefold() == "datetime"), "")
-                if datetime_value:
-                    self._row["date"] = datetime_value
-            if tag == "a":
+        elif self._row is not None:
+            if tag == "div" and "fincen-news-article__meta" in classes:
+                self._meta_depth = depth
+            elif tag == "div" and "fincen-news-article__title" in classes:
+                self._title_depth = depth
+            elif tag == "time" and self._meta_depth is not None and not self._row["datetime"]:
+                self._time_depth = depth
+                self._row["datetime"] = next(
+                    (value or "" for key, value in attrs if key.casefold() == "datetime"), "")
+            elif tag == "a" and self._title_depth is not None and self._anchor is None:
                 href = next((value or "" for key, value in attrs if key.casefold() == "href"), "")
-                self._anchor = {"href": href, "text": "",
-                                "is_title": self._title_field_depth is not None}
+                self._anchor = {"href": href, "text": ""}
         if tag not in self._VOID:
             self._stack.append(tag)
 
@@ -177,10 +155,10 @@ class _FinCENListingParser(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._row is None:
             return
-        if self._date_depth is not None and not self._row["date"]:
-            self._row["date"] += data
-        if self._category_depth is not None:
-            self._row["category"] += data
+        if self._meta_depth is not None:
+            self._row["meta_text"] += data
+        if self._time_depth is not None:
+            self._row["time_text"] += data
         if self._anchor is not None:
             self._anchor["text"] += data
 
@@ -189,26 +167,32 @@ class _FinCENListingParser(HTMLParser):
         if tag == "a" and self._anchor is not None and self._row is not None:
             self._row["anchors"].append(self._anchor)
             self._anchor = None
-        if self._date_depth == depth:
-            self._date_depth = None
-        if self._category_depth == depth:
-            self._category_depth = None
-        if self._title_field_depth == depth:
-            self._title_field_depth = None
-        if self._row is not None and self._row_depth == depth and tag in {"div", "article", "li"}:
+        if self._time_depth == depth:
+            self._time_depth = None
+        if self._meta_depth == depth:
+            self._meta_depth = None
+        if self._title_depth == depth:
+            self._title_depth = None
+        if self._row is not None and self._row_depth == depth and tag == "div":
             self.rows.append(self._row)
             self._row = None
             self._row_depth = None
-            self._date_depth = self._category_depth = self._title_field_depth = None
-        if self._content_depth == depth:
-            self._content_depth = None
-        if self._listing_depth == depth:
+            self._meta_depth = self._time_depth = self._title_depth = None
+            self._anchor = None
+        if self._listing_depth == depth and tag == "div":
             self._listing_depth = None
         if self._stack and self._stack[-1] == tag:
             self._stack.pop()
         elif tag in self._stack:
             index = len(self._stack) - 1 - self._stack[::-1].index(tag)
             del self._stack[index:]
+
+
+def _row_category(meta_text: str) -> str:
+    # The meta line is "<date> | <category>"; the category is whatever follows the bar.
+    if "|" not in meta_text:
+        return ""
+    return " ".join(meta_text.split("|", 1)[1].split())
 
 
 def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
@@ -219,32 +203,33 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     parser = _FinCENListingParser()
     parser.feed(text)
     parser.close()
-    if not parser.listing_found or not parser.content_found:
+    if not parser.listing_found:
         raise ValueError("FinCEN response is missing the Press Releases listing structure")
-    if (parser._row is not None or parser._listing_depth is not None
-            or parser._content_depth is not None or parser._stack):
+    if parser._row is not None or parser._listing_depth is not None:
         raise ValueError("FinCEN Press Releases HTML ended inside an incomplete row")
 
     rows: list[dict[str, Any]] = []
     complete = True
     for raw in parser.rows:
-        article = next(((_article_identity(anchor["href"]), anchor["text"])
-                        for anchor in raw["anchors"] if anchor.get("is_title")), None)
-        if article is None or article[0] is None:
-            # A row with no title-field link is malformed; never infer identity from its text.
+        # Identity comes only from the link in the title field; never from body text.
+        anchor = raw["anchors"][0] if raw["anchors"] else None
+        identity = _article_identity(anchor["href"]) if anchor else None
+        if identity is None:
             complete = False
             continue
-        native_id, article_url = article[0]
-        title = " ".join(article[1].split())
+        native_id, article_url = identity
+        title = " ".join(anchor["text"].split())
         if not title:
             complete = False
             continue
+        # <time datetime> is authoritative; displayed text is used only if it is absent.
+        # A datetime that is present but unparseable is never papered over.
         try:
-            published = _parse_date(raw["date"])
+            published = _parse_date(raw["datetime"] or raw["time_text"])
         except ValueError:
             complete = False
             continue
-        category = " ".join(raw["category"].split())
+        category = _row_category(raw["meta_text"])
         if not category:
             complete = False
             continue

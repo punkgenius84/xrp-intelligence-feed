@@ -36,17 +36,34 @@ def source(**changes):
     return result
 
 
-def row(slug, title, published, category="News"):
-    date_value = f'<div class="views-field views-field-field-date"><span>{published}</span></div>'
-    return (f'<div class="views-row"><div class="views-field views-field-title">'
-            f'<a href="/news/news-releases/{slug}">{title}</a></div>{date_value}'
-            f'<div class="views-field views-field-field-news-type">{category}</div></div>')
+CONTAINER_OPEN = ('<div class="table-with-filters fincen-filter-form js-view-dom-id-test">'
+                  '<form class="views-exposed-form usa-form"><select><option>- Any -</option>'
+                  '</select></form>')
+PAGER = '<nav aria-label="Pagination" class="usa-pagination"><ul><li><a href="?page=1">2</a></li></ul></nav>'
+
+
+def article(meta, title, body="<p>Summary text…</p>"):
+    return ('<div class="fincen-news-article">     <div class="fincen-news-article__image"> '
+            '<img src="/seal.webp" alt="seal" />\n</div>\n   '
+            '<div class="fincen-news-article__content">\n'
+            f'      <div class="fincen-news-article__meta">{meta}</div>\n'
+            f'      <div class="fincen-news-article__title">{title}</div>\n'
+            f'      <div class="fincen-news-article__body">{body}</div>\n   </div>\n</div>\n    ')
+
+
+def row(slug, title, published, category="News", datetime_attr=None):
+    """A row shaped like the real page: <time datetime> | Category, link in the title field."""
+    month, day, year = published.split("/")
+    if datetime_attr is None:
+        datetime_attr = f"{year}-{month}-{day}T12:00:00Z"
+    attr = f' datetime="{datetime_attr}"' if datetime_attr else ""
+    return article(f"<time{attr}>{published}</time>\n | {category}",
+                   f'<a href="/news/news-releases/{slug}" hreflang="en">{title}</a>')
 
 
 def listing(*rows):
-    return (('<html><body><h1>Press Releases</h1><div class="view view-press-releases '
-             'view-id-press_releases"><div class="view-content">')
-            + "".join(rows) + "</div></div></body></html>").encode()
+    return (("<html><body><h1>Press Releases</h1>" + CONTAINER_OPEN)
+            + "".join(rows) + PAGER + "</div></body></html>").encode()
 
 
 def response(content=b"", *, status=200, headers=None):
@@ -122,12 +139,15 @@ def test_registry_rejects_invalid_fincen_configuration(changes):
 def test_parses_actual_listing_fields_and_current_fixture_releases():
     rows, complete = _parse_page(FIXTURE.read_bytes())
     assert complete is True
+    assert [item["date"] for item in rows] == [date(2026, 9, 16), date(2026, 9, 3), date(2026, 8, 3)]
     by_slug = {item["native_id"]: item for item in rows}
     assert by_slug["fincen-identifies-nearly-13-billion-linked-suspected-digital-asset-scams"]["date"] == date(2026, 9, 3)
-    genius = by_slug["fincen-agencies-propose-rule-implement-genius-act-customer-identification"]
-    assert genius["date"] == date(2026, 6, 18)
-    assert genius["title"] == "FinCEN, Agencies Propose Rule to Implement GENIUS Act Customer Identification Program Requirement"
-    assert genius["category"] == "News"
+    ubs = by_slug["fincen-assesses-historic-125-million-penalty-against-ubs-financial-services-inc"]
+    assert ubs["date"] == date(2026, 8, 3)
+    assert ubs["title"] == "FinCEN Assesses Historic $125 Million Penalty Against UBS Financial Services Inc. for Recidivist BSA Violations"
+    assert ubs["category"] == "News"
+    assert ubs["url"] == ("https://www.fincen.gov/news/news-releases/"
+                          "fincen-assesses-historic-125-million-penalty-against-ubs-financial-services-inc")
 
 
 def test_publication_date_comes_from_its_field_not_a_date_in_the_title():
@@ -163,17 +183,71 @@ def test_rejects_external_downgraded_or_malformed_article_urls(value):
     assert _article_identity(value) is None
 
 
+GOOD_META = '<time datetime="2026-09-03T12:00:00Z">09/03/2026</time>\n | News'
+GOOD_TITLE = '<a href="/news/news-releases/example-release">Example release</a>'
+
+
 @pytest.mark.parametrize("bad_row", [
-    '<div class="views-row"><div class="views-field views-field-title"><a href="/news/news-releases/example-release">No date</a></div></div>',
-    '<div class="views-row"><div class="views-field views-field-title"><a href="/news/news-releases/example-release">Bad date</a></div><div class="views-field-field-date">yesterday</div></div>',
-    '<div class="views-row"><div class="views-field views-field-title"><a href="/news/news-releases/example-release"></a></div><div class="views-field-field-date">09/03/2026</div></div>',
-    '<div class="views-row"><div class="views-field views-field-title"><a href="https://evil.example/news/news-releases/example-release">External</a></div><div class="views-field-field-date">09/03/2026</div></div>',
-    '<div class="views-row"><div class="views-field views-field-title"><a href="/news/news-releases/example-release">No category</a></div><div class="views-field-field-date">09/03/2026</div></div>',
+    article(" | News", GOOD_TITLE),                                          # no <time> at all
+    article('<time datetime="yesterday">yesterday</time> | News', GOOD_TITLE),   # unparseable
+    article('<time>yesterday</time> | News', GOOD_TITLE),                    # no datetime, bad text
+    article('<time datetime="not-a-date">09/03/2026</time> | News', GOOD_TITLE),  # bad datetime is not papered over
+    article(GOOD_META, '<a href="/news/news-releases/example-release"></a>'),      # empty title text
+    article(GOOD_META, '<a href="https://evil.example/news/news-releases/example-release">External</a>'),
+    article('<time datetime="2026-09-03T12:00:00Z">09/03/2026</time>', GOOD_TITLE),  # no bar, no category
+    article('<time datetime="2026-09-03T12:00:00Z">09/03/2026</time>\n | ', GOOD_TITLE),  # empty after bar
+    article(GOOD_META, "Example release, no link"),                          # title with no link
+    article(GOOD_META, "Example release",                                    # link only outside title field
+            body='<p>See <a href="/news/news-releases/example-release">this</a></p>'),
 ])
 def test_malformed_row_is_not_fabricated_and_marks_page_incomplete(bad_row):
     parsed, complete = _parse_page(listing(bad_row))
     assert parsed == []
     assert complete is False
+
+
+def test_old_drupal_views_markup_is_rejected():
+    old = (b'<html><body><div class="view view-press-releases view-id-press_releases">'
+           b'<div class="view-content"><div class="views-row"><div class="views-field views-field-title">'
+           b'<a href="/news/news-releases/example-release">Old markup</a></div>'
+           b'<div class="views-field views-field-field-date"><span>09/03/2026</span></div>'
+           b'<div class="views-field views-field-field-news-type">News</div></div></div></div></body></html>')
+    with pytest.raises(ValueError, match="listing structure"):
+        _parse_page(old)
+
+
+def test_datetime_attribute_wins_over_displayed_text_and_text_is_only_a_fallback():
+    conflicting = article('<time datetime="2026-09-03T12:00:00Z">09/22/2026</time>\n | News', GOOD_TITLE)
+    parsed, complete = _parse_page(listing(conflicting))
+    assert complete is True and parsed[0]["date"] == date(2026, 9, 3)
+    text_only = article("<time>09/22/2026</time>\n | News", GOOD_TITLE)
+    parsed, complete = _parse_page(listing(text_only))
+    assert complete is True and parsed[0]["date"] == date(2026, 9, 22)
+
+
+def test_category_is_whatever_follows_the_bar_in_the_meta_line():
+    meta = '<time datetime="2026-09-03T12:00:00Z">09/03/2026</time>\n |   Statement   of  Record '
+    parsed, complete = _parse_page(listing(article(meta, GOOD_TITLE)))
+    assert complete is True
+    assert parsed[0]["category"] == "Statement of Record"
+
+
+def test_identity_comes_from_title_field_link_not_body_links():
+    body = '<p>Read the <a href="/news/news-releases/other-release">other release</a></p>'
+    parsed, complete = _parse_page(listing(article(GOOD_META, GOOD_TITLE, body=body)))
+    assert complete is True
+    assert [item["native_id"] for item in parsed] == ["example-release"]
+
+
+def test_rows_outside_the_listing_container_are_ignored():
+    outside_before = row("outside-before", "Before container", "09/10/2026")
+    outside_after = row("outside-after", "After container", "09/11/2026")
+    inside = row("inside-release", "Inside container", "09/12/2026")
+    body = (("<html><body>" + outside_before + CONTAINER_OPEN + inside + PAGER + "</div>"
+             + outside_after + "</body></html>").encode())
+    parsed, complete = _parse_page(body)
+    assert complete is True
+    assert [item["native_id"] for item in parsed] == ["inside-release"]
 
 
 def test_wrong_page_structure_fails_and_well_formed_empty_listing_succeeds():
@@ -191,16 +265,16 @@ def test_first_run_initializes_oldest_valid_boundary_without_crawling_history():
     assert page_number(http.calls[0][0]) == "0"
     state_value = result.pagination["fincen_press_releases"]
     assert state_value == progress(
-        "fincen-agencies-propose-rule-implement-genius-act-customer-identification",
-        "2026-06-18", hint=1, lookback=180,
+        "fincen-assesses-historic-125-million-penalty-against-ubs-financial-services-inc",
+        "2026-08-03", hint=1, lookback=180,
     )
 
 
 def test_configured_lookback_filters_out_old_listing_rows():
-    result = fixture_result()
+    result = fixture_result(lookback_days=30)
     found = candidates(result)
     assert "fincen-identifies-nearly-13-billion-linked-suspected-digital-asset-scams" in found
-    assert "fincen-agencies-propose-rule-implement-genius-act-customer-identification" not in found
+    assert "fincen-assesses-historic-125-million-penalty-against-ubs-financial-services-inc" not in found
 
 
 def test_item_limit_bounds_candidates_and_prevents_validator_or_progress_advance():
@@ -264,7 +338,8 @@ def test_failed_or_malformed_deep_page_does_not_advance_frontier(failure):
 
 def test_partial_page_keeps_valid_candidates_but_not_its_validator_or_frontier():
     malformed = listing(row("good-release", "FinCEN XRP release", "09/22/2026"),
-                        '<div class="views-row"><div class="views-field views-field-title"><a href="/news/news-releases/bad-release">Bad date</a></div><div class="views-field-field-date">unknown</div></div>')
+                        article("<time>unknown</time>\n | News",
+                                '<a href="/news/news-releases/bad-release">Bad date</a>'))
     http = FakeHttp([response(malformed)])
     result = adapter(http).collect()
     assert result.status == "partial"
