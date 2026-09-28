@@ -34,6 +34,7 @@ def _classify(item, combined: str) -> list[str]:
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
         "designation", "designations", "designates", "removal", "removals", "delisting",
+        "proposal", "proposals", "public comment", "request for comment", "requests comment",
     ))
     digital_or_payment = any(_contains(combined, term) for term in (
         "digital asset", "cryptocurrency", "crypto", "stablecoin", "payment", "payments",
