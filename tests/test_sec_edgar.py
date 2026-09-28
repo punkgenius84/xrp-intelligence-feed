@@ -68,6 +68,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "treasury-press-releases",
         "fdic-press-releases",
         "occ-issuances",
+        "federal-reserve-board-rss",
     }
 
 
