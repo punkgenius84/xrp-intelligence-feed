@@ -44,7 +44,8 @@ def _classify(item, combined: str) -> list[str]:
     if regulatory and action and digital_or_payment:
         categories.append("relevant_regulatory_digital_asset_payments")
 
-    broad_tokenization = any(_contains(combined, term) for term in ("tokenization", "tokenized"))
+    broad_tokenization = any(_contains(combined, term) for term in (
+        "tokenization", "tokenisation", "tokenized", "tokenised"))
     if broad_tokenization and not direct and "RLUSD" not in entities and not _contains(combined, "stablecoin"):
         categories.append("broad_tokenization")
     return categories

@@ -249,3 +249,20 @@ def test_bis_digital_asset_publication_reaches_existing_relevance_scoring():
                    "Bank for International Settlements media release: analysis of stablecoin payment risks.")
     assert "BIS" in news.detected_entities
     assert news.relevance_score > 0
+
+
+@pytest.mark.parametrize("word", ["tokenisation", "tokenization"])
+def test_british_and_american_tokenisation_spellings_score_the_same(word):
+    news = _scored(f"BIS publishes prototype showing how {word} can improve cross-border payments",
+                   f"Bank for International Settlements media release: {word} for wholesale payments.")
+    assert "Tokenization" in news.detected_entities
+    assert any(signal.startswith("keyword:context:token") for signal in news.score_signals)
+
+
+def test_real_project_agora_release_now_reaches_the_publish_threshold():
+    result, _ = run(FIXTURE.read_bytes(), config=source(lookback_days=200))
+    agora = next(c for c in result.candidates if "project-agora" in c.source_native_id)
+    detect_entities(agora)
+    classify_source_quality(agora)
+    score_relevance(agora)
+    assert agora.relevance_score >= 35
