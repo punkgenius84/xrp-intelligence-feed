@@ -122,6 +122,17 @@
       "enabled": true,
       "lookback_days": 60,
       "max_items_per_feed": 50
+    },
+    {
+      "source_id": "bis-media-releases",
+      "name": "Bank for International Settlements",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "bis_media_releases",
+      "source_url": "https://www.bis.org/doclist/all_pressrels.rss",
+      "enabled": true,
+      "lookback_days": 120,
+      "max_items": 50
     }
   ]
 }

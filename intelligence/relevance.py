@@ -27,7 +27,7 @@ def _classify(item, combined: str) -> list[str]:
             or (_contains(combined, "ODL") and bool(entities & {"Ripple", "XRP"}))):
         categories.append("ripple_payments_network")
 
-    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN"})
+    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",

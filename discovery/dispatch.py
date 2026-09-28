@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from discovery.base import DiscoveryResult, DiscoveryStrategy
+from discovery.bis_media_releases import BISMediaReleasesDiscovery, validate_bis_source
 from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.federal_register import (FederalRegisterDiscovery,
                                          validate_federal_register_source)
@@ -43,6 +44,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "sec_submissions": validate_sec_source,
             "federal_register_api": validate_federal_register_source,
             "federal_reserve_rss": validate_federal_reserve_source,
+            "bis_media_releases": validate_bis_source,
             "ofac_recent_actions_html": validate_ofac_source,
             "cftc_rss": validate_cftc_source,
             "fincen_press_releases": validate_fincen_source,
@@ -80,6 +82,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return FederalRegisterDiscovery(source, **kwargs)
     if method == "federal_reserve_rss":
         return FederalReserveRSSDiscovery(source, **kwargs)
+    if method == "bis_media_releases":
+        return BISMediaReleasesDiscovery(source, **kwargs)
     if method == "ofac_recent_actions_html":
         return OFACRecentActionsDiscovery(source, **kwargs)
     if method == "cftc_rss":
