@@ -6,7 +6,19 @@ A free, modular XRP/XRPL source intelligence feed. No paid APIs, API keys, or AI
 
 Enabled registry sources are collected as RSS, normalized into NewsItem, deduplicated against JSON state, entity-matched using configured aliases, classified by source authority tier, and deterministically scored for relevance. The relevance score describes topical relevance only; it does not predict XRP price or market direction.
 
-The pipeline does not publish to Discord yet. discord/webhook.py remains isolated for a later delivery phase.
+## Discord posting
+
+Relevant new items (score at or above `publish_score`) are posted to a Discord channel through a webhook. Configuration is by environment variable only; the webhook URL is never stored in the repository.
+
+| Variable | Meaning |
+| --- | --- |
+| `DISCORD_WEBHOOK_URL` | The channel webhook. If unset, nothing is posted and the run is otherwise unchanged. Must be a `discord.com` or `discordapp.com` webhook URL. |
+| `DISCORD_MAX_POSTS` | Most posts per run, 1 to 25 (default 5). If more items qualify, the highest-scoring are posted, oldest first. The rest are not posted and are not retried. |
+| `DISCORD_DRY_RUN` | `true` prints what would be posted, posts nothing, and saves no state, so a live run afterwards still sees the same items as new. |
+
+Each post shows the headline, source, score, matched entities, up to two scoring reasons, and the link. Posts cannot ping `@everyone` or roles. Delivery is at-most-once: state is saved before posting, so a failed post is reported as a warning but not retried on a later run. A Discord rate limit is retried once if Discord asks for a short wait. Error messages never include the webhook URL.
+
+On GitHub Actions, add the webhook as the repository secret `DISCORD_INTELLIGENCE_DISCORD_WEBHOOK`; the workflow passes it to the program as `DISCORD_WEBHOOK_URL`. Manual runs have a `dry_run` checkbox that defaults to on; untick it to post for real. Dry runs do not save the state cache.
 
 ## v0.3 discovery foundation
 
@@ -29,7 +41,7 @@ The FDIC adapter reads the official [FDIC Press Releases listing](https://www.fd
 
 Discovery state is stored locally in `state/discovery.json`, separately from the existing `state/seen.json`. It records per-request validators, successful fetch time, watermarks, candidate first/last-seen metadata, Federal Register per-term pagination progress, and the OFAC, FinCEN, Treasury, and FDIC boundaries/page hints, with deterministic age/count retention and atomic writes. Corrupt state fails closed and is preserved. Both discovery state files are git-ignored. GitHub Actions restores and saves both files using a branch-scoped immutable cache lineage; successful workflow runs persist the state for later scheduled or manual runs.
 
-SEC submissions metadata identifies that a filing exists; it does not include the filing text in this adapter. Relevance therefore reflects the issuer/form metadata available from the submissions record until a separately approved phase adds bounded document-content inspection. Discovery currently covers SEC filing metadata, Federal Register API results, OFAC Recent Actions, official CFTC press-release RSS feeds, the FinCEN Press Releases listing, the Treasury Press Releases listing, and the FDIC Press Releases listing; it does not add Congress, GDELT, Ripple/XRPL monitors, generic page or sitemap scraping, or Discord delivery.
+SEC submissions metadata identifies that a filing exists; it does not include the filing text in this adapter. Relevance therefore reflects the issuer/form metadata available from the submissions record until a separately approved phase adds bounded document-content inspection. Discovery currently covers SEC filing metadata, Federal Register API results, OFAC Recent Actions, official CFTC press-release RSS feeds, the FinCEN Press Releases listing, the Treasury Press Releases listing, and the FDIC Press Releases listing; it does not add Congress, GDELT, Ripple/XRPL monitors, or generic page or sitemap scraping. Delivery to Discord is described above.
 
 ## Source registry
 

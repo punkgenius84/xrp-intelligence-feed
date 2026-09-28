@@ -1,0 +1,122 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import os
+import re
+import time
+from typing import Any, Callable, Mapping
+
+from discord.webhook import DiscordError, DiscordWebhook, is_valid_webhook_url
+
+DEFAULT_MAX_POSTS = 5
+MAX_POSTS_LIMIT = 25
+_TRUTHY = {"1", "true", "yes", "on"}
+_MARKDOWN = re.compile(r"([\\*_~`|>])")
+
+
+@dataclass(frozen=True)
+class DiscordSettings:
+    webhook_url: str = ""
+    max_posts: int = DEFAULT_MAX_POSTS
+    dry_run: bool = False
+
+
+@dataclass
+class PublishReport:
+    eligible: int = 0
+    posted: int = 0
+    failed: int = 0
+    not_selected: int = 0
+    dry_run: bool = False
+    skipped_unconfigured: bool = False
+
+
+def settings_from_env(env: Mapping[str, str] | None = None) -> DiscordSettings:
+    """Read and validate Discord settings. Raises ValueError with a token-free message."""
+    env = os.environ if env is None else env
+    url = (env.get("DISCORD_WEBHOOK_URL") or "").strip()
+    if url and not is_valid_webhook_url(url):
+        raise ValueError("DISCORD_WEBHOOK_URL is set but is not a Discord webhook URL")
+    raw_max = (env.get("DISCORD_MAX_POSTS") or "").strip()
+    max_posts = DEFAULT_MAX_POSTS
+    if raw_max:
+        try:
+            max_posts = int(raw_max)
+        except ValueError:
+            raise ValueError("DISCORD_MAX_POSTS must be a whole number") from None
+        if not 1 <= max_posts <= MAX_POSTS_LIMIT:
+            raise ValueError(f"DISCORD_MAX_POSTS must be from 1 to {MAX_POSTS_LIMIT}")
+    dry_run = (env.get("DISCORD_DRY_RUN") or "").strip().lower() in _TRUTHY
+    return DiscordSettings(webhook_url=url, max_posts=max_posts, dry_run=dry_run)
+
+
+def _clean(value: str, limit: int) -> str:
+    text = _MARKDOWN.sub(r"\\\1", " ".join(str(value).split()))
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def format_message(item: Any) -> str:
+    meta = [_clean(item.source, 80) or "Unknown source", f"score {item.relevance_score}"]
+    if item.detected_entities:
+        meta.append(_clean(", ".join(item.detected_entities[:6]), 120))
+    lines = [f"**{_clean(item.title, 220)}**", " · ".join(meta)]
+    lines.extend(f"• {_clean(reason, 160)}" for reason in item.score_reasons[:2])
+    lines.append(item.url.strip())  # last, so Discord unfurls the link preview
+    return "\n".join(lines)
+
+
+def _when(item: Any) -> datetime:
+    value = item.published_at or item.collected_at
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def publish(items: list[Any], settings: DiscordSettings, *, webhook: DiscordWebhook | None = None,
+            sleep: Callable[[float], None] = time.sleep, pause: float = 1.0,
+            out: Callable[[str], None] = print) -> PublishReport:
+    report = PublishReport(eligible=len(items), dry_run=settings.dry_run)
+    if not items:
+        return report
+    # If capped, keep the highest-scoring items (newest first on ties), then post oldest-first
+    # so the channel reads chronologically.
+    ranked = sorted(items, key=lambda i: (-i.relevance_score, -_when(i).timestamp()))
+    selected = sorted(ranked[: settings.max_posts], key=_when)
+    report.not_selected = len(items) - len(selected)
+
+    if settings.dry_run:
+        for item in selected:
+            out("[dry run] would post to Discord:\n" + format_message(item) + "\n")
+    elif not settings.webhook_url:
+        report.skipped_unconfigured = True
+        out("Discord: DISCORD_WEBHOOK_URL is not set; nothing was posted")
+        return report
+    else:
+        hook = webhook or DiscordWebhook(settings.webhook_url, sleep=sleep)
+        consecutive_failures = 0
+        for index, item in enumerate(selected):
+            try:
+                hook.send(format_message(item))
+            except DiscordError as exc:
+                report.failed += 1
+                consecutive_failures += 1
+                out(f"::warning::Discord post failed for {item.url}: {exc}")
+                if consecutive_failures >= 2:
+                    report.failed += len(selected) - index - 1
+                    out("Discord: stopping after 2 consecutive failures")
+                    break
+                continue
+            consecutive_failures = 0
+            report.posted += 1
+            if index < len(selected) - 1:
+                sleep(pause)
+
+    label = "would post" if settings.dry_run else "posted"
+    count = len(selected) if settings.dry_run else report.posted
+    line = f"Discord: {label} {count} of {report.eligible} relevant"
+    if report.failed:
+        line += f"; {report.failed} failed"
+    if report.not_selected:
+        line += (f"; {report.not_selected} over the {settings.max_posts}-post cap "
+                 "were not posted and will not be retried")
+    out(line)
+    return report

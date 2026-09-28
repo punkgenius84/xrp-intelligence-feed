@@ -9,6 +9,7 @@ from discovery.dispatch import (DiscoveryRegistryError, collect_source,
                                 load_discovery_sources)
 from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
+from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
@@ -143,10 +144,34 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     return collected, fresh, failures
 
 
+class _NoSaveState:
+    """Wraps a state store so a dry run reads state but never writes it."""
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def load(self):
+        return self._inner.load()
+
+    def save(self, *args, **kwargs):
+        return None
+
+
 def main() -> None:
     from intelligence.configuration import read_object, validate_thresholds
+    # Validate Discord settings before collecting: a bad setting must not fail the run after
+    # state has been saved, because a later run would then re-post items that already went out.
     try:
-        collected, fresh, failures = run_pipeline()
+        discord_settings = settings_from_env()
+    except ValueError as exc:
+        raise SystemExit(f"Discord configuration error: {exc}") from exc
+    try:
+        if discord_settings.dry_run:
+            # A preview must not mark items as seen, or the live run would find nothing new.
+            collected, fresh, failures = run_pipeline(
+                state=_NoSaveState(JsonState()), discovery_state=_NoSaveState(JsonDiscoveryState()))
+        else:
+            collected, fresh, failures = run_pipeline()
     except (StateFileError, DiscoveryStateError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except DiscoveryRegistryError as exc:
@@ -172,6 +197,9 @@ def main() -> None:
     for result in discovery_results:
         print(f"Discovery source {result.source_id}: {result.status} "
               f"({len(result.candidates)} candidates)")
+    # State was saved inside run_pipeline, so posting is at-most-once: a failed post is reported
+    # but not retried on the next run.
+    publish(relevant, discord_settings)
 
 
 if __name__ == "__main__":
