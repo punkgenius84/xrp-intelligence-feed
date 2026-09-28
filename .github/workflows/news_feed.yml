@@ -2,12 +2,9 @@ name: XRP Intelligence Feed
 
 on:
   workflow_dispatch:
-  schedule:
-    
 
 concurrency:
   group: xrp-intelligence-feed
-  cancel-in-progress: false
 
 jobs:
   run:
