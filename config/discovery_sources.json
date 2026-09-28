@@ -10,7 +10,13 @@
       "source_url": "https://data.sec.gov/submissions/",
       "enabled": true,
       "issuer_ciks": [],
-      "filing_forms": ["8-K", "10-K", "10-Q", "S-1", "S-3"],
+      "filing_forms": [
+        "8-K",
+        "10-K",
+        "10-Q",
+        "S-1",
+        "S-3"
+      ],
       "contact_email_env": "SEC_CONTACT_EMAIL",
       "application_name": "XRPIntelligenceFeed/0.3",
       "max_issuers_per_run": 5
@@ -34,9 +40,16 @@
       "discovery_method": "federal_register_api",
       "source_url": "https://www.federalregister.gov/api/v1/",
       "enabled": true,
-      "search_terms": ["digital assets", "stablecoin"],
+      "search_terms": [
+        "digital assets",
+        "stablecoin"
+      ],
       "agencies": [],
-      "document_types": ["RULE", "PRORULE", "NOTICE"],
+      "document_types": [
+        "RULE",
+        "PRORULE",
+        "NOTICE"
+      ],
       "lookback_days": 7,
       "page_size": 10,
       "max_pages": 2
@@ -105,7 +118,10 @@
       "lookback_days": 60,
       "max_items": 50,
       "max_years": 2,
-      "document_types": ["news_release", "bulletin"]
+      "document_types": [
+        "news_release",
+        "bulletin"
+      ]
     },
     {
       "source_id": "federal-reserve-board-rss",
