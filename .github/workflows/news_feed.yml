@@ -3,7 +3,7 @@ name: XRP Intelligence Feed
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    
 
 concurrency:
   group: xrp-intelligence-feed
