@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>SEC Press Releases</title>
+    <link>https://www.sec.gov/newsroom/press-releases</link>
+    <description>Official announcements highlighting recent actions taken by the SEC.</description>
+    <item>
+      <title>SEC Publishes Updated Market Statistics, Highlighting Increase in IPOs and Proceeds Raised</title>
+      <link>https://www.sec.gov/newsroom/press-releases/2026-93</link>
+      <description>Updated market statistics for 2026.</description>
+      <pubDate>Wed, 23 Sep 2026 16:00:00 +0000</pubDate>
+      <guid>2026-93</guid>
+    </item>
+    <item>
+      <title>SEC Issues “Innovation Exemption” to Facilitate the Trading of Tokenized NMS Stock and Request for Comment</title>
+      <link>https://www.sec.gov/newsroom/press-releases/2026-90</link>
+      <description>The SEC issues an innovation exemption and requests public comment on tokenized NMS stock.</description>
+      <pubDate>Thu, 17 Sep 2026 16:00:00 +0000</pubDate>
+      <guid>2026-90</guid>
+    </item>
+    <item>
+      <title>SEC Proposes New Regulation Crypto Assets</title>
+      <link>https://www.sec.gov/newsroom/press-releases/2026-76</link>
+      <description>The Commission proposes new Regulation Crypto Assets.</description>
+      <pubDate>Tue, 18 Aug 2026 16:00:00 +0000</pubDate>
+      <guid>2026-76</guid>
+    </item>
+  </channel>
+</rss>
