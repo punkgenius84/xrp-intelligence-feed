@@ -19,6 +19,7 @@ from discovery.ofac_recent_actions import (OFACRecentActionsDiscovery,
                                            validate_ofac_source)
 from discovery.occ_issuances import OCCYearlyIssuancesDiscovery, validate_occ_source
 from discovery.sec_edgar import SECEdgarDiscovery, validate_sec_source
+from discovery.sec_press_releases import SECPressReleasesRSSDiscovery, validate_sec_press_source
 
 
 class DiscoveryRegistryError(ValueError):
@@ -42,6 +43,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
         method = source.get("discovery_method")
         validator = {
             "sec_submissions": validate_sec_source,
+            "sec_press_releases_rss": validate_sec_press_source,
             "federal_register_api": validate_federal_register_source,
             "federal_reserve_rss": validate_federal_reserve_source,
             "bis_media_releases": validate_bis_source,
@@ -78,6 +80,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
     method = source.get("discovery_method")
     if method == "sec_submissions":
         return SECEdgarDiscovery(source, **kwargs)
+    if method == "sec_press_releases_rss":
+        return SECPressReleasesRSSDiscovery(source, **kwargs)
     if method == "federal_register_api":
         return FederalRegisterDiscovery(source, **kwargs)
     if method == "federal_reserve_rss":
