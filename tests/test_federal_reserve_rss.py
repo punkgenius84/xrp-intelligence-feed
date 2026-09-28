@@ -143,7 +143,7 @@ def test_malformed_record_is_skipped_and_does_not_persist_that_feed_validator():
     <item><title>Missing date</title><link>https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm</link></item>
     <item><title>Valid release</title><link>https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm</link>
     <pubDate>Thu, 24 Sep 2026 16:00:00 +0000</pubDate><guid>fed-valid</guid></item>
-    </channel></rss>'''.encode()
+    </channel></rss>'''
     fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
     http = FakeHttp([response(body)] + [response(fixture) for _ in range(5)])
     configured = load_discovery_sources()

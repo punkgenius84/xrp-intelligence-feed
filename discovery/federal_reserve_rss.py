@@ -243,30 +243,17 @@ class FederalReserveRSSDiscovery:
                         existing.provenance = list(dict.fromkeys(
                             existing.provenance + candidate.provenance
                         ))
-                        existing.source_native_metadata["feed_ids"] = ",".join(
-                            dict.fromkeys(
-                                filter(
-                                    None,
-                                    (
-                                        existing.source_native_metadata.get("feed_id", ""),
-                                        existing.source_native_metadata.get("feed_ids", ""),
-                                        feed_id,
-                                    ),
-                                )
+                        for plural, single, value in (
+                            ("feed_ids", "feed_id", feed_id),
+                            ("feed_categories", "feed_category", feed["category"]),
+                        ):
+                            meta = existing.source_native_metadata
+                            merged = [meta.get(single, "")]
+                            merged.extend(str(meta.get(plural, "")).split(","))
+                            merged.append(value)
+                            meta[plural] = ",".join(
+                                dict.fromkeys(part for part in merged if part)
                             )
-                        )
-                        existing.source_native_metadata["feed_categories"] = ",".join(
-                            dict.fromkeys(
-                                filter(
-                                    None,
-                                    (
-                                        existing.source_native_metadata.get("feed_category", ""),
-                                        existing.source_native_metadata.get("feed_categories", ""),
-                                        feed["category"],
-                                    ),
-                                )
-                            )
-                        )
                 except (ValueError, TypeError, AttributeError) as exc:
                     complete = False
                     errors.append(f"{feed['name']}: malformed item ({exc})")
