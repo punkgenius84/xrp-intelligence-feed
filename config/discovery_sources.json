@@ -45,6 +45,29 @@
       "max_pages": 3
     },
     {
+      "source_id": "doj-news-api",
+      "name": "U.S. Department of Justice",
+      "authority_tier": 1,
+      "category": "government",
+      "discovery_method": "doj_press_releases_api",
+      "source_url": "https://www.justice.gov/api/v1/press_releases.json",
+      "enabled": true,
+      "lookback_days": 180,
+      "search_terms": [
+        "cryptocurrency",
+        "digital asset",
+        "stablecoin",
+        "blockchain",
+        "Ripple",
+        "XRP",
+        "virtual currency",
+        "money laundering"
+      ],
+      "page_size": 50,
+      "max_pages": 1,
+      "max_items": 100
+    },
+    {
       "source_id": "federal-register-api",
       "name": "Federal Register",
       "authority_tier": 1,
