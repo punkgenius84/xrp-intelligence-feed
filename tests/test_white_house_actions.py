@@ -182,7 +182,7 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
     collected, fresh, failures = main.run_pipeline(
         sources=[],
         state=JsonState(str(tmp_path / "seen.json")),
-        discovery_sources=[wh_source(max_pages=1)],
+        discovery_sources=[wh_source(max_pages=1, lookback_days=180)],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
     assert failures == []
