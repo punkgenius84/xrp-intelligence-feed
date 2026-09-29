@@ -16,7 +16,8 @@ STAMP = datetime(2026, 9, 27, 23, 0, tzinfo=timezone.utc)
 FIXTURE = Path(__file__).parent / "fixtures" / "sec_press_releases.xml"
 SOURCE_ID = "sec-press-releases"
 METHOD = "sec_press_releases_rss"
-FEED_URL = "https://www.sec.gov/news/pressreleases.rss"
+FEED_URL = "https://www.sec.gov/news/pressreleases.rss"
+SEC_FEED_ID = "press_releases"
 
 
 def source(**overrides):
@@ -209,4 +210,4 @@ def test_real_fixture_contains_current_sec_crypto_releases():
     result, _ = run(FIXTURE.read_bytes())
     titles = {c.title for c in result.candidates}
     assert "SEC Proposes New Regulation Crypto Assets" in titles
-    assert "SEC Issues Innovation Exemption to Facilitate the Trading of Tokenized NMS Stock and Request for Comment" in titles
+    assert "SEC Issues “Innovation Exemption” to Facilitate the Trading of Tokenized NMS Stock and Request for Comment" in titles

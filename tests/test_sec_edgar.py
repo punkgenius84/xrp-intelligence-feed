@@ -70,6 +70,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "occ-issuances",
         "federal-reserve-board-rss",
         "bis-media-releases",
+        "sec-press-releases",
     }
 
 
