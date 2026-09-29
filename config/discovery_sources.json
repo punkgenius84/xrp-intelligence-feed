@@ -33,6 +33,18 @@
       "max_items": 50
     },
     {
+      "source_id": "white-house-presidential-actions",
+      "name": "The White House",
+      "authority_tier": 1,
+      "category": "government",
+      "discovery_method": "white_house_actions_html",
+      "source_url": "https://www.whitehouse.gov/presidential-actions/",
+      "enabled": true,
+      "lookback_days": 90,
+      "max_items": 50,
+      "max_pages": 3
+    },
+    {
       "source_id": "federal-register-api",
       "name": "Federal Register",
       "authority_tier": 1,
