@@ -186,7 +186,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 "date": published,
             })
         except (KeyError, TypeError, ValueError):
-            complete = False
+            if article.get("links"):
+                complete = False
+    if not rows:
+        raise ValueError("Ripple Press Center response has no official press releases")
     return rows, complete
 
 
