@@ -330,12 +330,12 @@ WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "news_feed.yml"
 def test_workflow_defaults_manual_runs_to_dry_run_and_skips_state_save_when_dry():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "dry_run:" in text and "default: true" in text
-    assert "DISCORD_DRY_RUN: ${{ inputs.dry_run }}" in text
-    assert "if: success() && !inputs.dry_run" in text
+    assert "DISCORD_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}" in text
+    assert "if: success() && (github.event_name == 'schedule' || !inputs.dry_run)" in text
 
 
 def test_workflow_takes_webhook_from_secrets_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_INTELLIGENCE_DISCORD_WEBHOOK }}" in text
     assert "discord.com/api/webhooks" not in text
-    assert "schedule:" not in text
+    assert "schedule:" in text
