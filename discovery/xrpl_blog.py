@@ -87,6 +87,14 @@ def _clean(value: object) -> str:
     return " ".join(unescape(_TAG_RE.sub(" ", value)).split())
 
 
+def _parse_nearest_date(text: str, position: int) -> datetime | None:
+    candidates = list(_DATE_RE.finditer(text))
+    if not candidates:
+        return None
+    nearest = min(candidates, key=lambda match: abs(match.start() - position))
+    return _parse_date(nearest.group(0))
+
+
 def _parse_date(value: str) -> datetime | None:
     match = _DATE_RE.search(value)
     if not match:
@@ -119,7 +127,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
             window = text[start:end]
             title = _clean(match.group("title"))
-            published = _parse_date(window)
+            published = _parse_nearest_date(window, match.start() - start)
             if not title:
                 raise ValueError("missing XRPL blog title")
             if published is None:
