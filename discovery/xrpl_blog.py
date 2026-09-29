@@ -120,7 +120,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     complete = True
     for index, match in enumerate(matches):
         try:
-            safe = _official_url(f"https://{XRPL_HOST}{match.group('href')}")
+            href = match.group("href").strip()
+            safe = _official_url(
+                href if href.lower().startswith(("https://", "http://")) else f"https://{XRPL_HOST}{href}"
+            )
             if safe is None:
                 raise ValueError("invalid official XRPL blog URL")
             start = max(0, match.start() - 1200)
