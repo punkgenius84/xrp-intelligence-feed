@@ -213,7 +213,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 "action_type": action_type,
             })
         except (KeyError, TypeError, ValueError):
-            complete = False
+            if article.get("links"):
+                complete = False
+    if not parsed:
+        raise ValueError("White House response has no official Presidential Actions")
     return parsed, complete
 
 
