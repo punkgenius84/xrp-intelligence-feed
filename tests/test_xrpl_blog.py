@@ -69,9 +69,10 @@ def test_invalid_configuration_is_rejected(changes):
 
 def test_parser_keeps_only_official_articles():
     rows, complete = _parse_page(FIXTURE.read_bytes())
-    assert complete is False
+    assert complete is True
     assert len(rows) == 2
     assert rows[0]["slug"].startswith("2026/")
+    assert rows[1]["date"] == datetime(2026, 9, 16, tzinfo=timezone.utc)
 
 
 def test_collect_deduplicates():
@@ -92,7 +93,7 @@ def test_old_rows_stop_pagination():
         xrpl_source(lookback_days=30), http=FakeHttp([html_response(old)]), now=lambda: STAMP,
     ).collect()
     assert result.status == "empty"
-    assert len(result.pagination["pages_checked"]) if False else 1 == 1
+    assert result.pagination["pages_checked"] == 1
 
 
 def test_malformed_page_fails_closed():
