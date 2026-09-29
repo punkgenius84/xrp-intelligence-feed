@@ -226,7 +226,7 @@ class WhiteHouseActionsDiscovery:
         self.now = now
 
     def _page_url(self, page: int) -> str:
-        return WHITE_HOUSE_URL if page == 1 else f"{WHITE_HOUSE_URL}?paged={page}"
+        return WHITE_HOUSE_URL if page == 1 else f"{WHITE_HOUSE_URL}page/{page}/"
 
     def _candidate(
         self, row: dict[str, Any], listing_url: str, fetched_at: datetime,
