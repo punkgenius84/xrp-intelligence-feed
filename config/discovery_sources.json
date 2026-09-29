@@ -68,6 +68,18 @@
       "max_items": 100
     },
     {
+      "source_id": "ripple-press-center",
+      "name": "Ripple",
+      "authority_tier": 1,
+      "category": "company",
+      "discovery_method": "ripple_press_center_html",
+      "source_url": "https://ripple.com/press-releases/",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "max_pages": 4
+    },
+    {
       "source_id": "federal-register-api",
       "name": "Federal Register",
       "authority_tier": 1,
