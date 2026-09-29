@@ -52,7 +52,10 @@ def validate_ripple_source(source: object) -> dict[str, Any]:
 def _official_url(value: object) -> tuple[str, str] | None:
     if not isinstance(value, str) or not value.strip():
         return None
-    parts = urlsplit(value.strip())
+    raw = value.strip()
+    if raw.startswith("/"):
+        raw = f"https://{RIPPLE_HOST}{raw}"
+    parts = urlsplit(raw)
     if (
         parts.scheme.lower() != "https"
         or parts.hostname is None
@@ -264,7 +267,7 @@ class RipplePressCenterDiscovery:
                 break
             if response.status_code == 304:
                 state_updates[request_id] = {
-                    key: response.headers.get(key, validators.get(key, ""))
+                    key: response.headers.get(key) or response.headers.get(key.replace("_", "-")) or validators.get(key, "")
                     for key in ("etag", "last_modified")
                     if response.headers.get(key, validators.get(key, ""))
                 }
