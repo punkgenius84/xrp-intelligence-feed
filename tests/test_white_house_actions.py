@@ -170,7 +170,11 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
     from storage.database import JsonState
     from storage.discovery_state import JsonDiscoveryState
 
-    relevant_html = FIXTURE.read_bytes().replace(\n        b"Integrating Financial Technology Innovation into Regulatory Frameworks",\n        b"Ripple Payments stablecoin regulatory framework",\n    )\n    http = FakeHttp([html_response(relevant_html, headers={"content-type": "text/html"})])
+    relevant_html = FIXTURE.read_bytes().replace(
+        b"Integrating Financial Technology Innovation into Regulatory Frameworks",
+        b"Ripple Payments stablecoin regulatory framework",
+    )
+    http = FakeHttp([html_response(relevant_html, headers={"content-type": "text/html"})])
     monkeypatch.setattr(
         main, "collect_source",
         lambda source, state: WhiteHouseActionsDiscovery(source, http=http, now=lambda: STAMP).collect(state),
