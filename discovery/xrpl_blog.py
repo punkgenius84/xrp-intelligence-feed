@@ -258,6 +258,8 @@ class XRPLBlogDiscovery:
                 if existing is not None:
                     if existing.url != candidate.url or existing.title != candidate.title:
                         errors.append(f"XRPL: conflicting duplicate slug {candidate.source_native_id}")
+                    else:
+                        errors.append(f"XRPL: duplicate article {candidate.source_native_id}")
                     continue
                 candidates[candidate.source_native_id] = candidate
             if len(candidates) >= self.source["max_items"]:
