@@ -25,7 +25,7 @@ _DATE_RE = re.compile(
     re.IGNORECASE,
 )
 _LINK_RE = re.compile(
-    r'<a[^>]+href=["\'](?P<href>/blog/\d{4}/[^"\']+)["\'][^>]*>(?P<title>.*?)</a>',
+    r'<a[^>]+href=["\'](?P<href>[^"\']+)["\'][^>]*>(?P<title>.*?)</a>',
     re.IGNORECASE | re.DOTALL,
 )
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -125,6 +125,8 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 href if href.lower().startswith(("https://", "http://")) else f"https://{XRPL_HOST}{href}"
             )
             if safe is None:
+                if href.lower().startswith(("http://", "https://")):
+                    continue
                 raise ValueError("invalid official XRPL blog URL")
             start = max(0, match.start() - 1200)
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
