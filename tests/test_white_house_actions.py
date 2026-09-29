@@ -101,7 +101,7 @@ def test_collect_filters_lookback_and_deduplicates():
         html_response(payload, headers={"content-type": "text/html", "etag": '"page2"'}),
     ])
     result = WhiteHouseActionsDiscovery(
-        wh_source(lookback_days=120, max_pages=2), http=http, now=lambda: STAMP,
+        wh_source(lookback_days=180, max_pages=2), http=http, now=lambda: STAMP,
     ).collect()
     assert result.status == "success"
     assert len(result.candidates) == 2
