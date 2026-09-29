@@ -153,9 +153,13 @@ class _ActionParser(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "a" and self._anchor is not None and self._article is not None:
-            safe = _official_action_url(self._anchor["href"])
+            href = self._anchor["href"]
+            safe = _official_action_url(href)
             if safe:
                 self._article["links"].append((safe[0], safe[1], _clean(self._anchor["text"])))
+            elif href.strip().lower().startswith(("http://", "https://")):
+                # External links are expected on public indexes; ignore them.
+                pass
             self._anchor = None
         if tag == "time" and self._time is not None and self._article is not None:
             self._article["date"] = self._time["datetime"] or self._time["text"]
