@@ -28,6 +28,7 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS"})
+    government = bool(entities & {"White House", "DOJ", "Treasury"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",
@@ -43,6 +44,8 @@ def _classify(item, combined: str) -> list[str]:
     ))
     if regulatory and action and digital_or_payment:
         categories.append("relevant_regulatory_digital_asset_payments")
+    if government and action and digital_or_payment:
+        categories.append("government_digital_asset_action")
 
     broad_tokenization = any(_contains(combined, term) for term in (
         "tokenization", "tokenisation", "tokenized", "tokenised"))
@@ -61,7 +64,8 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     categories = _classify(item, combined)
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
     regulatory_relevance = "relevant_regulatory_digital_asset_payments" in categories
-    topical = direct or regulatory_relevance or "ripple_payments_network" in categories
+    government_relevance = "government_digital_asset_action" in categories
+    topical = direct or regulatory_relevance or government_relevance or "ripple_payments_network" in categories
 
     score = 0
     reasons: list[str] = []

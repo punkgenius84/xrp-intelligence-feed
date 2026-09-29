@@ -1,5 +1,37 @@
 {
-  "high": ["XRP", "XRPL", "Ripple", "RLUSD"],
-  "medium": ["SEC", "CFTC", "stablecoin", "ETF", "settlement", "payments"],
-  "context": ["ODL", "Ripple Payments", "RippleNet", "tokenization", "tokenisation", "custody", "licensing", "GENIUS Act", "BSA", "AML/CFT", "virtual currency", "payment stablecoin", "digital asset service provider"]
+  "high": [
+    "XRP",
+    "XRPL",
+    "Ripple",
+    "RLUSD"
+  ],
+  "medium": [
+    "SEC",
+    "CFTC",
+    "stablecoin",
+    "ETF",
+    "settlement",
+    "payments",
+    "cryptocurrency",
+    "digital asset",
+    "blockchain"
+  ],
+  "context": [
+    "ODL",
+    "Ripple Payments",
+    "RippleNet",
+    "tokenization",
+    "tokenisation",
+    "custody",
+    "licensing",
+    "GENIUS Act",
+    "BSA",
+    "AML/CFT",
+    "virtual currency",
+    "payment stablecoin",
+    "digital asset service provider",
+    "money laundering",
+    "cybercrime",
+    "sanctions"
+  ]
 }
