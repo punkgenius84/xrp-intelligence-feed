@@ -80,6 +80,18 @@
       "max_pages": 4
     },
     {
+      "source_id": "xrpl-community-blog",
+      "name": "XRP Ledger Community",
+      "authority_tier": 1,
+      "category": "technology",
+      "discovery_method": "xrpl_blog_html",
+      "source_url": "https://xrpl.org/blog",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "max_pages": 4
+    },
+    {
       "source_id": "federal-register-api",
       "name": "Federal Register",
       "authority_tier": 1,
