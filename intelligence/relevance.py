@@ -44,6 +44,8 @@ def _classify(item, combined: str) -> list[str]:
     ))
     if regulatory and action and digital_or_payment:
         categories.append("relevant_regulatory_digital_asset_payments")
+    if government:
+        categories.append("government")
     if government and action and digital_or_payment:
         categories.append("government_digital_asset_action")
 
