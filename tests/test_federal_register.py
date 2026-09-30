@@ -458,9 +458,9 @@ def test_federal_register_candidate_flows_through_existing_intelligence_pipeline
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
 
-    assert failures == []
-    assert collected == fresh
-    candidate = result.fresh[0]
+    assert result.failures == []
+    assert result.collected == fresh
+    candidate = result.result.fresh[0]
     assert "Ripple Payments stablecoin" in candidate.summary
     assert "Federal Reserve" in candidate.detected_entities
     assert "Ripple" in candidate.detected_entities
