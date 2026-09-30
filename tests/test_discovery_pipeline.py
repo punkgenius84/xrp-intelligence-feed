@@ -167,7 +167,10 @@ def test_partial_federal_register_result_without_completed_progress_does_not_per
         sources=[], state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
     )
-    assert "federal-register-api" not in discovery.load()["sources"]
+    saved = discovery.load()["sources"]["federal-register-api"]
+    assert "pagination" not in saved
+    assert saved["health"]["last_status"] == "partial"
+    assert saved["health"]["consecutive_failures"] == 1
 
 
 def test_ofac_pagination_only_update_persists_through_pipeline(tmp_path, monkeypatch):
