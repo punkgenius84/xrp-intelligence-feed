@@ -97,7 +97,7 @@ def test_pipeline_scores_circle_stablecoin_payment_signal(tmp_path):
     original = main.collect_source
     main.collect_source = monkey
     try:
-        _, fresh, failures = main.run_pipeline(
+        result = main.run_pipeline(
             sources=[],
             state=JsonState(str(tmp_path / "seen.json")),
             discovery_sources=[source()],
@@ -108,9 +108,9 @@ def test_pipeline_scores_circle_stablecoin_payment_signal(tmp_path):
 
     assert result.failures == []
     assert len(result.fresh) == 2
-    assert all(item.source_quality == "primary" for item in fresh)
-    relevant = next(item for item in fresh if "stablecoin payment" in item.title.casefold())
-    generic = next(item for item in fresh if "Arc Mainnet" in item.title)
+    assert all(item.source_quality == "primary" for item in result.fresh)
+    relevant = next(item for item in result.fresh if "stablecoin payment" in item.title.casefold())
+    generic = next(item for item in result.fresh if "Arc Mainnet" in item.title)
     assert "institutional_digital_asset_payment" in relevant.relevance_categories
     assert relevant.relevance_score >= 35
     assert generic.relevance_score == 0

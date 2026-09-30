@@ -169,8 +169,8 @@ def test_pipeline_relevance_forwards_crypto_doj_signal(tmp_path, monkeypatch):
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
     assert result.failures == []
-    assert len(collected) == 2
+    assert len(result.collected) == 2
     assert len(result.fresh) == 2
-    crypto = result.result.fresh[0]
+    crypto = result.fresh[0]
     assert "government" in crypto.relevance_categories
     assert crypto.relevance_score > 0

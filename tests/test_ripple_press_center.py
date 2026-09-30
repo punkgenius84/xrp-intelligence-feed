@@ -142,10 +142,10 @@ def test_pipeline_flows_ripple_signal_into_existing_relevance(tmp_path, monkeypa
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
     assert result.failures == []
-    assert len(collected) == 2
+    assert len(result.collected) == 2
     assert len(result.fresh) == 2
-    assert all("direct_ripple" in item.relevance_categories for item in fresh)
-    assert all(item.relevance_score >= 35 for item in fresh)
+    assert all("direct_ripple" in item.relevance_categories for item in result.fresh)
+    assert all(item.relevance_score >= 35 for item in result.fresh)
 
 
 def test_external_url_never_becomes_candidate():

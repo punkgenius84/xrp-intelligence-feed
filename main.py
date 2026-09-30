@@ -6,8 +6,8 @@ from html.parser import HTMLParser
 
 from collectors.rss import FeedCollectionError, RSSCollector
 from discovery.base import DiscoveryResult
-from discovery.dispatch import (DiscoveryRegistryError, collect_source,
-                                load_discovery_sources)
+from discovery.dispatch import (DiscoveryDispatchError, DiscoveryRegistryError,
+                                collect_source, load_discovery_sources)
 from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
@@ -15,7 +15,7 @@ from intelligence.deduplication import deduplicate
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
-from sources.registry import enabled_sources
+from sources.registry import SourceRegistryError, enabled_sources
 from storage.database import JsonState, StateFileError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 
@@ -197,8 +197,10 @@ def main() -> None:
             result = run_pipeline()
     except (StateFileError, DiscoveryStateError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
-    except DiscoveryRegistryError as exc:
+    except (DiscoveryRegistryError, DiscoveryDispatchError) as exc:
         raise SystemExit(f"Discovery configuration error: {exc}") from exc
+    except SourceRegistryError as exc:
+        raise SystemExit(f"Source configuration error: {exc}") from exc
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
     publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
@@ -217,10 +219,10 @@ def main() -> None:
             print(f"Source {report.source_name}: {report.status} ({report.item_count} items)"
                   + (f"; HTTP {report.http_status}" if report.http_status else "")
                   + (f"; {report.error}" if report.error else ""))
-    for result in discovery_results:
-        print(f"Discovery source {result.source_id}: {result.status} "
-              f"({len(result.candidates)} candidates)")
-        health = result.health.get(result.source_id, {})
+    for discovery_result in discovery_results:
+        print(f"Discovery source {discovery_result.source_id}: {discovery_result.status} "
+              f"({len(discovery_result.candidates)} candidates)")
+        health = result.health.get(discovery_result.source_id, {})
         if health:
             print(f"  Health: failures={health.get('consecutive_failures', 0)} "
                   f"empty={health.get('consecutive_empty', 0)}")

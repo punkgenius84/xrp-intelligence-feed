@@ -5,6 +5,8 @@ import pytest
 import requests
 
 import main
+from discovery.dispatch import DiscoveryDispatchError, DiscoveryRegistryError
+from sources.registry import SourceRegistryError
 from discord.publisher import (DEFAULT_MAX_POSTS, DiscordSettings, format_message, publish,
                                settings_from_env)
 from discord.webhook import DiscordError, DiscordWebhook, is_valid_webhook_url
@@ -284,6 +286,25 @@ def test_main_publishes_only_items_at_or_above_publish_score(monkeypatch):
     assert captured["settings"].webhook_url == URL
 
 
+def test_main_prints_discovery_health_and_still_publishes(monkeypatch, capsys):
+    # Regression: the discovery print loop once rebound `result`, so the first discovery source
+    # raised AttributeError (DiscoveryResult has no .health) before publish() was reached.
+    relevant = item("Relevant story here", 50)
+    discovery = main.DiscoveryResult("sec-edgar", "sec_edgar", "ok")
+    health = {"sec-edgar": {"consecutive_failures": 2, "consecutive_empty": 1}}
+    captured = {}
+    monkeypatch.setattr(main, "run_pipeline", lambda: main.PipelineResult(
+        fresh=[relevant], discovery_results=[discovery], health=health))
+    monkeypatch.setattr(main, "publish", lambda items, settings: captured.update(items=items))
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
+    monkeypatch.delenv("DISCORD_DRY_RUN", raising=False)
+    main.main()
+    out = capsys.readouterr().out
+    assert "Discovery source sec-edgar: ok" in out
+    assert "Health: failures=2 empty=1" in out
+    assert captured["items"] == [relevant]
+
+
 def test_main_rejects_bad_discord_settings_before_collecting_anything(monkeypatch):
     def must_not_run(*args, **kwargs):
         raise AssertionError("pipeline must not run with invalid Discord settings")
@@ -292,6 +313,22 @@ def test_main_rejects_bad_discord_settings_before_collecting_anything(monkeypatc
     monkeypatch.setenv("DISCORD_MAX_POSTS", "banana")
     with pytest.raises(SystemExit, match="Discord configuration error"):
         main.main()
+
+
+@pytest.mark.parametrize("error, message", [
+    (SourceRegistryError("bad source entry"), "Source configuration error: bad source entry"),
+    (DiscoveryDispatchError("no such method"), "Discovery configuration error: no such method"),
+    (DiscoveryRegistryError("bad discovery entry"), "Discovery configuration error: bad discovery entry"),
+])
+def test_main_turns_config_errors_into_clean_exits(monkeypatch, error, message):
+    def boom():
+        raise error
+
+    monkeypatch.setattr(main, "run_pipeline", boom)
+    monkeypatch.delenv("DISCORD_DRY_RUN", raising=False)
+    with pytest.raises(SystemExit) as excinfo:
+        main.main()
+    assert str(excinfo.value) == message
 
 
 def test_dry_run_hands_the_pipeline_read_only_state(monkeypatch, tmp_path):

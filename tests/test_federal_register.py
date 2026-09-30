@@ -459,8 +459,8 @@ def test_federal_register_candidate_flows_through_existing_intelligence_pipeline
     )
 
     assert result.failures == []
-    assert result.collected == fresh
-    candidate = result.result.fresh[0]
+    assert result.collected == result.fresh
+    candidate = result.fresh[0]
     assert "Ripple Payments stablecoin" in candidate.summary
     assert "Federal Reserve" in candidate.detected_entities
     assert "Ripple" in candidate.detected_entities

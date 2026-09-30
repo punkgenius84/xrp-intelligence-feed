@@ -170,7 +170,8 @@ def test_partial_federal_register_result_without_completed_progress_does_not_per
     saved = discovery.load()["sources"]["federal-register-api"]
     assert "pagination" not in saved
     assert saved["health"]["last_status"] == "partial"
-    assert saved["health"]["consecutive_failures"] == 1
+    assert saved["health"]["consecutive_failures"] == 0
+    assert saved["health"]["consecutive_empty"] == 1
 
 
 def test_ofac_pagination_only_update_persists_through_pipeline(tmp_path, monkeypatch):

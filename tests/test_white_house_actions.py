@@ -186,16 +186,16 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
     assert result.failures == []
-    assert len(collected) == 2
+    assert len(result.collected) == 2
     assert len(result.fresh) == 2
-    assert all(item.source_quality == "primary" for item in fresh)
-    assert all(item.relevance_categories for item in fresh)
+    assert all(item.source_quality == "primary" for item in result.fresh)
+    assert all(item.relevance_categories for item in result.fresh)
 
     # The fixture intentionally contains one topical Ripple candidate and one
     # government/cybercrime candidate. The shared pipeline must process both,
     # while relevance scoring should only mark the topical candidate relevant.
-    relevant = next(item for item in fresh if "Ripple Payments" in item.title)
-    generic = next(item for item in fresh if "Transnational Cyber-Enabled Crime" in item.title)
+    relevant = next(item for item in result.fresh if "Ripple Payments" in item.title)
+    generic = next(item for item in result.fresh if "Transnational Cyber-Enabled Crime" in item.title)
     assert relevant.relevance_score > 0
     assert relevant.relevance_categories
     assert generic.relevance_score == 0
