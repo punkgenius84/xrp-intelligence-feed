@@ -127,8 +127,8 @@ def test_discovery_state_save_failure_does_not_permanently_mark_candidate_seen(
         raise AssertionError("expected discovery-state write failure")
 
     assert seen.load() == set()
-    _, fresh, _ = main.run_pipeline(**args)
-    assert result.fresh == [candidate]
+    retry_result = main.run_pipeline(**args)
+    assert retry_result.fresh == [candidate]
     assert seen.load()
 
 
