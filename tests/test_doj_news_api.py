@@ -162,15 +162,15 @@ def test_pipeline_relevance_forwards_crypto_doj_signal(tmp_path, monkeypatch):
         main, "collect_source",
         lambda source, state: DOJNewsAPIDiscovery(source, http=http, now=lambda: STAMP).collect(state),
     )
-    collected, fresh, failures = main.run_pipeline(
+    result = main.run_pipeline(
         sources=[],
         state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[doj_source(search_terms=["cryptocurrency"])],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
-    assert failures == []
+    assert result.failures == []
     assert len(collected) == 2
-    assert len(fresh) == 2
-    crypto = fresh[0]
+    assert len(result.fresh) == 2
+    crypto = result.result.fresh[0]
     assert "government" in crypto.relevance_categories
     assert crypto.relevance_score > 0

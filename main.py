@@ -1,6 +1,7 @@
 import html
 import re
 import unicodedata
+from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
 from collectors.rss import FeedCollectionError, RSSCollector
@@ -17,6 +18,17 @@ from intelligence.source_quality import classify_source_quality
 from sources.registry import enabled_sources
 from storage.database import JsonState, StateFileError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
+
+
+@dataclass(slots=True)
+class PipelineResult:
+    collected: list = field(default_factory=list)
+    fresh: list = field(default_factory=list)
+    failures: list[str] = field(default_factory=list)
+    reports: list = field(default_factory=list)
+    discovery_results: list[DiscoveryResult] = field(default_factory=list)
+    health: dict[str, dict] = field(default_factory=dict)
+
 
 
 class _PlainText(HTMLParser):
@@ -44,7 +56,7 @@ def normalize_item(item):
     return item
 
 
-def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None):
+def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
 
@@ -147,9 +159,12 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     # enter the shared seen set. If that save fails, a later run can rediscover them.
     # RSS-only runs retain the same save behavior and state shape as v0.2.
     state.save(seen)
-    run_pipeline.last_reports = reports
-    run_pipeline.last_discovery_results = discovery_results
-    return collected, fresh, failures
+    health = {
+        result.source_id: discovery_state_value["sources"][result.source_id].get("health", {})
+        for result in discovery_results
+        if discovery_state_value is not None
+    }
+    return PipelineResult(collected, fresh, failures, reports, discovery_results, health)
 
 
 class _NoSaveState:
@@ -176,16 +191,16 @@ def main() -> None:
     try:
         if discord_settings.dry_run:
             # A preview must not mark items as seen, or the live run would find nothing new.
-            collected, fresh, failures = run_pipeline(
+            result = run_pipeline(
                 state=_NoSaveState(JsonState()), discovery_state=_NoSaveState(JsonDiscoveryState()))
         else:
-            collected, fresh, failures = run_pipeline()
+            result = run_pipeline()
     except (StateFileError, DiscoveryStateError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except DiscoveryRegistryError as exc:
         raise SystemExit(f"Discovery configuration error: {exc}") from exc
-    reports = getattr(run_pipeline, "last_reports", [])
-    discovery_results = getattr(run_pipeline, "last_discovery_results", [])
+    collected, fresh, failures = result.collected, result.fresh, result.failures
+    reports, discovery_results = result.reports, result.discovery_results
     publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
     relevant = [item for item in fresh if item.relevance_score >= publish_score]
     print(f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)}")
@@ -205,7 +220,7 @@ def main() -> None:
     for result in discovery_results:
         print(f"Discovery source {result.source_id}: {result.status} "
               f"({len(result.candidates)} candidates)")
-        health = (discovery_state_value or {}).get("sources", {}).get(result.source_id, {}).get("health", {})
+        health = result.health.get(result.source_id, {})
         if health:
             print(f"  Health: failures={health.get('consecutive_failures', 0)} "
                   f"empty={health.get('consecutive_empty', 0)}")

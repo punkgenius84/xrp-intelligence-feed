@@ -275,7 +275,7 @@ def test_failure_lines_never_contain_the_webhook_token():
 def test_main_publishes_only_items_at_or_above_publish_score(monkeypatch):
     relevant, weak = item("Relevant story here", 50), item("Weak story here", 10)
     captured = {}
-    monkeypatch.setattr(main, "run_pipeline", lambda: ([], [relevant, weak], []))
+    monkeypatch.setattr(main, "run_pipeline", lambda: main.PipelineResult(fresh=[relevant, weak]))
     monkeypatch.setattr(main, "publish", lambda items, settings: captured.update(items=items, settings=settings))
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
     monkeypatch.delenv("DISCORD_DRY_RUN", raising=False)
@@ -299,7 +299,7 @@ def test_dry_run_hands_the_pipeline_read_only_state(monkeypatch, tmp_path):
 
     def fake_pipeline(**kwargs):
         captured.update(kwargs)
-        return [], [], []
+        return main.PipelineResult()
 
     monkeypatch.setattr(main, "run_pipeline", fake_pipeline)
     monkeypatch.setattr(main, "publish", lambda items, settings: None)

@@ -20,8 +20,8 @@ def test_health_tracks_failures_and_resets_after_success(tmp_path):
         "last_status": "partial",
         "last_candidate_count": 2,
         "last_error": "one malformed item",
-        "consecutive_failures": 2,
-        "consecutive_empty": 0,
+        "consecutive_failures": 0,
+        "consecutive_empty": 1,
     }
 
     JsonDiscoveryState.record_health(state, "sec", STAMP, "success", 4)
@@ -58,3 +58,12 @@ def test_health_rejects_unknown_or_invalid_fields(tmp_path):
     )
     with pytest.raises(DiscoveryStateError, match="invalid health"):
         JsonDiscoveryState(path).load()
+
+
+def test_partial_does_not_increment_hard_failure_streak():
+    state = {"schema_version": 1, "sources": {}, "candidates": {}}
+    JsonDiscoveryState.record_health(state, "federal-register", STAMP, "partial", 3, "one term failed")
+    JsonDiscoveryState.record_health(state, "federal-register", STAMP, "partial", 2, "another term failed")
+    health = state["sources"]["federal-register"]["health"]
+    assert health["consecutive_failures"] == 0
+    assert health["consecutive_empty"] == 2
