@@ -60,8 +60,7 @@ def _parse_date(value: object) -> datetime | None:
     match = _DATE_RE.search(value)
     if not match:
         return None
-    raw = match.group(0).replace(",", "")
-    if "/" in raw:
+    raw = match.group(0).replace(",", "").replace("Sept ", "Sep ")    if "/" in raw:
         formats = ("%m/%d/%Y",)
     elif re.match(r"^\d{1,2}\s", raw):
         formats = ("%d %B %Y", "%d %b %Y")
