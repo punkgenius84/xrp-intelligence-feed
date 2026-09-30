@@ -1,10 +1,27 @@
-# XRP Intelligence Feed — v0.4 Intelligence Discovery Feed
+# XRP Intelligence Feed — Intelligence Discovery Feed
 
 A free, modular XRP/XRPL source intelligence feed. No paid APIs, API keys, or AI services are required.
 
 ## Pipeline
 
 Enabled registry sources are collected as RSS, normalized into NewsItem, deduplicated against JSON state, entity-matched using configured aliases, classified by source authority tier, and deterministically scored for relevance. The relevance score describes topical relevance only; it does not predict XRP price or market direction.
+
+
+## Source health
+
+Discovery sources persist lightweight health telemetry in `state/discovery.json`: last attempt/status, candidate count, last error, consecutive hard failures, and consecutive empty/partial runs. A `partial` result is not counted as a hard failure streak; this avoids treating bounded multi-request sources as completely unavailable when only one request had trouble. Health is returned as part of the pipeline result and printed in normal runs.
+
+## Pipeline result model
+
+The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, and discovery health. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
+
+## Institutional coverage
+
+The discovery registry includes official institutional sources for Citi, Circle, Mastercard, Coinbase, Swift, Visa, DBS, J.P. Morgan/Kinexys, and BNY. Institutional candidates use the same normalization, entity detection, source-quality, relevance, deduplication, and Discord publishing path as government and XRPL sources. The feed favors primary-source evidence and does not treat an institution's involvement as proof that XRP is being used.
+
+## CI
+
+Every push and pull request to `main` runs the full pytest suite on Python 3.12 before changes are merged. Production scheduled runs also execute the test suite before collection and publishing.
 
 ## Discord posting
 
@@ -20,7 +37,7 @@ Each post shows the headline, source, score, matched entities, up to two scoring
 
 On GitHub Actions, add the webhook as the repository secret `DISCORD_INTELLIGENCE_DISCORD_WEBHOOK`; the workflow passes it to the program as `DISCORD_WEBHOOK_URL`. Manual runs have a `dry_run` checkbox that defaults to on; untick it to post for real. Dry runs do not save the state cache.
 
-## v0.3 discovery foundation
+## Discovery foundation
 
 The discovery package provides a bounded HTTPS client, a small strategy interface, candidate normalization, dispatch, and a separate fail-closed JSON state file. `DiscoveryCandidate` extends the existing `NewsItem`, so discovery results use the same entity detection, source-quality classification, relevance scoring, and deduplication path rather than creating a second intelligence pipeline.
 
