@@ -138,7 +138,7 @@ def test_pipeline_scores_xrpl_primary_source(tmp_path, monkeypatch):
         discovery_sources=[xrpl_source(max_pages=1)],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
-    assert failures == []
+    assert result.failures == []
     assert len(collected) == 2
     assert len(result.fresh) == 2
     assert all("direct_xrp_xrpl" in item.relevance_categories for item in fresh)
