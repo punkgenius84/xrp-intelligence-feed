@@ -179,7 +179,7 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
         main, "collect_source",
         lambda source, state: WhiteHouseActionsDiscovery(source, http=http, now=lambda: STAMP).collect(state),
     )
-    collected, fresh, failures = main.run_pipeline(
+    result = main.run_pipeline(
         sources=[],
         state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[wh_source(max_pages=1, lookback_days=180)],
@@ -187,7 +187,7 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
     )
     assert failures == []
     assert len(collected) == 2
-    assert len(fresh) == 2
+    assert len(result.fresh) == 2
     assert all(item.source_quality == "primary" for item in fresh)
     assert all(item.relevance_categories for item in fresh)
 
