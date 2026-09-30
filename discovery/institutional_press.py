@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 import re
 from typing import Any, Callable
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 from discovery.base import DiscoveryResult
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
@@ -18,7 +18,7 @@ _DATE_RE = re.compile(
     r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
     r"Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b"
     r"|\b\d{1,2}/\d{1,2}/\d{4}\b"
-    r"|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b",
+    r"|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\b",
     re.IGNORECASE,
 )
 
@@ -92,6 +92,11 @@ def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] |
     ):
         return None
     canonical = f"https://{parts.hostname}{parts.path.rstrip('/')}/"
+    query_param = source.get("native_id_query_param")
+    if isinstance(query_param, str) and query_param:
+        values = parse_qs(parts.query).get(query_param, [])
+        if values:
+            return raw, f"{parts.path.casefold()}?{query_param}={values[0]}"
     return canonical, parts.path.casefold()
 
 
@@ -120,6 +125,10 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         raise ValueError("allowed_hosts must be a non-empty list")
     if any(not isinstance(host, str) or not host.strip() for host in source["allowed_hosts"]):
         raise ValueError("allowed_hosts must contain non-empty strings")
+    if "native_id_query_param" in source and (
+        not isinstance(source["native_id_query_param"], str) or not source["native_id_query_param"].strip()
+    ):
+        raise ValueError("native_id_query_param must be a non-empty string when provided")
     return source
 
 
