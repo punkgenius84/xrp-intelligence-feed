@@ -40,6 +40,13 @@
     "Mastercard": [
       "Mastercard",
       "Mastercard Digital Assets"
+    ],
+    "Swift": [
+      "Swift",
+      "SWIFT"
+    ],
+    "Visa": [
+      "Visa"
     ]
   },
   "regulators": {
