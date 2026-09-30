@@ -17,7 +17,8 @@ _MAX_ITEMS_HARD = 100
 _DATE_RE = re.compile(
     r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
     r"Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b"
-    r"|\b\d{1,2}/\d{1,2}/\d{4}\b",
+    r"|\b\d{1,2}/\d{1,2}/\d{4}\b"
+    r"|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b",
     re.IGNORECASE,
 )
 
@@ -60,7 +61,12 @@ def _parse_date(value: object) -> datetime | None:
     if not match:
         return None
     raw = match.group(0).replace(",", "")
-    formats = ("%m/%d/%Y",) if "/" in raw else ("%B %d %Y", "%b %d %Y")
+    if "/" in raw:
+        formats = ("%m/%d/%Y",)
+    elif re.match(r"^\d{1,2}\s", raw):
+        formats = ("%d %B %Y", "%d %b %Y")
+    else:
+        formats = ("%B %d %Y", "%b %d %Y")
     for fmt in formats:
         try:
             return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
