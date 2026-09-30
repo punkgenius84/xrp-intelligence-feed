@@ -56,6 +56,19 @@ def normalize_item(item):
     return item
 
 
+# Pagination keys that hold a resumable cursor. Other pagination entries (page_fetches,
+# requests_made, ...) are per-run telemetry and must not be persisted on their own.
+CURSOR_PAGINATION_KEYS = (
+    "federal_register_terms", "ofac_recent_actions", "fincen_press_releases",
+    "treasury_press_releases", "fdic_press_releases",
+)
+
+
+def _has_cursor_progress(pagination: dict) -> bool:
+    return any(isinstance(pagination.get(key), dict) and bool(pagination.get(key))
+               for key in CURSOR_PAGINATION_KEYS)
+
+
 def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -121,17 +134,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         score_relevance(item)
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            federal_register_progress = result.pagination.get("federal_register_terms")
-            ofac_progress = result.pagination.get("ofac_recent_actions")
-            fincen_progress = result.pagination.get("fincen_press_releases")
-            treasury_progress = result.pagination.get("treasury_press_releases")
-            fdic_progress = result.pagination.get("fdic_press_releases")
-            if result.state_updates or (isinstance(federal_register_progress, dict)
-                                        and bool(federal_register_progress)) or (
-                    isinstance(ofac_progress, dict) and bool(ofac_progress)) or (
-                    isinstance(fincen_progress, dict) and bool(fincen_progress)) or (
-                    isinstance(treasury_progress, dict) and bool(treasury_progress)) or (
-                    isinstance(fdic_progress, dict) and bool(fdic_progress)):
+            if result.state_updates or _has_cursor_progress(result.pagination):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
@@ -160,7 +163,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     # RSS-only runs retain the same save behavior and state shape as v0.2.
     state.save(seen)
     health = {
-        result.source_id: discovery_state_value["sources"][result.source_id].get("health", {})
+        result.source_id: discovery_state_value["sources"].get(result.source_id, {}).get("health", {})
         for result in discovery_results
         if discovery_state_value is not None
     }
