@@ -267,6 +267,37 @@
         "coinbase.com"
       ],
       "article_path_regex": "/blog/[^/?#]+"
+    },
+    {
+      "source_id": "swift-press-releases",
+      "name": "Swift",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.swift.com/news-events/press-releases?page=0",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.swift.com",
+        "swift.com"
+      ],
+      "article_path_regex": "/news-events/press-releases/[^/?#]+"
+    },
+    {
+      "source_id": "visa-press-releases",
+      "name": "Visa",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "usa.visa.com"
+      ],
+      "article_path_regex": "/about-visa/newsroom/press-releases\\.releaseId\\.[^/?#]+"
     }
   ]
 }
