@@ -117,26 +117,27 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("institutional response is not valid UTF-8") from exc
-    parser = _LinkParser()
-    parser.feed(text)
-    parser.close()
-    if not parser.links:
+
+    matches = list(re.finditer(
+        r'<a[^>]+href=["\\'](?P<href>[^"\\']+)["\\'][^>]*>(?P<title>.*?)</a>',
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    if not matches:
         raise ValueError("institutional response is missing links")
 
     rows: list[dict[str, Any]] = []
     complete = True
-    for index, link in enumerate(parser.links):
-        safe = _official_article(source, link["href"])
+    for index, match in enumerate(matches):
+        safe = _official_article(source, match.group("href"))
         if safe is None:
             continue
-        start = max(0, index - 12)
-        end = min(len(parser.links), index + 13)
-        window = " ".join(item["text"] for item in parser.links[start:end])
-        title = _clean(link["text"])
+        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
+        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+        window = re.sub(r"<[^>]+>", " ", text[previous:following])
+        window = _clean(window)
+        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         published = _parse_date(window)
         if not title or published is None:
-            # Some sites render the date outside the anchor. Use the raw HTML
-            # only as a bounded fallback around the anchor's text position.
             complete = False
             continue
         rows.append({
