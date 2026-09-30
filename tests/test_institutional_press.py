@@ -107,7 +107,7 @@ def test_pipeline_scores_circle_stablecoin_payment_signal(tmp_path):
         main.collect_source = original
 
     assert failures == []
-    assert len(fresh) == 2
+    assert len(result.fresh) == 2
     assert all(item.source_quality == "primary" for item in fresh)
     relevant = next(item for item in fresh if "stablecoin payment" in item.title.casefold())
     generic = next(item for item in fresh if "Arc Mainnet" in item.title)
