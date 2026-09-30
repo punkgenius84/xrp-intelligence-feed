@@ -177,8 +177,8 @@ class JsonDiscoveryState:
         previous = source.get("health", {})
         previous_failures = previous.get("consecutive_failures", 0) if isinstance(previous, dict) else 0
         previous_empty = previous.get("consecutive_empty", 0) if isinstance(previous, dict) else 0
-        failure = status in {"failed", "partial"}
-        empty = status == "empty"
+        failure = status == "failed"
+        empty = status in {"empty", "partial"}
         source["health"] = {
             "last_attempt": attempted_at.astimezone(timezone.utc).isoformat(),
             "last_status": status,
