@@ -105,6 +105,12 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         reasons.append(f"primary source authority for relevant topic (+{points})")
         signals.append("source_quality:primary")
 
+    if institutional_relevance and item.source_quality == "primary":
+        points = weights["institutional_source_bonus"]
+        score += points
+        reasons.append(f"institutional source relevance bonus (+{points})")
+        signals.append("source_quality:institutional")
+
     if direct and len(item.detected_entities) > 1:
         points = weights["multiple_entity_bonus"]
         score += points
