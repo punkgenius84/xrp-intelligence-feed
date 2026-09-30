@@ -15,8 +15,8 @@ from storage.discovery_state import JsonDiscoveryState
 METHOD = "institutional_press_html"
 _MAX_ITEMS_HARD = 100
 _DATE_RE = re.compile(
-    r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)"
-    r"\s+\d{1,2},\s+\d{4}\b",
+    r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+    r"Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b",
     re.IGNORECASE,
 )
 
@@ -58,10 +58,13 @@ def _parse_date(value: object) -> datetime | None:
     match = _DATE_RE.search(value)
     if not match:
         return None
-    try:
-        return datetime.strptime(match.group(0), "%B %d, %Y").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+    raw = match.group(0).replace(",", "")
+    for fmt in ("%B %d %Y", "%b %d %Y"):
+        try:
+            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] | None:
@@ -119,7 +122,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         raise ValueError("institutional response is not valid UTF-8") from exc
 
     matches = list(re.finditer(
-        r'<a[^>]+href=["\\'](?P<href>[^"\\']+)["\\'][^>]*>(?P<title>.*?)</a>',
+        r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
     if not matches:
