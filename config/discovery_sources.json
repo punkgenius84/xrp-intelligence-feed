@@ -203,6 +203,70 @@
       "enabled": true,
       "lookback_days": 120,
       "max_items": 50
+    },
+    {
+      "source_id": "citi-press-releases",
+      "name": "Citi",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.citigroup.com/global/news/press-release",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.citigroup.com",
+        "citigroup.com"
+      ],
+      "article_path_regex": "/global/news/press-release/[^/?#]+"
+    },
+    {
+      "source_id": "circle-pressroom",
+      "name": "Circle",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.circle.com/pressroom",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.circle.com",
+        "circle.com"
+      ],
+      "article_path_regex": "/pressroom/[^/?#]+"
+    },
+    {
+      "source_id": "mastercard-press-releases",
+      "name": "Mastercard",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.mastercard.com/content/mccom/us/en/news-and-trends/press.html",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.mastercard.com",
+        "mastercard.com"
+      ],
+      "article_path_regex": "/us/en/news-and-trends/press/\\d{4}/[^/?#]+"
+    },
+    {
+      "source_id": "coinbase-blog",
+      "name": "Coinbase",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.coinbase.com/blog",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.coinbase.com",
+        "coinbase.com"
+      ],
+      "article_path_regex": "/blog/[^/?#]+"
     }
   ]
 }

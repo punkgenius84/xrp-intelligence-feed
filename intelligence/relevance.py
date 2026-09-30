@@ -29,11 +29,14 @@ def _classify(item, combined: str) -> list[str]:
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS"})
     government = bool(entities & {"White House", "DOJ", "Treasury"})
+    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
+        "launch", "launched", "expands", "expanded", "partner", "partners", "partnered",
+        "collaborate", "collaboration", "integrate", "integration",
         "designation", "designations", "designates", "removal", "removals", "delisting",
         "proposal", "proposals", "public comment", "request for comment", "requests comment",
     ))
@@ -48,6 +51,8 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("government")
     if government and action and digital_or_payment:
         categories.append("government_digital_asset_action")
+    if institutional and action and digital_or_payment:
+        categories.append("institutional_digital_asset_payment")
 
     broad_tokenization = any(_contains(combined, term) for term in (
         "tokenization", "tokenisation", "tokenized", "tokenised"))
@@ -67,7 +72,9 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
     regulatory_relevance = "relevant_regulatory_digital_asset_payments" in categories
     government_relevance = "government_digital_asset_action" in categories
-    topical = direct or regulatory_relevance or government_relevance or "ripple_payments_network" in categories
+    institutional_relevance = "institutional_digital_asset_payment" in categories
+    topical = (direct or regulatory_relevance or government_relevance
+               or institutional_relevance or "ripple_payments_network" in categories)
 
     score = 0
     reasons: list[str] = []
