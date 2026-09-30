@@ -137,3 +137,22 @@ def test_swift_and_visa_article_allowlists_and_dates():
     assert len(visa_rows) == 1
     assert swift_rows[0]["date"] == datetime(2026, 7, 9, tzinfo=timezone.utc)
     assert visa_rows[0]["date"] == datetime(2026, 6, 10, tzinfo=timezone.utc)
+
+
+def test_dbs_supports_path_and_query_identifiers():
+    fixture = Path(__file__).parent / "fixtures" / "dbs_newsroom.html"
+    dbs = source(
+        source_id="dbs-newsroom",
+        name="DBS",
+        source_url="https://www.dbs.com/media/default.page",
+        allowed_hosts=["www.dbs.com", "dbs.com"],
+        article_path_regex=r"(?:/newsroom/[^/?#]+|/NewsPrinter\.page)",
+        native_id_query_param="newsId",
+    )
+    rows, complete = _parse_page(dbs, fixture.read_bytes())
+    assert complete is True
+    assert len(rows) == 2
+    assert rows[0]["date"] == datetime(2026, 9, 10, tzinfo=timezone.utc)
+    assert rows[1]["date"] == datetime(2026, 9, 7, tzinfo=timezone.utc)
+    assert rows[0]["native_id"] != rows[1]["native_id"]
+    assert rows[1]["native_id"] == "/newsprinter.page?newsId=mt38s6jc"
