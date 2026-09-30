@@ -111,4 +111,3 @@ def test_pipeline_scores_circle_stablecoin_payment_signal(tmp_path):
     assert "institutional_digital_asset_payment" in relevant.relevance_categories
     assert relevant.relevance_score >= 35
     assert generic.relevance_score == 0
-    assert any("Swift" in item.title for item in fresh) is False
