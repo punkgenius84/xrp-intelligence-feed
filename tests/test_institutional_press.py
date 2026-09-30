@@ -50,7 +50,10 @@ def response(payload):
 def test_registered_institutional_sources_are_bounded():
     sources = load_discovery_sources()
     ids = {item["source_id"] for item in sources}
-    assert {"citi-press-releases", "circle-pressroom", "mastercard-press-releases", "coinbase-blog"} <= ids
+    assert {
+        "citi-press-releases", "circle-pressroom", "mastercard-press-releases",
+        "coinbase-blog", "jpmorgan-payments-newsroom", "bny-newsroom",
+    } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
 
 
@@ -156,3 +159,15 @@ def test_dbs_supports_path_and_query_identifiers():
     assert rows[1]["date"] == datetime(2026, 9, 7, tzinfo=timezone.utc)
     assert rows[0]["native_id"] != rows[1]["native_id"]
     assert rows[1]["native_id"] == "/newsprinter.page?newsId=mt38s6jc"
+
+
+def test_optional_native_id_query_parameter_is_valid():
+    dbs = source(
+        source_id="dbs-newsroom",
+        name="DBS",
+        source_url="https://www.dbs.com/media/default.page",
+        allowed_hosts=["www.dbs.com", "dbs.com"],
+        article_path_regex=r"(?:/newsroom/[^/?#]+|/NewsPrinter\.page)",
+        native_id_query_param="newsId",
+    )
+    assert validate_institutional_source(dbs)["native_id_query_param"] == "newsId"
