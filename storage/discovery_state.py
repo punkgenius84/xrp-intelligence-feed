@@ -51,7 +51,7 @@ class JsonDiscoveryState:
         for source_id, source in value["sources"].items():
             if not isinstance(source_id, str) or not source_id or not isinstance(source, dict):
                 raise DiscoveryStateError("Discovery state sources must map IDs to objects")
-            if set(source) - {"requests", "last_successful_fetch", "watermark", "pagination"}:
+            if set(source) - {"requests", "last_successful_fetch", "watermark", "pagination", "health"}:
                 raise DiscoveryStateError(f"Discovery state source {source_id!r} has unknown fields")
             requests = source.get("requests", {})
             if not isinstance(requests, dict):
@@ -64,6 +64,20 @@ class JsonDiscoveryState:
             last_success = source.get("last_successful_fetch")
             if last_success is not None and not _valid_timestamp(last_success):
                 raise DiscoveryStateError(f"Discovery state source {source_id!r} has invalid last_successful_fetch")
+            health = source.get("health")
+            if health is not None:
+                if (not isinstance(health, dict)
+                        or set(health) != {"last_attempt", "last_status", "last_candidate_count",
+                                            "last_error", "consecutive_failures", "consecutive_empty"}
+                        or not isinstance(health["last_status"], str)
+                        or not isinstance(health["last_candidate_count"], int)
+                        or not isinstance(health["last_error"], str)
+                        or type(health["consecutive_failures"]) is not int
+                        or type(health["consecutive_empty"]) is not int
+                        or health["consecutive_failures"] < 0
+                        or health["consecutive_empty"] < 0
+                        or not _valid_timestamp(health["last_attempt"])):
+                    raise DiscoveryStateError(f"Discovery state source {source_id!r} has invalid health")
             for field in ("watermark", "pagination"):
                 if field in source and not isinstance(source[field], (dict, str, int, float, type(None))):
                     raise DiscoveryStateError(f"Discovery state source {source_id!r}.{field} has invalid shape")
@@ -151,6 +165,28 @@ class JsonDiscoveryState:
             combined_pagination = dict(previous_pagination) if isinstance(previous_pagination, dict) else {}
             combined_pagination.update(pagination)
             source["pagination"] = dict(sorted(combined_pagination.items()))
+
+    @staticmethod
+    def record_health(state: dict[str, Any], source_id: str, attempted_at: datetime,
+                      status: str, candidate_count: int, error: str = "") -> None:
+        if attempted_at.tzinfo is None:
+            attempted_at = attempted_at.replace(tzinfo=timezone.utc)
+        if candidate_count < 0:
+            raise ValueError("candidate_count cannot be negative")
+        source = state["sources"].setdefault(source_id, {"requests": {}})
+        previous = source.get("health", {})
+        previous_failures = previous.get("consecutive_failures", 0) if isinstance(previous, dict) else 0
+        previous_empty = previous.get("consecutive_empty", 0) if isinstance(previous, dict) else 0
+        failure = status in {"failed", "partial"}
+        empty = status == "empty"
+        source["health"] = {
+            "last_attempt": attempted_at.astimezone(timezone.utc).isoformat(),
+            "last_status": status,
+            "last_candidate_count": candidate_count,
+            "last_error": error[:1000],
+            "consecutive_failures": previous_failures + 1 if failure else 0,
+            "consecutive_empty": previous_empty + 1 if empty else 0,
+        }
 
     @staticmethod
     def observe_candidate(state: dict[str, Any], candidate_id: str, content_hash: str,
