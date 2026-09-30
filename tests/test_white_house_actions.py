@@ -185,7 +185,7 @@ def test_candidate_flows_through_existing_intelligence_pipeline(tmp_path, monkey
         discovery_sources=[wh_source(max_pages=1, lookback_days=180)],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
-    assert failures == []
+    assert result.failures == []
     assert len(collected) == 2
     assert len(result.fresh) == 2
     assert all(item.source_quality == "primary" for item in fresh)
