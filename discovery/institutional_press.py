@@ -1,0 +1,273 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
+import re
+from typing import Any, Callable
+from urllib.parse import urljoin, urlsplit
+
+from discovery.base import DiscoveryResult
+from discovery.http import BoundedHttpClient, DiscoveryHttpError
+from discovery.models import DiscoveryCandidate
+from storage.discovery_state import JsonDiscoveryState
+
+
+METHOD = "institutional_press_html"
+_MAX_ITEMS_HARD = 100
+_DATE_RE = re.compile(
+    r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{1,2},\s+\d{4}\b",
+    re.IGNORECASE,
+)
+
+
+class _LinkParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[dict[str, str]] = []
+        self._anchor: dict[str, str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a" or self._anchor is not None:
+            return
+        href = next((value or "" for key, value in attrs if key.lower() == "href"), "")
+        self._anchor = {"href": href, "text": ""}
+
+    def handle_data(self, data: str) -> None:
+        if self._anchor is not None:
+            self._anchor["text"] += data
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "a" and self._anchor is not None:
+            self.links.append(self._anchor)
+            self._anchor = None
+
+    def close(self) -> None:
+        super().close()
+        if self._anchor is not None:
+            raise ValueError("institutional page ended inside an anchor")
+
+
+def _clean(value: object) -> str:
+    return " ".join(value.split()) if isinstance(value, str) else ""
+
+
+def _parse_date(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    match = _DATE_RE.search(value)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(0), "%B %d, %Y").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] | None:
+    if not isinstance(href, str) or not href.strip():
+        return None
+    raw = urljoin(source["source_url"], href.strip())
+    parts = urlsplit(raw)
+    hosts = {host.casefold() for host in source["allowed_hosts"]}
+    if (
+        parts.scheme.lower() != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() not in hosts
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or not re.fullmatch(source["article_path_regex"], parts.path, re.IGNORECASE)
+    ):
+        return None
+    canonical = f"https://{parts.hostname}{parts.path.rstrip('/')}/"
+    return canonical, parts.path.casefold()
+
+
+def validate_institutional_source(source: object) -> dict[str, Any]:
+    required = {
+        "source_id", "name", "authority_tier", "category", "discovery_method",
+        "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
+        "article_path_regex",
+    }
+    if not isinstance(source, dict) or set(source) != required:
+        raise ValueError(f"Institutional source must have exactly {sorted(required)}")
+    for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
+        if not isinstance(source[key], str) or not source[key].strip():
+            raise ValueError(f"{key} must be a non-empty string")
+    if source["discovery_method"] != METHOD:
+        raise ValueError(f"discovery_method must be {METHOD!r}")
+    if type(source["authority_tier"]) is not int or source["authority_tier"] != 1:
+        raise ValueError("institutional authority_tier must be 1")
+    if type(source["enabled"]) is not bool:
+        raise ValueError("enabled must be boolean")
+    if type(source["lookback_days"]) is not int or not 1 <= source["lookback_days"] <= 365:
+        raise ValueError("lookback_days must be an integer from 1 to 365")
+    if type(source["max_items"]) is not int or not 1 <= source["max_items"] <= _MAX_ITEMS_HARD:
+        raise ValueError(f"max_items must be an integer from 1 to {_MAX_ITEMS_HARD}")
+    if not isinstance(source["allowed_hosts"], list) or not source["allowed_hosts"]:
+        raise ValueError("allowed_hosts must be a non-empty list")
+    if any(not isinstance(host, str) or not host.strip() for host in source["allowed_hosts"]):
+        raise ValueError("allowed_hosts must contain non-empty strings")
+    return source
+
+
+def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, Any]], bool]:
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("institutional response is not valid UTF-8") from exc
+    parser = _LinkParser()
+    parser.feed(text)
+    parser.close()
+    if not parser.links:
+        raise ValueError("institutional response is missing links")
+
+    rows: list[dict[str, Any]] = []
+    complete = True
+    for index, link in enumerate(parser.links):
+        safe = _official_article(source, link["href"])
+        if safe is None:
+            continue
+        start = max(0, index - 12)
+        end = min(len(parser.links), index + 13)
+        window = " ".join(item["text"] for item in parser.links[start:end])
+        title = _clean(link["text"])
+        published = _parse_date(window)
+        if not title or published is None:
+            # Some sites render the date outside the anchor. Use the raw HTML
+            # only as a bounded fallback around the anchor's text position.
+            complete = False
+            continue
+        rows.append({
+            "url": safe[0],
+            "native_id": safe[1],
+            "title": title,
+            "date": published,
+        })
+    if not rows:
+        raise ValueError("institutional response has no dated official articles")
+    return rows, complete
+
+
+class InstitutionalPressDiscovery:
+    discovery_method = METHOD
+
+    def __init__(
+        self,
+        source: dict[str, Any],
+        *,
+        http: BoundedHttpClient | None = None,
+        now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    ):
+        self.source = validate_institutional_source(source)
+        self.http = http or BoundedHttpClient(user_agent="XRPIntelligenceFeed/0.4")
+        self.now = now
+
+    def _candidate(self, row: dict[str, Any], fetched_at: datetime) -> DiscoveryCandidate:
+        native_id = row["native_id"]
+        return DiscoveryCandidate(
+            title=row["title"],
+            url=row["url"],
+            source=self.source["name"],
+            published_at=row["date"],
+            summary=f"{self.source['name']} official release: {row['title']}",
+            source_type="discovery",
+            source_id=self.source["source_id"],
+            authority_tier=1,
+            category=self.source["category"],
+            source_native_id=native_id,
+            candidate_id=f"{self.source['source_id']}:{native_id}",
+            discovery_method=METHOD,
+            source_url=self.source["source_url"],
+            document_type=f"{self.source['name']} Press Release",
+            primary_url=row["url"],
+            provenance=[self.source["source_url"], row["url"]],
+            collected_at=fetched_at,
+            first_seen_at=fetched_at,
+            last_seen_at=fetched_at,
+        )
+
+    def collect(self, source_state: dict[str, Any] | None = None) -> DiscoveryResult:
+        fetched_at = self.now()
+        if fetched_at.tzinfo is None:
+            fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+        if not self.source["enabled"]:
+            return DiscoveryResult(self.source["source_id"], METHOD, "not_configured",
+                                   fetched_at=fetched_at)
+
+        cutoff = fetched_at.astimezone(timezone.utc) - timedelta(days=self.source["lookback_days"])
+        state = source_state if isinstance(source_state, dict) else {}
+        validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], "index")
+        errors: list[str] = []
+        updates: dict[str, dict[str, str]] = {}
+        candidates: dict[str, DiscoveryCandidate] = {}
+
+        try:
+            response = self.http.get(
+                self.source["source_url"],
+                etag=validators.get("etag", ""),
+                last_modified=validators.get("last_modified", ""),
+                expected_content_types=("text/html", "application/xhtml+xml"),
+            )
+        except DiscoveryHttpError as exc:
+            errors.append(
+                f"{self.source['name']}: {exc.kind}"
+                + (f" (HTTP {exc.status_code})" if exc.status_code else "")
+            )
+            return DiscoveryResult(self.source["source_id"], METHOD, "failed",
+                                   fetched_at=fetched_at, errors=errors)
+
+        if response.status_code == 304:
+            updates["index"] = {
+                key: response.headers.get(key, validators.get(key, ""))
+                for key in ("etag", "last_modified")
+                if response.headers.get(key, validators.get(key, ""))
+            }
+            return DiscoveryResult(self.source["source_id"], METHOD, "empty",
+                                   fetched_at=fetched_at, state_updates=updates)
+
+        if response.status_code != 200:
+            errors.append(f"{self.source['name']}: unexpected HTTP status {response.status_code}")
+            return DiscoveryResult(self.source["source_id"], METHOD, "failed",
+                                   fetched_at=fetched_at, errors=errors)
+
+        try:
+            rows, complete = _parse_page(self.source, response.content)
+        except ValueError as exc:
+            errors.append(f"{self.source['name']}: malformed HTML ({exc})")
+            return DiscoveryResult(self.source["source_id"], METHOD, "failed",
+                                   fetched_at=fetched_at, errors=errors)
+
+        if not complete:
+            errors.append(f"{self.source['name']}: malformed article on official index")
+        else:
+            updates["index"] = {
+                key: response.headers[key]
+                for key in ("etag", "last_modified") if response.headers.get(key)
+            }
+
+        for row in rows:
+            if row["date"] < cutoff:
+                continue
+            candidate = self._candidate(row, fetched_at)
+            existing = candidates.get(candidate.source_native_id)
+            if existing is None:
+                candidates[candidate.source_native_id] = candidate
+            elif existing.url != candidate.url or existing.title != candidate.title:
+                errors.append(
+                    f"{self.source['name']}: conflicting duplicate article {candidate.source_native_id}"
+                )
+
+        ordered = sorted(
+            candidates.values(),
+            key=lambda item: (item.published_at or fetched_at, item.source_native_id),
+            reverse=True,
+        )[:self.source["max_items"]]
+        status = "partial" if errors and ordered else "failed" if errors else (
+            "empty" if not ordered else "success"
+        )
+        return DiscoveryResult(
+            self.source["source_id"], METHOD, status, candidates=ordered,
+            fetched_at=fetched_at, errors=errors, state_updates=updates,
+        )
