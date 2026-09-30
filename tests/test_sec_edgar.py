@@ -75,6 +75,15 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "doj-news-api",
         "ripple-press-center",
         "xrpl-community-blog",
+        "citi-press-releases",
+        "circle-pressroom",
+        "mastercard-press-releases",
+        "coinbase-blog",
+        "swift-press-releases",
+        "visa-press-releases",
+        "dbs-newsroom",
+        "jpmorgan-payments-newsroom",
+        "bny-newsroom",
     }
 
 
