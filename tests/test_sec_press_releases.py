@@ -122,6 +122,42 @@ def test_recent_release_is_parsed_and_legacy_official_url_is_canonicalized():
     assert result.candidates[0].candidate_id == f"{SOURCE_ID}:2026-93"
 
 
+def test_slugged_release_links_from_the_live_feed_are_accepted():
+    # SEC's current feed appends a title slug after the release number.
+    slug = "2026-93-sec-publishes-updated-market-statistics-highlighting-increase-ipos"
+    url = f"https://www.sec.gov/newsroom/press-releases/{slug}"
+    result, _ = run(rss(item("2026-93", title="SEC Publishes Updated Market Statistics", link=url)))
+    assert result.status == "success"
+    assert result.errors == []
+    candidate = result.candidates[0]
+    assert candidate.source_native_id == "2026-93"
+    assert candidate.candidate_id == f"{SOURCE_ID}:2026-93"
+    assert candidate.url == url
+
+
+def test_slugged_and_plain_links_for_one_release_share_an_identity():
+    slugged = "https://www.sec.gov/newsroom/press-releases/2026-93-some-title"
+    plain = "https://www.sec.gov/newsroom/press-releases/2026-93"
+    first, _ = run(rss(item("2026-93", link=slugged)))
+    second, _ = run(rss(item("2026-93", link=plain)))
+    assert first.candidates[0].candidate_id == second.candidates[0].candidate_id
+
+
+@pytest.mark.parametrize("link", [
+    "https://www.sec.gov/newsroom/press-releases/not-a-release",
+    "https://www.sec.gov/newsroom/press-releases/2026-93-slug/extra",
+    "https://www.sec.gov/newsroom/press-releases/2026-93-",
+    "https://www.sec.gov/newsroom/press-releases/2026-93-slug%2Fpath",
+    "https://www.sec.gov/newsroom/speeches-statements/2026-93-some-title",
+    "https://evil.example.com/newsroom/press-releases/2026-93-some-title",
+    "http://www.sec.gov/newsroom/press-releases/2026-93-some-title",
+])
+def test_non_release_links_are_still_rejected(link):
+    result, _ = run(rss(item("2026-93", link=link)))
+    assert result.candidates == []
+    assert any("malformed item" in error for error in result.errors)
+
+
 def test_feed_is_fetched_with_saved_validators():
     state = {"sources": {SOURCE_ID: {"requests": {SEC_FEED_ID: {
         "etag": '"old"', "last_modified": "Sat, 26 Sep 2026 17:08:20 GMT"}}}}}

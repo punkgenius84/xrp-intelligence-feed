@@ -21,9 +21,10 @@ SEC_FEED_URL = "https://www.sec.gov/news/pressreleases.rss"
 SEC_HOSTS = {"www.sec.gov", "sec.gov"}
 SEC_NAME = "U.S. Securities and Exchange Commission"
 
-# SEC's current newsroom uses /newsroom/press-releases/YYYY-NN. Older RSS entries
-# may use the legacy /news/pressreleases/YYYY-NN.htm route. Both are official.
-_CURRENT_PATH = re.compile(r"^/newsroom/press-releases/(\d{4}-\d+)$")
+# SEC's current newsroom uses /newsroom/press-releases/YYYY-NN, and the live feed now appends
+# a title slug (YYYY-NN-some-title). Older RSS entries may use the legacy
+# /news/pressreleases/YYYY-NN.htm route. All are official; identity is always YYYY-NN.
+_CURRENT_PATH = re.compile(r"^/newsroom/press-releases/(\d{4}-\d+)(?:-[A-Za-z0-9][A-Za-z0-9-]*)?$")
 _LEGACY_PATH = re.compile(r"^/news/pressreleases/(\d{4}-\d+)\.html?$")
 
 
@@ -73,12 +74,13 @@ def _article_identity(value: object) -> tuple[str, str] | None:
         return None
     match = _CURRENT_PATH.fullmatch(parts.path)
     if match:
-        native_id = match.group(1)
-    else:
-        match = _LEGACY_PATH.fullmatch(parts.path)
-        if not match:
-            return None
-        native_id = match.group(1)
+        # Keep the path exactly as SEC published it (including any slug) so the posted link
+        # is one SEC itself serves; identity stays the bare release number.
+        return match.group(1), f"https://www.sec.gov{parts.path}"
+    match = _LEGACY_PATH.fullmatch(parts.path)
+    if not match:
+        return None
+    native_id = match.group(1)
     return native_id, f"https://www.sec.gov/newsroom/press-releases/{native_id}"
 
 
