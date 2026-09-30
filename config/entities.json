@@ -20,6 +20,26 @@
     "XRPL Foundation": [
       "XRPL Foundation",
       "XRP Ledger Foundation"
+    ],
+    "Citi": [
+      "Citi",
+      "Citigroup",
+      "Citibank"
+    ],
+    "Circle": [
+      "Circle",
+      "Circle Internet Group",
+      "Circle Payments Network",
+      "USDC"
+    ],
+    "Coinbase": [
+      "Coinbase",
+      "Coinbase Payments",
+      "Coinbase Institutional"
+    ],
+    "Mastercard": [
+      "Mastercard",
+      "Mastercard Digital Assets"
     ]
   },
   "regulators": {
