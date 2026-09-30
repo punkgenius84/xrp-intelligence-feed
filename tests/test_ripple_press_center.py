@@ -141,7 +141,7 @@ def test_pipeline_flows_ripple_signal_into_existing_relevance(tmp_path, monkeypa
         discovery_sources=[ripple_source(max_pages=1)],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
     )
-    assert failures == []
+    assert result.failures == []
     assert len(collected) == 2
     assert len(result.fresh) == 2
     assert all("direct_ripple" in item.relevance_categories for item in fresh)
