@@ -135,7 +135,7 @@ def test_pipeline_flows_ripple_signal_into_existing_relevance(tmp_path, monkeypa
         main, "collect_source",
         lambda source, state: RipplePressCenterDiscovery(source, http=http, now=lambda: STAMP).collect(state),
     )
-    collected, fresh, failures = main.run_pipeline(
+    result = main.run_pipeline(
         sources=[],
         state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[ripple_source(max_pages=1)],
@@ -143,7 +143,7 @@ def test_pipeline_flows_ripple_signal_into_existing_relevance(tmp_path, monkeypa
     )
     assert failures == []
     assert len(collected) == 2
-    assert len(fresh) == 2
+    assert len(result.fresh) == 2
     assert all("direct_ripple" in item.relevance_categories for item in fresh)
     assert all(item.relevance_score >= 35 for item in fresh)
 
