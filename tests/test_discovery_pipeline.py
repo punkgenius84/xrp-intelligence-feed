@@ -45,9 +45,9 @@ def test_discovery_candidate_uses_existing_intelligence_pipeline_and_persists_st
     result = main.run_pipeline(
         sources=[], state=seen, discovery_sources=[discovery_source], discovery_state=discovery,
     )
-    assert collected == [candidate]
-    assert fresh == [candidate]
-    assert failures == []
+    assert result.collected == [candidate]
+    assert result.fresh == [candidate]
+    assert result.failures == []
     assert candidate.detected_entities == ["Ripple", "SEC"]
     assert candidate.source_quality == "primary"
     state = discovery.load()
@@ -128,7 +128,7 @@ def test_discovery_state_save_failure_does_not_permanently_mark_candidate_seen(
 
     assert seen.load() == set()
     _, fresh, _ = main.run_pipeline(**args)
-    assert fresh == [candidate]
+    assert result.fresh == [candidate]
     assert seen.load()
 
 
