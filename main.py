@@ -87,6 +87,14 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
             result = collect_source(source, discovery_state_value)
             discovery_results.append(result)
             collected.extend(result.candidates)
+            JsonDiscoveryState.record_health(
+                discovery_state_value,
+                result.source_id,
+                result.fetched_at,
+                result.status,
+                len(result.candidates),
+                "; ".join(result.errors),
+            )
             if result.errors:
                 failures.extend(f"{result.source_id}: {error}" for error in result.errors)
 
@@ -197,6 +205,10 @@ def main() -> None:
     for result in discovery_results:
         print(f"Discovery source {result.source_id}: {result.status} "
               f"({len(result.candidates)} candidates)")
+        health = (discovery_state_value or {}).get("sources", {}).get(result.source_id, {}).get("health", {})
+        if health:
+            print(f"  Health: failures={health.get('consecutive_failures', 0)} "
+                  f"empty={health.get('consecutive_empty', 0)}")
     # State was saved inside run_pipeline, so posting is at-most-once: a failed post is reported
     # but not retried on the next run.
     publish(relevant, discord_settings)
