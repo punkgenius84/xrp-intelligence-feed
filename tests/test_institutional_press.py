@@ -111,3 +111,29 @@ def test_pipeline_scores_circle_stablecoin_payment_signal(tmp_path):
     assert "institutional_digital_asset_payment" in relevant.relevance_categories
     assert relevant.relevance_score >= 35
     assert generic.relevance_score == 0
+
+
+def test_swift_and_visa_article_allowlists_and_dates():
+    fixture = Path(__file__).parent / "fixtures" / "institutional_swift_visa.html"
+    swift = source(
+        source_id="swift-press-releases",
+        name="Swift",
+        source_url="https://www.swift.com/news-events/press-releases?page=0",
+        allowed_hosts=["www.swift.com", "swift.com"],
+        article_path_regex=r"/news-events/press-releases/[^/?#]+",
+    )
+    visa = source(
+        source_id="visa-press-releases",
+        name="Visa",
+        source_url="https://usa.visa.com/about-visa/newsroom/press-releases-listing.html",
+        allowed_hosts=["usa.visa.com"],
+        article_path_regex=r"/about-visa/newsroom/press-releases\.releaseId\.[^/?#]+",
+    )
+    swift_rows, swift_complete = _parse_page(swift, fixture.read_bytes())
+    visa_rows, visa_complete = _parse_page(visa, fixture.read_bytes())
+    assert swift_complete is True
+    assert visa_complete is True
+    assert len(swift_rows) == 1
+    assert len(visa_rows) == 1
+    assert swift_rows[0]["date"] == datetime(2026, 7, 9, tzinfo=timezone.utc)
+    assert visa_rows[0]["date"] == datetime(2026, 6, 10, tzinfo=timezone.utc)
