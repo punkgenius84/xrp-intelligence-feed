@@ -16,9 +16,9 @@ METHOD = "institutional_press_html"
 _MAX_ITEMS_HARD = 100
 _DATE_RE = re.compile(
     r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-    r"Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b"
+    r"Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b"
     r"|\b\d{1,2}/\d{1,2}/\d{4}\b"
-    r"|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\b",
+    r"|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\b",
     re.IGNORECASE,
 )
 
@@ -60,7 +60,7 @@ def _parse_date(value: object) -> datetime | None:
     match = _DATE_RE.search(value)
     if not match:
         return None
-    raw = match.group(0).replace(",", "")
+    raw = match.group(0).replace(",", "").replace("Sept ", "Sep ")
     if "/" in raw:
         formats = ("%m/%d/%Y",)
     elif re.match(r"^\d{1,2}\s", raw):
@@ -106,8 +106,9 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    if not isinstance(source, dict) or set(source) != required:
-        raise ValueError(f"Institutional source must have exactly {sorted(required)}")
+    allowed = required | {"native_id_query_param"}
+    if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
+        raise ValueError(f"Institutional source must contain {sorted(required)} and only optional native_id_query_param")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
         if not isinstance(source[key], str) or not source[key].strip():
             raise ValueError(f"{key} must be a non-empty string")

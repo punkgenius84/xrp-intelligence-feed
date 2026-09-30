@@ -46,7 +46,7 @@ def validate_keyword_groups(value: dict) -> dict:
 
 REQUIRED_WEIGHTS = (
     "high_keyword", "medium_keyword", "context_keyword",
-    "primary_source_bonus", "multiple_entity_bonus", "title_match_bonus",
+    "primary_source_bonus", "multiple_entity_bonus", "title_match_bonus", "institutional_source_bonus",
 )
 
 

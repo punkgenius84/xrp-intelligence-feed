@@ -29,7 +29,7 @@ def _classify(item, combined: str) -> list[str]:
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS"})
     government = bool(entities & {"White House", "DOJ", "Treasury"})
-    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa"})
+    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",
@@ -104,6 +104,12 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         score += points
         reasons.append(f"primary source authority for relevant topic (+{points})")
         signals.append("source_quality:primary")
+
+    if institutional_relevance and item.source_quality == "primary":
+        points = weights["institutional_source_bonus"]
+        score += points
+        reasons.append(f"institutional source relevance bonus (+{points})")
+        signals.append("source_quality:institutional")
 
     if direct and len(item.detected_entities) > 1:
         points = weights["multiple_entity_bonus"]

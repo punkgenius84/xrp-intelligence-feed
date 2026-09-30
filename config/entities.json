@@ -51,6 +51,17 @@
     "DBS": [
       "DBS",
       "DBS Bank"
+    ],
+    "J.P. Morgan": [
+      "J.P. Morgan",
+      "JPMorgan",
+      "JPMorgan Chase",
+      "Kinexys"
+    ],
+    "BNY": [
+      "BNY",
+      "Bank of New York Mellon",
+      "BNY Mellon"
     ]
   },
   "regulators": {
