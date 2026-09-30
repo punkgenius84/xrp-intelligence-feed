@@ -452,7 +452,7 @@ def test_federal_register_candidate_flows_through_existing_intelligence_pipeline
         lambda source, state: FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect(state),
     )
 
-    collected, fresh, failures = main.run_pipeline(
+    result = main.run_pipeline(
         sources=[], state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[fr_source(agencies=[])],
         discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
@@ -460,7 +460,7 @@ def test_federal_register_candidate_flows_through_existing_intelligence_pipeline
 
     assert failures == []
     assert collected == fresh
-    candidate = fresh[0]
+    candidate = result.fresh[0]
     assert "Ripple Payments stablecoin" in candidate.summary
     assert "Federal Reserve" in candidate.detected_entities
     assert "Ripple" in candidate.detected_entities
