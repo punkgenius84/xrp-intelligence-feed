@@ -42,7 +42,7 @@ def test_discovery_candidate_uses_existing_intelligence_pipeline_and_persists_st
     }
     seen = JsonState(str(tmp_path / "seen.json"))
     discovery = JsonDiscoveryState(tmp_path / "discovery.json")
-    collected, fresh, failures = main.run_pipeline(
+    result = main.run_pipeline(
         sources=[], state=seen, discovery_sources=[discovery_source], discovery_state=discovery,
     )
     assert collected == [candidate]
