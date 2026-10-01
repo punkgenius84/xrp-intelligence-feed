@@ -58,6 +58,15 @@ def _clean(value: object) -> str:
 def _parse_date(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
+    raw_value = value.strip()
+    if raw_value:
+        try:
+            parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+        except ValueError:
+            pass
     match = _DATE_RE.search(value)
     if not match:
         return None
