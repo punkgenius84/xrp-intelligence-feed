@@ -169,7 +169,7 @@ def test_partial_federal_register_result_without_completed_progress_does_not_per
         discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
     )
     saved = discovery.load()["sources"]["federal-register-api"]
-    assert saved["pagination"] == {}
+    assert "pagination" not in saved
     assert saved["health"]["last_status"] == "partial"
     assert saved["health"]["consecutive_failures"] == 0
     assert saved["health"]["consecutive_empty"] == 1
