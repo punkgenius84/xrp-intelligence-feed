@@ -204,3 +204,51 @@ def test_any_non_empty_pagination_persists_without_state_updates(tmp_path, monke
     )
     saved = discovery.load()["sources"]["new-paginated-source"]["pagination"]
     assert saved["opaque_cursor"]["next"] == "cursor-2"
+
+
+def test_correlation_state_save_failure_does_not_mark_candidate_seen(
+        tmp_path, monkeypatch):
+    candidate = DiscoveryCandidate(
+        title="Ripple digital asset payment framework",
+        url="https://example.com/ripple-framework",
+        source="Ripple",
+        source_id="ripple-press-center",
+        authority_tier=1,
+        category="payments",
+        discovery_method="test",
+        content_hash="fixture-hash",
+        published_at=STAMP,
+    )
+    result = DiscoveryResult(
+        "ripple-press-center", "test", "success",
+        candidates=[candidate], fetched_at=STAMP,
+    )
+    monkeypatch.setattr(main, "collect_source", lambda source, state: result)
+    source = {"source_id": "ripple-press-center"}
+
+    class FailOnceCorrelationState(main.JsonCorrelationState):
+        fail = True
+
+        def save(self, value, **kwargs):
+            if self.fail:
+                self.fail = False
+                raise RuntimeError("simulated correlation-state write failure")
+            return super().save(value, **kwargs)
+
+    seen = JsonState(str(tmp_path / "seen.json"))
+    correlation = FailOnceCorrelationState(tmp_path / "correlation.json")
+    args = dict(
+        sources=[],
+        state=seen,
+        discovery_sources=[source],
+        discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
+        correlation_state=correlation,
+    )
+
+    with pytest.raises(RuntimeError, match="simulated correlation-state write failure"):
+        main.run_pipeline(**args)
+
+    assert seen.load() == set()
+    retry_result = main.run_pipeline(**args)
+    assert retry_result.fresh == [candidate]
+    assert seen.load()
