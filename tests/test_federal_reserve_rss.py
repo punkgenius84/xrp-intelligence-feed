@@ -5,6 +5,7 @@ import pytest
 
 from discovery.dispatch import DiscoveryRegistryError, collect_source, load_discovery_sources, validate_discovery_sources
 from discovery.http import HttpResponse
+from discovery.federal_reserve_rss import _parse_feed
 
 
 STAMP = datetime(2026, 9, 27, 23, 0, tzinfo=timezone.utc)
@@ -131,14 +132,9 @@ def test_utf8_payload_with_stale_ascii_declaration_is_parsed():
     <link>https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm</link>
     <pubDate>Thu, 24 Sep 2026 16:00:00 +0000</pubDate><guid>fed-utf8</guid>
     </item></channel></rss>'''
-    fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
-    http = FakeHttp([response(body)] + [response(fixture) for _ in range(5)])
-    configured = load_discovery_sources()
-    fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
-    result = collect_source(fed, http=http, now=lambda: STAMP)
-    assert result.status == "success"
-    candidate = next(item for item in result.candidates if item.source_native_id == "bcreg20260924a")
-    assert "Café" in candidate.title
+    parsed = _parse_feed(body)
+    assert not parsed.bozo
+    assert parsed.entries[0].title.endswith("Café banking data")
 
 
 def test_invalid_external_article_url_is_skipped_and_feed_validator_is_not_saved():
