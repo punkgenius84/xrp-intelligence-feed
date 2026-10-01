@@ -187,20 +187,23 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
-    if not matches:
+    official_matches = [(match, _official_action_url(match.group("href"))) for match in matches]
+    official_matches = [(match, safe) for match, safe in official_matches if safe is not None]
+    if not official_matches:
         raise ValueError("White House response is missing Presidential Action links")
 
     parsed: list[dict[str, Any]] = []
     complete = True
-    for index, match in enumerate(matches):
-        safe = _official_action_url(match.group("href"))
-        if safe is None:
-            continue
-        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
-        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+    for index, (match, safe) in enumerate(official_matches):
+        previous = official_matches[index - 1][0].start() if index else max(0, match.start() - 800)
+        following = (
+            official_matches[index + 1][0].start()
+            if index + 1 < len(official_matches)
+            else min(len(text), match.end() + 1200)
+        )
         window = text[previous:following]
         published = None
-        datetime_values = re.findall(r"\bdatetime=[\"']([^\"']+)[\"']", window, re.IGNORECASE)
+        datetime_values = re.findall(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE)
         for value in datetime_values:
             published = _parse_date(value)
             if published is not None:
@@ -211,12 +214,13 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 anchor_position = match.start() - previous
                 nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
                 published = _parse_date(nearest.group(0))
+        local_text = _clean(text[match.end():following])
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         if not title or published is None:
             complete = False
             continue
         action_type = next(
-            (kind for kind in _ACTION_TYPES if kind.casefold() in _clean(window).casefold()),
+            (kind for kind in _ACTION_TYPES if kind.casefold() in local_text.casefold()),
             "Presidential Action",
         )
         parsed.append({
