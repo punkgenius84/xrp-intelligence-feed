@@ -203,11 +203,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         )
         window = text[previous:following]
         published = None
-        datetime_values = re.findall(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE)
-        for value in datetime_values:
-            published = _parse_date(value)
-            if published is not None:
-                break
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE))
+        if datetime_matches:
+            anchor_position = match.start() - previous
+            nearest = min(datetime_matches, key=lambda item: abs(item.start() - anchor_position))
+            published = _parse_date(nearest.group(1))
         if published is None:
             date_matches = list(_DATE_TEXT.finditer(window))
             if date_matches:
@@ -219,10 +219,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         if not title or published is None:
             complete = False
             continue
-        action_type = next(
-            (kind for kind in _ACTION_TYPES if kind.casefold() in local_text.casefold()),
-            "Presidential Action",
-        )
+        type_matches = []
+        for kind in _ACTION_TYPES:
+            for occurrence in re.finditer(re.escape(kind), local_text, re.IGNORECASE):
+                type_matches.append((abs(occurrence.start() - (match.end() - match.end())), kind))
+        action_type = min(type_matches, default=(0, "Presidential Action"))[1]
         parsed.append({
             "url": safe[0],
             "native_id": safe[1],
