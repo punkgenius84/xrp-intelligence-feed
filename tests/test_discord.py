@@ -369,6 +369,7 @@ def test_workflow_defaults_manual_runs_to_dry_run_and_skips_state_save_when_dry(
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "dry_run:" in text and "default: true" in text
     assert "DISCORD_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}" in text
+    assert "state/outbox.json" in text
     assert "if: success() && (github.event_name == 'schedule' || !inputs.dry_run)" in text
 
 
