@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+    duplicate_sources: list[str] = field(default_factory=list)\n    duplicate_urls: list[str] = field(default_factory=list)\n    # Conservative cross-source correlation metadata. Correlation never implies truth or relevance.\n    correlated_source_ids: list[str] = field(default_factory=list)\n    correlated_candidate_ids: list[str] = field(default_factory=list)\n    correlation_reasons: list[str] = field(default_factory=list)\n    correlation_score: int = 0\nfrom dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 import re
