@@ -218,7 +218,7 @@
         "www.citigroup.com",
         "citigroup.com"
       ],
-      "article_path_regex": "/global/news/press-release/[^/?#]+"
+      "article_path_regex": "/global/news/press-release/(?:\\d{4}/)?[^/?#]+"
     },
     {
       "source_id": "circle-pressroom",
