@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+import pytest
 import main
 from discovery.base import DiscoveryResult
 from discovery.models import DiscoveryCandidate
