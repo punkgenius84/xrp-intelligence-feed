@@ -185,11 +185,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         )
         window = text[previous:following]
         published = None
-        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE))
+        local_after = text[match.end():following]
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", local_after, re.IGNORECASE))
         if datetime_matches:
-            anchor_position = match.start() - previous
-            nearest = min(datetime_matches, key=lambda item: abs(item.start() - anchor_position))
-            published = _parse_date(nearest.group(1))
+            published = _parse_date(datetime_matches[0].group(1))
         if published is None:
             date_matches = list(_DATE_TEXT.finditer(window))
             if date_matches:
