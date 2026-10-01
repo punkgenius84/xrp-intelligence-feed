@@ -89,7 +89,7 @@
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
-      "max_pages": 4
+      "max_pages": 1
     },
     {
       "source_id": "federal-register-api",
