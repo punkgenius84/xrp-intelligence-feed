@@ -185,9 +185,16 @@ def test_parse_analysis_preserves_conflicts():
 
 
 def test_parse_analysis_bounds_conflicts():
-    result = parse_analysis(
-        '{"event_type":"other","event_summary":"x","significance":"y",'
-        '"claims":[],"conflicts":["a" * 600],"uncertainties":[]}',
-        source_url="https://example.test",
-    )
-    assert result.conflicts == []
+    import json
+
+    raw = json.dumps({
+        "event_type": "other",
+        "event_summary": "x",
+        "significance": "y",
+        "claims": [],
+        "conflicts": ["a" * 600],
+        "uncertainties": [],
+    })
+    result = parse_analysis(raw, source_url="https://example.test")
+    assert len(result.conflicts) == 1
+    assert len(result.conflicts[0]) == 500
