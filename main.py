@@ -57,17 +57,6 @@ def normalize_item(item):
     return item
 
 
-# Pagination keys that hold a resumable cursor. Other pagination entries (page_fetches,
-# requests_made, ...) are per-run telemetry and must not be persisted on their own.
-CURSOR_PAGINATION_KEYS = (
-    "federal_register_terms", "ofac_recent_actions", "fincen_press_releases",
-    "treasury_press_releases", "fdic_press_releases",
-)
-
-
-def _has_cursor_progress(pagination: dict) -> bool:
-    return any(isinstance(pagination.get(key), dict) and bool(pagination.get(key))
-               for key in CURSOR_PAGINATION_KEYS)
 
 
 def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None) -> PipelineResult:
