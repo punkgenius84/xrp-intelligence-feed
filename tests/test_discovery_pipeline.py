@@ -189,3 +189,18 @@ def test_ofac_pagination_only_update_persists_through_pipeline(tmp_path, monkeyp
     )
     saved = discovery.load()["sources"]["ofac-recent-actions"]["pagination"]
     assert saved["ofac_recent_actions"] == progress
+
+
+def test_any_non_empty_pagination_persists_without_state_updates(tmp_path, monkeypatch):
+    result = DiscoveryResult(
+        "new-paginated-source", "new_method", "success", fetched_at=STAMP,
+        pagination={"opaque_cursor": {"next": "cursor-2"}},
+    )
+    monkeypatch.setattr(main, "collect_source", lambda source, state: result)
+    discovery = JsonDiscoveryState(tmp_path / "discovery.json")
+    main.run_pipeline(
+        sources=[], state=JsonState(str(tmp_path / "seen.json")),
+        discovery_sources=[{"source_id": "new-paginated-source"}], discovery_state=discovery,
+    )
+    saved = discovery.load()["sources"]["new-paginated-source"]["pagination"]
+    assert saved["opaque_cursor"]["next"] == "cursor-2"
