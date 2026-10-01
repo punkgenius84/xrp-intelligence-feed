@@ -182,41 +182,57 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("White House response is not valid UTF-8") from exc
-    parser = _ActionParser()
-    parser.feed(text)
-    parser.close()
-    if not parser.articles:
-        raise ValueError("White House response is missing Presidential Actions article cards")
+
+    matches = list(re.finditer(
+        r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    official_matches = [(match, _official_action_url(match.group("href"))) for match in matches]
+    official_matches = [(match, safe) for match, safe in official_matches if safe is not None]
+    if not official_matches:
+        raise ValueError("White House response is missing Presidential Action links")
+
     parsed: list[dict[str, Any]] = []
     complete = True
-    for article in parser.articles:
-        try:
-            if not article["links"]:
-                raise ValueError("missing official Presidential Action link")
-            url, slug, anchor_title = article["links"][0]
-            title = anchor_title
-            if not title:
-                raise ValueError("missing Presidential Action title")
-            published = _parse_date(article["date"]) or _parse_date(article["text"])
-            if published is None:
-                raise ValueError("missing Presidential Action date")
-            article_text = _clean(article["text"])
-            action_type = next(
-                (kind for kind in _ACTION_TYPES if kind.casefold() in article_text.casefold()),
-                "Presidential Action",
-            )
-            parsed.append({
-                "url": url,
-                "native_id": slug,
-                "title": title,
-                "date": published,
-                "action_type": action_type,
-            })
-        except (KeyError, TypeError, ValueError):
-            if article.get("links"):
-                complete = False
+    for index, (match, safe) in enumerate(official_matches):
+        previous = official_matches[index - 1][0].start() if index else max(0, match.start() - 800)
+        following = (
+            official_matches[index + 1][0].start()
+            if index + 1 < len(official_matches)
+            else min(len(text), match.end() + 1200)
+        )
+        window = text[previous:following]
+        published = None
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE))
+        if datetime_matches:
+            anchor_position = match.start() - previous
+            nearest = min(datetime_matches, key=lambda item: abs(item.start() - anchor_position))
+            published = _parse_date(nearest.group(1))
+        if published is None:
+            date_matches = list(_DATE_TEXT.finditer(window))
+            if date_matches:
+                anchor_position = match.start() - previous
+                nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+                published = _parse_date(nearest.group(0))
+        local_text = _clean(text[match.end():following])
+        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        if not title or published is None:
+            complete = False
+            continue
+        type_matches = []
+        for kind in _ACTION_TYPES:
+            for occurrence in re.finditer(re.escape(kind), local_text, re.IGNORECASE):
+                type_matches.append((abs(occurrence.start() - (match.end() - match.end())), kind))
+        action_type = min(type_matches, default=(0, "Presidential Action"))[1]
+        parsed.append({
+            "url": safe[0],
+            "native_id": safe[1],
+            "title": title,
+            "date": published,
+            "action_type": action_type,
+        })
     if not parsed:
-        raise ValueError("White House response has no official Presidential Actions")
+        raise ValueError("White House response has no dated official Presidential Actions")
     return parsed, complete
 
 

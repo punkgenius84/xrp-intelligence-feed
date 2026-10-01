@@ -77,7 +77,7 @@ def _clean(value: object) -> str:
 
 
 _DATE_TEXT = re.compile(
-    r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b",
+    r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b",
     re.IGNORECASE,
 )
 
@@ -151,10 +151,12 @@ def _parse_date(value: object) -> datetime | None:
     match = _DATE_TEXT.search(raw)
     if not match:
         return None
-    try:
-        return datetime.strptime(match.group(0), "%B %d, %Y").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(match.group(0), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
@@ -162,34 +164,45 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("Ripple Press Center response is not valid UTF-8") from exc
-    parser = _PressParser()
-    parser.feed(text)
-    parser.close()
-    if not parser.articles:
-        raise ValueError("Ripple Press Center response is missing press-release articles")
+
+    matches = list(re.finditer(
+        r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    official_matches = [(match, _official_url(match.group("href"))) for match in matches]
+    official_matches = [(match, safe) for match, safe in official_matches if safe is not None]
+    if not official_matches:
+        raise ValueError("Ripple Press Center response is missing press-release links")
+
     rows: list[dict[str, Any]] = []
     complete = True
-    for article in parser.articles:
-        try:
-            if not article["links"]:
-                raise ValueError("missing official Ripple press-release link")
-            url, slug, title = article["links"][0]
-            if not title:
-                raise ValueError("missing Ripple press-release title")
-            published = _parse_date(article["date"]) or _parse_date(article["text"])
-            if published is None:
-                raise ValueError("missing Ripple press-release date")
-            rows.append({
-                "url": url,
-                "slug": slug,
-                "title": title,
-                "date": published,
-            })
-        except (KeyError, TypeError, ValueError):
-            if article.get("links"):
-                complete = False
+    for index, (match, safe) in enumerate(official_matches):
+        previous = official_matches[index - 1][0].start() if index else max(0, match.start() - 800)
+        following = (
+            official_matches[index + 1][0].start()
+            if index + 1 < len(official_matches)
+            else min(len(text), match.end() + 1200)
+        )
+        window = text[previous:following]
+        published = None
+        local_after = text[match.end():following]
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", local_after, re.IGNORECASE))
+        if datetime_matches:
+            published = _parse_date(datetime_matches[0].group(1))
+        if published is None:
+            date_matches = list(_DATE_TEXT.finditer(window))
+            if date_matches:
+                anchor_position = match.start() - previous
+                nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+                published = _parse_date(nearest.group(0))
+        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        if not title or published is None:
+            complete = False
+            continue
+        rows.append({"url": safe[0], "slug": safe[1], "title": title, "date": published})
+
     if not rows:
-        raise ValueError("Ripple Press Center response has no official press releases")
+        raise ValueError("Ripple Press Center response has no dated official press releases")
     return rows, complete
 
 

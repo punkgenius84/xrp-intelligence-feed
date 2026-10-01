@@ -256,10 +256,11 @@ class XRPLBlogDiscovery:
                 candidate = self._candidate(row, url, fetched_at)
                 existing = candidates.get(candidate.source_native_id)
                 if existing is not None:
-                    if existing.url != candidate.url or existing.title != candidate.title:
+                    # The same canonical slug can legitimately appear more than once
+                    # on a category/index page. Identity is the canonical URL/slug;
+                    # do not turn repeated presentation cards into a source failure.
+                    if existing.url != candidate.url:
                         errors.append(f"XRPL: conflicting duplicate slug {candidate.source_native_id}")
-                    else:
-                        errors.append(f"XRPL: duplicate article {candidate.source_native_id}")
                     continue
                 candidates[candidate.source_native_id] = candidate
             if len(candidates) >= self.source["max_items"]:

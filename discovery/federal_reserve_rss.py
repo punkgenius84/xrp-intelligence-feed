@@ -103,6 +103,25 @@ def _article_identity(value: object) -> tuple[str, str] | None:
     return native_id, f"https://www.federalreserve.gov{parts.path}"
 
 
+def _parse_feed(content: bytes) -> Any:
+    """Parse Federal Reserve RSS while tolerating a stale ASCII declaration."""
+    head = content[:512].lower()
+    if b'encoding="us-ascii"' in head or b"encoding='us-ascii'" in head:
+        try:
+            decoded = content.decode("utf-8")
+            decoded = re.sub(
+                r"encoding\s*=\s*[\"']us-ascii[\"']",
+                'encoding="utf-8"',
+                decoded,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            return feedparser.parse(decoded)
+        except UnicodeDecodeError:
+            pass
+    return feedparser.parse(content)
+
+
 def _publication_time(value: object) -> datetime:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("missing or invalid publication date")
@@ -209,7 +228,7 @@ class FederalReserveRSSDiscovery:
                 errors.append(f"{feed['name']}: unexpected HTTP status {response.status_code}")
                 continue
 
-            parsed = feedparser.parse(response.content)
+            parsed = _parse_feed(response.content)
             malformed_structure = bool(getattr(parsed, "bozo", False))
             complete = not malformed_structure
             if malformed_structure:

@@ -94,6 +94,19 @@ def test_parser_keeps_only_official_action_links_and_extracts_type_and_date():
     assert rows[1]["action_type"] == "Presidential Memoranda"
 
 
+def test_parser_does_not_require_article_wrapper_elements():
+    html = b'''<main>
+      <div class="card"><a href="/presidential-actions/inaugurating-the-era-of-super-intelligence/">
+      Inaugurating The Era Of Super Intelligence</a><span>September 29, 2026</span></div>
+      <section><a href="/presidential-actions/streamlining-access-to-government-services-through-america-gov/">
+      Streamlining Access to Government Services Through America.gov</a><span>September 29, 2026</span></section>
+    </main>'''
+    rows, complete = _parse_page(html)
+    assert complete is True
+    assert len(rows) == 2
+    assert rows[0]["date"] == datetime(2026, 9, 29, tzinfo=timezone.utc)
+
+
 def test_collect_filters_lookback_and_deduplicates():
     payload = FIXTURE.read_bytes()
     http = FakeHttp([

@@ -5,6 +5,7 @@ import pytest
 
 from discovery.dispatch import DiscoveryRegistryError, collect_source, load_discovery_sources, validate_discovery_sources
 from discovery.http import HttpResponse
+from discovery.federal_reserve_rss import _parse_feed
 
 
 STAMP = datetime(2026, 9, 27, 23, 0, tzinfo=timezone.utc)
@@ -122,6 +123,18 @@ def test_federal_reserve_release_identity_and_date_are_preserved_without_article
     assert candidate.url == "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm"
     assert candidate.document_type == "Federal Reserve Board Press Release"
     assert len(http.calls) == 6
+
+
+def test_utf8_payload_with_stale_ascii_declaration_is_parsed():
+    body = b'''<?xml version="1.0" encoding="us-ascii"?>
+    <rss version="2.0"><channel><title>Federal Reserve</title><item>
+    <title>Federal Reserve Board requests public comment on Caf\xc3\xa9 banking data</title>
+    <link>https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm</link>
+    <pubDate>Thu, 24 Sep 2026 16:00:00 +0000</pubDate><guid>fed-utf8</guid>
+    </item></channel></rss>'''
+    parsed = _parse_feed(body)
+    assert not parsed.bozo
+    assert parsed.entries[0].title.endswith("Café banking data")
 
 
 def test_invalid_external_article_url_is_skipped_and_feed_validator_is_not_saved():
