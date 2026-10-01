@@ -104,9 +104,6 @@ def correlate(items: list[NewsItem]) -> list[NewsItem]:
         buckets[day].append(item)
 
     for day, bucket in buckets.items():
-        neighbors = list(bucket)
-        if day:
-            neighbors.extend(buckets.get(day.replace(day=day), []))
         # Compare nearby days explicitly; each item also gets checked against the
         # preceding/following bucket so the algorithm remains bounded by batch size.
         nearby = bucket + buckets.get(day.fromordinal(day.toordinal() - 1), []) + buckets.get(
