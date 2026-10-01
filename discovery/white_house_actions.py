@@ -200,7 +200,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
         window = text[previous:following]
         published = None
-        datetime_values = re.findall(r"\\bdatetime=[\"']([^\"']+)[\"']", window, re.IGNORECASE)
+        datetime_values = re.findall(r"\bdatetime=[\"']([^\"']+)[\"']", window, re.IGNORECASE)
         for value in datetime_values:
             published = _parse_date(value)
             if published is not None:
