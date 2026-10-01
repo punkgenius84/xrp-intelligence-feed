@@ -24,6 +24,24 @@ from storage.database import JsonState, StateFileError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 
 
+# Only these pagination keys represent durable continuation progress. Fetch counters
+# and page-count telemetry must never become a false frontier.
+_PAGINATION_PROGRESS_KEYS = frozenset({
+    "federal_register_terms",
+    "ofac_recent_actions",
+    "fincen_press_releases",
+    "fdic_press_releases",
+    "treasury_press_releases",
+    "next_issuer_index",
+})
+
+
+def _has_pagination_progress(pagination: object) -> bool:
+    return isinstance(pagination, dict) and bool(
+        _PAGINATION_PROGRESS_KEYS.intersection(pagination)
+    )
+
+
 @dataclass(slots=True)
 class PipelineResult:
     collected: list = field(default_factory=list)
@@ -201,7 +219,7 @@ def run_pipeline(
 
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates or result.pagination:
+            if result.state_updates or _has_pagination_progress(result.pagination):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
@@ -274,8 +292,10 @@ def main() -> None:
         raise SystemExit(f"State error: {exc}") from exc
     except SourceRegistryError as exc:
         raise SystemExit(f"Source configuration error: {exc}") from exc
-    except (DiscoveryRegistryError, DiscoveryDispatchError, ValueError) as exc:
+    except (DiscoveryRegistryError, DiscoveryDispatchError) as exc:
         raise SystemExit(f"Discovery configuration error: {exc}") from exc
+    except ValueError as exc:
+        raise SystemExit(f"Pipeline configuration error: {exc}") from exc
 
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
