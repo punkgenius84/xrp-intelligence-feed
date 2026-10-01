@@ -140,6 +140,56 @@ class _RecentActionsParser(HTMLParser):
             self._div_depth = max(0, self._div_depth - 1)
 
 
+def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
+    """Recover valid action cards when OFAC changes the row wrapper markup."""
+    link_re = re.compile(
+        r'<a[^>]+href=["\'](?P<href>/recent-actions/\d{8}/?)["\'][^>]*>'
+        r'(?P<title>.*?)</a>',
+        re.IGNORECASE | re.DOTALL,
+    )
+    category_re = re.compile(
+        r'<a[^>]+href=["\']/recent-actions/(?P<slug>'
+        + "|".join(sorted(OFAC_CATEGORIES))
+        + r')/?["\'][^>]*>(?P<category>.*?)</a>',
+        re.IGNORECASE | re.DOTALL,
+    )
+    rows: list[dict[str, Any]] = []
+    for match in link_re.finditer(text):
+        native_id = re.search(r"/(\d{8})/?$", match.group("href"))
+        if not native_id:
+            continue
+        start = max(0, match.start() - 900)
+        end = min(len(text), match.end() + 1200)
+        window = text[start:end]
+        date_match = _DATE_TEXT.search(window)
+        if not date_match:
+            continue
+        try:
+            published = datetime.strptime(
+                date_match.group(0), "%B %d, %Y"
+            ).date()
+        except ValueError:
+            continue
+        categories = list(category_re.finditer(window))
+        if not categories:
+            continue
+        category = categories[0]
+        title = re.sub(r"<[^>]+>", " ", match.group("title"))
+        category_text = re.sub(r"<[^>]+>", " ", category.group("category"))
+        rows.append({
+            "url": f"https://{OFAC_HOST}/recent-actions/{native_id.group(1)}",
+            "native_id": native_id.group(1),
+            "title": " ".join(title.split()),
+            "date": published,
+            "category_slug": category.group("slug").casefold(),
+            "category": " ".join(category_text.split()),
+        })
+    unique: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        unique.setdefault(row["native_id"], row)
+    return list(unique.values())
+
+
 def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     try:
         text = content.decode("utf-8-sig")
@@ -148,6 +198,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     parser = _RecentActionsParser()
     parser.feed(text)
     parser.close()
+    fallback_rows = _regex_fallback_rows(text)
     if (parser._div_depth != 0 or parser._view_depth is not None
             or parser._content_depth is not None or parser._row is not None
             or parser._date_field_depth is not None):
@@ -182,6 +233,22 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                            "category_slug": category[0], "category": " ".join(category[1].split())})
         except (ValueError, TypeError):
             complete = False
+    if fallback_rows:
+        known = {row["native_id"]: row for row in parsed}
+        for row in fallback_rows:
+            known.setdefault(row["native_id"], row)
+        parsed = list(known.values())
+        # The fallback is deliberately conservative: it can recover cards from
+        # wrapper changes, but does not declare the page complete unless every
+        # recovered action link is also represented by a valid parsed row.
+        official_ids = {
+            match.group("id")
+            for match in re.finditer(
+                r'href=["\']/recent-actions/(?P<id>\d{8})/?["\']',
+                text, re.IGNORECASE,
+            )
+        }
+        complete = complete and official_ids <= {row["native_id"] for row in parsed}
     return parsed, complete
 
 
