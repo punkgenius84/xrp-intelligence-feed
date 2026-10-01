@@ -169,7 +169,7 @@ def test_partial_federal_register_result_without_completed_progress_does_not_per
         discovery_sources=[{"source_id": "federal-register-api"}], discovery_state=discovery,
     )
     saved = discovery.load()["sources"]["federal-register-api"]
-    assert saved["pagination"]["requests_made"] == 4
+    assert "pagination" not in saved
     assert saved["health"]["last_status"] == "partial"
     assert saved["health"]["consecutive_failures"] == 0
     assert saved["health"]["consecutive_empty"] == 1
@@ -192,10 +192,10 @@ def test_ofac_pagination_only_update_persists_through_pipeline(tmp_path, monkeyp
     assert saved["ofac_recent_actions"] == progress
 
 
-def test_any_non_empty_pagination_persists_without_state_updates(tmp_path, monkeypatch):
+def test_unknown_pagination_does_not_persist_without_state_updates(tmp_path, monkeypatch):
     result = DiscoveryResult(
         "new-paginated-source", "new_method", "success", fetched_at=STAMP,
-        pagination={"opaque_cursor": {"next": "cursor-2"}},
+        pagination={"opaque_cursor": {"next": "cursor-2"}, "requests_made": 2},
     )
     monkeypatch.setattr(main, "collect_source", lambda source, state: result)
     discovery = JsonDiscoveryState(tmp_path / "discovery.json")
@@ -203,8 +203,8 @@ def test_any_non_empty_pagination_persists_without_state_updates(tmp_path, monke
         sources=[], state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[{"source_id": "new-paginated-source"}], discovery_state=discovery,
     )
-    saved = discovery.load()["sources"]["new-paginated-source"]["pagination"]
-    assert saved["opaque_cursor"]["next"] == "cursor-2"
+    saved = discovery.load()["sources"]["new-paginated-source"]
+    assert "pagination" not in saved
 
 
 def test_correlation_state_save_failure_does_not_mark_candidate_seen(
