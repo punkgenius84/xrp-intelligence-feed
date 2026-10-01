@@ -13,6 +13,8 @@ class IntelligenceEvent:
     summary: str
     significance: str
     entities: list[str] = field(default_factory=list)
+    member_ids: list[str] = field(default_factory=list)
+    supersedes: list[str] = field(default_factory=list)
     claims: list[Claim] = field(default_factory=list)
     uncertainties: list[str] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
@@ -30,6 +32,8 @@ def event_from_analysis(
         summary=analysis.event_summary,
         significance=analysis.significance,
         entities=list(analysis.entities),
+        member_ids=[],
+        supersedes=[],
         claims=list(analysis.claims),
         uncertainties=list(analysis.uncertainties),
         evidence=list(evidence),
@@ -44,6 +48,8 @@ def event_to_dict(event: IntelligenceEvent) -> dict:
         "summary": event.summary,
         "significance": event.significance,
         "entities": list(event.entities),
+        "member_ids": list(event.member_ids),
+        "supersedes": list(event.supersedes),
         "claims": [
             {
                 "text": claim.text,
@@ -107,9 +113,15 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
         )
 
     entities = value.get("entities", [])
+    member_ids = value.get("member_ids", [])
+    supersedes = value.get("supersedes", [])
     uncertainties = value.get("uncertainties", [])
     if not isinstance(entities, list) or any(not isinstance(item, str) for item in entities):
         raise ValueError("intelligence event entities must be a string list")
+    if not isinstance(member_ids, list) or any(not isinstance(item, str) for item in member_ids):
+        raise ValueError("intelligence event member_ids must be a string list")
+    if not isinstance(supersedes, list) or any(not isinstance(item, str) for item in supersedes):
+        raise ValueError("intelligence event supersedes must be a string list")
     if not isinstance(uncertainties, list) or any(not isinstance(item, str) for item in uncertainties):
         raise ValueError("intelligence event uncertainties must be a string list")
 
@@ -151,6 +163,8 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
         summary=summary,
         significance=significance,
         entities=list(entities),
+        member_ids=list(member_ids),
+        supersedes=list(supersedes),
         claims=claims,
         uncertainties=list(uncertainties),
         evidence=evidence,

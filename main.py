@@ -16,7 +16,7 @@ from intelligence.deduplication import deduplicate
 from intelligence.correlation import build_correlation_card, correlate
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
-from intelligence.pipeline import enrich_items
+from intelligence.pipeline import enrich_clusters
 from intelligence.events import event_to_dict
 
 from intelligence.buried_signals import detect_buried_signals
@@ -225,7 +225,7 @@ def run_pipeline(
             model=intelligence_config.model,
             timeout=intelligence_config.timeout_seconds,
         )
-        intelligence_events, intelligence_failures = enrich_items(
+        intelligence_events, intelligence_failures = enrich_clusters(
             fresh,
             provider,
             intelligence_config,
@@ -233,6 +233,11 @@ def run_pipeline(
         if intelligence_state_value is not None:
             now = datetime.now().astimezone().isoformat()
             for event in intelligence_events:
+                for superseded_id in event.supersedes:
+                    JsonIntelligenceState.remove(
+                        intelligence_state_value,
+                        superseded_id,
+                    )
                 JsonIntelligenceState.upsert(
                     intelligence_state_value,
                     event.event_id,

@@ -5,7 +5,7 @@ import pytest
 from intelligence.configuration import load_intelligence_config
 from intelligence.events import event_from_dict, event_to_dict
 from intelligence.llm.schemas import Claim
-from intelligence.pipeline import event_id_for, select_items
+from intelligence.pipeline import cluster_event_id, enrich_clusters, event_id_for, select_items
 from models import NewsItem
 from storage.intelligence_state import JsonIntelligenceState, IntelligenceStateError
 
@@ -60,6 +60,8 @@ def test_event_round_trip_serialization():
             )
         ],
         uncertainties=["The article does not establish implementation timing."],
+        member_ids=["a", "b"],
+        supersedes=["evt-a", "evt-b"],
         evidence=[
             Evidence(
                 source_id="example",
@@ -253,3 +255,48 @@ def test_run_pipeline_keeps_intelligence_disabled_by_default(monkeypatch, tmp_pa
     )
     assert result.intelligence_events == []
     assert result.intelligence_failures == []
+
+
+def test_cluster_enrichment_creates_one_event_with_all_evidence():
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=5,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+    first = item(90, "a")
+    second = item(80, "b")
+    first.source_id = "source-a"
+    second.source_id = "source-b"
+    first.source = "Source A"
+    second.source = "Source B"
+    first.detected_entities = ["Ripple", "DBS"]
+    second.detected_entities = ["Ripple", "DBS"]
+    first.correlated_candidate_ids = ["b"]
+    second.correlated_candidate_ids = ["a"]
+
+    class Provider:
+        def generate(self, **kwargs):
+            from intelligence.llm.base import LLMResponse
+
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Shared event",'
+                '"significance":"Two independent sources report the same event.",'
+                '"entities":["Ripple","DBS"],"claims":[],"uncertainties":[]}',
+                model="test-model",
+            )
+
+    events, failures = enrich_clusters([first, second], Provider(), config)
+
+    assert failures == []
+    assert len(events) == 1
+    assert events[0].event_id == cluster_event_id(
+        __import__("intelligence.event_clustering", fromlist=["EventCluster"]).EventCluster(
+            cluster_id="ignored",
+            members=(first, second),
+        )
+    )
+    assert events[0].member_ids == ["a", "b"]
+    assert events[0].supersedes == [event_id_for(first), event_id_for(second)]
+    assert {e.source_id for e in events[0].evidence} == {"source-a", "source-b"}

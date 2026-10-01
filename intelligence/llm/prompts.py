@@ -13,7 +13,8 @@ policy_change, product_launch, institutional_adoption, funding, acquisition,
 litigation, executive_action, other.
 
 Claims must distinguish what the source states from uncertainty. Evidence entries may only refer to
-material present in the supplied article (for example: "title" or "summary").
+material present in the supplied source material (for example: "source-1 title" or "source-2 summary").
+When multiple sources disagree, preserve the disagreement as uncertainty; do not choose a winner.
 """
 
 
@@ -28,3 +29,26 @@ def build_user_prompt(*, title: str, summary: str, source: str) -> str:
         "--- END UNTRUSTED ARTICLE ---\n"
         "Analyze only this supplied material."
     )
+
+
+
+def build_cluster_user_prompt(items) -> str:
+    """Build a bounded prompt containing multiple independent untrusted sources."""
+    parts = [
+        "ARTICLE METADATA (trusted by the application):",
+        f"source_count: {len(items)}",
+        "",
+    ]
+    for index, item in enumerate(items, start=1):
+        source = (item.source or item.source_id or "unknown")[:200]
+        parts.extend([
+            f"--- BEGIN UNTRUSTED SOURCE {index} ---",
+            f"source: {source}",
+            f"source_id: {(item.source_id or "unknown")[:120]}",
+            f"TITLE: {item.title[:1000]}",
+            f"SUMMARY: {item.summary[:6000]}",
+            f"--- END UNTRUSTED SOURCE {index} ---",
+            "",
+        ])
+    parts.append("Analyze only the supplied source material. Do not browse or add facts. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
+    return "\n".join(parts)
