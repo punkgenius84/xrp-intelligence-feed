@@ -20,11 +20,11 @@ material present in the supplied article (for example: "title" or "summary").
 def build_user_prompt(*, title: str, summary: str, source: str) -> str:
     # Explicit delimiters make the trust boundary visible to the model.
     return (
-        "ARTICLE METADATA (trusted by the application):\\n"
-        f"source: {source[:200]}\\n"
-        "\\n--- BEGIN UNTRUSTED ARTICLE ---\\n"
-        f"TITLE: {title[:1000]}\\n"
-        f"SUMMARY: {summary[:12000]}\\n"
-        "--- END UNTRUSTED ARTICLE ---\\n"
+        "ARTICLE METADATA (trusted by the application):\n"
+        f"source: {source[:200]}\n"
+        "\n--- BEGIN UNTRUSTED ARTICLE ---\n"
+        f"TITLE: {title[:1000]}\n"
+        f"SUMMARY: {summary[:12000]}\n"
+        "--- END UNTRUSTED ARTICLE ---\n"
         "Analyze only this supplied material."
     )
