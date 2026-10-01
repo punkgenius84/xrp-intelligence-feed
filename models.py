@@ -50,6 +50,10 @@ class NewsItem:
     source_status: str = ""
     source_error: str = ""
     source_native_metadata: dict[str, str] = field(default_factory=dict)
+    # Conservative buried-signal metadata. Appended to preserve positional compatibility.
+    buried_signal: bool = False
+    buried_signal_score: int = 0
+    buried_signal_reasons: list[str] = field(default_factory=list)
 
     @property
     def canonical_url(self) -> str:

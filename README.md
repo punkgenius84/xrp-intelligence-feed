@@ -15,6 +15,10 @@ Discovery sources persist lightweight health telemetry in `state/discovery.json`
 
 The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, and discovery health. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
 
+## Buried-signal detection
+
+Fresh candidates that remain below the normal publish threshold can be flagged as buried signals when they have strong cross-source correlation, primary-source quality, and a configured high-value entity. The detector is intentionally separate from relevance scoring: it does not raise relevance scores, bypass the normal publish threshold, deduplicate items, or treat corroboration as proof. Buried signals are currently reported in the run output for later intelligence/publishing policy work; they are not automatically posted to Discord.
+
 ## Cross-source correlation
 
 Fresh candidates are conservatively compared across different sources for likely same-event relationships. Correlation requires a shared high-value entity, publication dates within one day, and meaningful headline overlap. It enriches each item with related source/candidate IDs and a correlation score, but it does not deduplicate items, increase relevance scores, or treat independent reporting as proof of the underlying claim.
