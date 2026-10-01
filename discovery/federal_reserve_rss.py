@@ -105,7 +105,7 @@ def _article_identity(value: object) -> tuple[str, str] | None:
 
 def _parse_feed(content: bytes) -> Any:
     """Parse Federal Reserve RSS while tolerating a stale ASCII declaration."""
-    if re.search(rb"<\\?xml[^>]*encoding=[\\\"']us-ascii[\\\"']", content[:512], re.IGNORECASE):
+    if re.search(rb"encoding\\s*=\\s*[\\\"']us-ascii[\\\"']", content[:512], re.IGNORECASE):
         try:
             return feedparser.parse(content.decode("utf-8"))
         except UnicodeDecodeError:
