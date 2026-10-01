@@ -348,6 +348,8 @@ def main() -> None:
 
     outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
     pending = outbox_store.load() if outbox_store is not None else relevant
+    if outbox_store is not None and not pending:
+        pending = relevant
     report = publish(pending, discord_settings)
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
