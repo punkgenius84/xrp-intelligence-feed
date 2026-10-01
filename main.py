@@ -13,6 +13,7 @@ from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
 from intelligence.correlation import correlate
+from intelligence.buried_signals import detect_buried_signals
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
@@ -29,6 +30,7 @@ class PipelineResult:
     reports: list = field(default_factory=list)
     discovery_results: list[DiscoveryResult] = field(default_factory=list)
     health: dict[str, dict] = field(default_factory=dict)
+    buried_signals: list = field(default_factory=list)
 
 
 
@@ -125,6 +127,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     # Correlation is deliberately downstream of relevance scoring: it enriches context
     # without changing whether an item qualifies for publication.
     correlate(fresh)
+    buried_signals = detect_buried_signals(fresh)
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
             if result.state_updates or (isinstance(result.pagination.get("federal_register_terms"), dict)
@@ -169,7 +172,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         for result in discovery_results
         if discovery_state_value is not None
     }
-    return PipelineResult(collected, fresh, failures, reports, discovery_results, health)
+    return PipelineResult(collected, fresh, failures, reports, discovery_results, health, buried_signals)
 
 
 class _NoSaveState:
@@ -208,14 +211,21 @@ def main() -> None:
         raise SystemExit(f"Source configuration error: {exc}") from exc
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
+    buried_signals = result.buried_signals
     publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
     relevant = [item for item in fresh if item.relevance_score >= publish_score]
-    print(f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)}")
+    print(f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} | Buried signals: {len(buried_signals)}")
     for item in relevant:
         print(f"[{item.relevance_score}] {item.title} — {item.source} "
               f"| entities: {', '.join(item.detected_entities) or 'none'} "
               f"| quality: {item.source_quality}")
         for reason in item.score_reasons:
+            print(f"  - {reason}")
+    for item in buried_signals:
+        print(f"[buried {item.buried_signal_score}] {item.title} — {item.source} "
+              f"| correlation: {item.correlation_score} "
+              f"| entities: {', '.join(item.detected_entities) or 'none'}")
+        for reason in item.buried_signal_reasons:
             print(f"  - {reason}")
     for failure in failures:
         print(f"Source failed: {failure}")
