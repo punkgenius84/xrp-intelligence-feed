@@ -15,8 +15,8 @@ def _card(candidate_id, published_at=STAMP, last_seen=STAMP, source_id="sec"):
         "source_id": source_id,
         "published_at": published_at.isoformat(),
         "high_value_entities": ["Ripple", "SEC"],
-        "title_tokens": ["digital", "asset", "ripple", "sec"],
-        "content_hash": f"hash-{candidate_id}",
+        "title_tokens": ["asset", "digital", "ripple", "sec"],
+        "content_hash": "hash-1",
         "last_seen": last_seen.isoformat(),
     }
 
