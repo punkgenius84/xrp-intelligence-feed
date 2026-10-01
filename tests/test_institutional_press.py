@@ -182,7 +182,7 @@ def test_json_ld_fallback_handles_js_heavy_institutional_index():
         name="Citi",
         source_url="https://www.citigroup.com/global/news/press-release",
         allowed_hosts=["www.citigroup.com", "citigroup.com"],
-        article_path_regex=r"/global/news/press-release/[^/?#]+",
+        article_path_regex=r"/global/news/press-release/(?:\d{4}/)?[^/?#]+",
     )
     rows, complete = _parse_page(citi, html)
     assert complete is True
