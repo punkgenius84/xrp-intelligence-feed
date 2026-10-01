@@ -176,3 +176,74 @@ def test_enrichment_failure_does_not_abort_other_items():
     assert len(events) == 1
     assert events[0].summary == "First"
     assert len(failures) == 1
+
+
+def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
+    import main
+    from intelligence.llm.base import LLMResponse
+    from storage.correlation_state import JsonCorrelationState
+
+    class FakeProvider:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Source-backed event",'
+                '"significance":"Relevant to the monitored domain.",'
+                '"entities":["Ripple"],"claims":[{"text":"The source reports an announcement.",'
+                '"certainty":"high","evidence":["summary"]}]}',
+                model="test-model",
+            )
+
+    monkeypatch.setenv("INTELLIGENCE_ENABLED", "true")
+    monkeypatch.setenv("INTELLIGENCE_MIN_SCORE", "0")
+    monkeypatch.setenv("INTELLIGENCE_MAX_ITEMS", "1")
+    monkeypatch.setattr(main, "OllamaProvider", FakeProvider)
+
+    item_value = NewsItem(
+        title="Ripple announces institutional payments partnership",
+        url="https://example.test/ripple-partnership",
+        source="Example",
+        source_id="example",
+        summary="Ripple announced a partnership with an institutional payments provider.",
+        published_at=datetime.now(timezone.utc),
+    )
+    intelligence_store = JsonIntelligenceState(tmp_path / "intelligence.json")
+    correlation_store = JsonCorrelationState(tmp_path / "correlation.json")
+    result = main.run_pipeline(
+        sources=[item_value],
+        state=__import__("storage.database", fromlist=["JsonState"]).JsonState(
+            tmp_path / "seen.json"
+        ),
+        correlation_state=correlation_store,
+        intelligence_state=intelligence_store,
+    )
+    assert len(result.intelligence_events) == 1
+    assert result.intelligence_events[0].summary == "Source-backed event"
+    persisted = intelligence_store.load()
+    assert len(persisted["events"]) == 1
+
+
+def test_run_pipeline_keeps_intelligence_disabled_by_default(monkeypatch, tmp_path):
+    import main
+    from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
+
+    monkeypatch.delenv("INTELLIGENCE_ENABLED", raising=False)
+    monkeypatch.setattr(
+        main,
+        "OllamaProvider",
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("Ollama must not be constructed when intelligence is disabled")
+        ),
+    )
+
+    result = main.run_pipeline(
+        sources=[],
+        state=JsonState(tmp_path / "seen.json"),
+        correlation_state=JsonCorrelationState(tmp_path / "correlation.json"),
+        intelligence_state=JsonIntelligenceState(tmp_path / "intelligence.json"),
+    )
+    assert result.intelligence_events == []
+    assert result.intelligence_failures == []
