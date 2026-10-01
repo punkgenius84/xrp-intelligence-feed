@@ -1,5 +1,7 @@
 from intelligence.discord import format_intelligence_event
-from dataclasses import replace\n\nfrom intelligence.events import IntelligenceEvent
+from dataclasses import replace
+
+from intelligence.events import IntelligenceEvent
 from intelligence.evidence import Evidence
 from intelligence.llm.schemas import Claim
 
