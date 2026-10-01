@@ -240,10 +240,10 @@ def main() -> None:
             result = run_pipeline()
     except (StateFileError, DiscoveryStateError, CorrelationStateError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
-    except (DiscoveryRegistryError, DiscoveryDispatchError, ValueError) as exc:
-        raise SystemExit(f"Discovery configuration error: {exc}") from exc
     except SourceRegistryError as exc:
         raise SystemExit(f"Source configuration error: {exc}") from exc
+    except (DiscoveryRegistryError, DiscoveryDispatchError, ValueError) as exc:
+        raise SystemExit(f"Discovery configuration error: {exc}") from exc
 
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
