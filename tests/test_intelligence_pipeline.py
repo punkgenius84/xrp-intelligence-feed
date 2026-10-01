@@ -37,3 +37,14 @@ def test_corrupt_intelligence_state_fails_closed(tmp_path):
     path.write_text("not json", encoding="utf-8")
     with pytest.raises(IntelligenceStateError):
         JsonIntelligenceState(path).load()
+
+
+def test_intelligence_state_upsert_replaces_same_event(tmp_path):
+    store = JsonIntelligenceState(tmp_path / "intelligence.json")
+    state = store.load()
+    JsonIntelligenceState.upsert(state, "evt-1", {"summary": "first"}, "2026-10-01T00:00:00Z")
+    JsonIntelligenceState.upsert(state, "evt-1", {"summary": "updated"}, "2026-10-01T01:00:00Z")
+    store.save(state)
+    loaded = store.load()
+    assert len(loaded["events"]) == 1
+    assert loaded["events"]["evt-1"]["summary"] == "updated"
