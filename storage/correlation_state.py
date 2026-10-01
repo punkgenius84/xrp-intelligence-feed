@@ -176,3 +176,12 @@ class JsonCorrelationState:
             "content_hash": content_hash,
             "last_seen": last_seen.astimezone(timezone.utc).isoformat(),
         }
+
+
+    @staticmethod
+    def touch_card(state: dict[str, Any], *, candidate_id: str, last_seen: datetime) -> None:
+        """Refresh observation time without changing the bounded card contents."""
+        card = state["cards"].get(candidate_id)
+        if card is None:
+            return
+        card["last_seen"] = last_seen.astimezone(timezone.utc).isoformat()

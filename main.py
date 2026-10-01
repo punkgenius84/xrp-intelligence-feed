@@ -138,6 +138,38 @@ def run_pipeline(
         classify_source_quality(item)
         score_relevance(item)
 
+    # Refresh cards already in memory even when deduplication says an item is not fresh.
+    # A stable candidate ID with a new content hash is an update to the same event, not
+    # a second event. Existing cards are never recreated merely because they were observed.
+    for item in normalized:
+        candidate_id = item.candidate_id or item.fingerprint
+        existing = correlation_state_value["cards"].get(candidate_id)
+        if existing is None:
+            continue
+        if existing["content_hash"] != item.content_hash:
+            detect_entities(item)
+            card = build_correlation_card(item)
+            JsonCorrelationState.upsert_card(
+                correlation_state_value,
+                candidate_id=card["candidate_id"],
+                source_id=card["source_id"],
+                published_at=datetime.fromisoformat(
+                    card["published_at"].replace("Z", "+00:00")
+                ),
+                high_value_entities=card["high_value_entities"],
+                title_tokens=card["title_tokens"],
+                content_hash=card["content_hash"],
+                last_seen=datetime.fromisoformat(
+                    card["last_seen"].replace("Z", "+00:00")
+                ),
+            )
+        else:
+            JsonCorrelationState.touch_card(
+                correlation_state_value,
+                candidate_id=candidate_id,
+                last_seen=item.collected_at,
+            )
+
     # Correlation is deliberately downstream of relevance scoring: it enriches context
     # without changing whether an item qualifies for publication.
     correlate(fresh, history=list(correlation_state_value["cards"].values()))
