@@ -50,4 +50,5 @@ jobs:
           path: |
             state/seen.json
             state/discovery.json
+            state/correlation.json
           key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json') }}
