@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import os
 import re
 import time
 from typing import Any, Callable, Mapping
+
+from storage.outbox import publication_key
 
 from discord.webhook import DiscordError, DiscordWebhook, is_valid_webhook_url
 
@@ -30,6 +32,9 @@ class PublishReport:
     not_selected: int = 0
     dry_run: bool = False
     skipped_unconfigured: bool = False
+    posted_keys: list[str] = field(default_factory=list)
+    failed_keys: list[str] = field(default_factory=list)
+    not_selected_keys: list[str] = field(default_factory=list)
 
 
 def settings_from_env(env: Mapping[str, str] | None = None) -> DiscordSettings:
@@ -82,6 +87,7 @@ def publish(items: list[Any], settings: DiscordSettings, *, webhook: DiscordWebh
     ranked = sorted(items, key=lambda i: (-i.relevance_score, -_when(i).timestamp()))
     selected = sorted(ranked[: settings.max_posts], key=_when)
     report.not_selected = len(items) - len(selected)
+    report.not_selected_keys = [publication_key(item) for item in ranked[settings.max_posts:]]
 
     if settings.dry_run:
         for item in selected:
@@ -97,16 +103,20 @@ def publish(items: list[Any], settings: DiscordSettings, *, webhook: DiscordWebh
             try:
                 hook.send(format_message(item))
             except DiscordError as exc:
-                report.failed += 1
                 consecutive_failures += 1
                 out(f"::warning::Discord post failed for {item.url}: {exc}")
+                report.failed += 1
+                report.failed_keys.append(publication_key(item))
                 if consecutive_failures >= 2:
-                    report.failed += len(selected) - index - 1
+                    remaining = selected[index + 1:]
+                    report.failed += len(remaining)
+                    report.failed_keys.extend(publication_key(value) for value in remaining)
                     out("Discord: stopping after 2 consecutive failures")
                     break
                 continue
             consecutive_failures = 0
             report.posted += 1
+            report.posted_keys.append(publication_key(item))
             if index < len(selected) - 1:
                 sleep(pause)
 
