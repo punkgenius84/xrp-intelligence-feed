@@ -4,7 +4,7 @@ from hashlib import sha256
 
 from models import NewsItem
 
-from .configuration import IntelligenceConfig
+from .configuration import IntelligenceRuntimeConfig
 from .evidence import evidence_from_item
 from .events import IntelligenceEvent, event_from_analysis
 from .llm.base import LLMError, LLMProvider
@@ -16,7 +16,7 @@ def event_id_for(item: NewsItem) -> str:
     return "evt-" + sha256(identity.encode("utf-8")).hexdigest()[:24]
 
 
-def select_items(items: list[NewsItem], config: IntelligenceConfig) -> list[NewsItem]:
+def select_items(items: list[NewsItem], config: IntelligenceRuntimeConfig) -> list[NewsItem]:
     eligible = [item for item in items if item.relevance_score >= config.min_relevance_score]
     eligible.sort(key=lambda item: (-item.relevance_score, item.published_at or item.collected_at))
     return eligible[:config.max_items_per_run]
