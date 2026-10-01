@@ -31,7 +31,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "key: xrp-state-${{ github.ref_name }}-v1-bootstrap" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert "actions/cache/save@v4" in save
-    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json') }}" in save
+    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/outbox.json') }}" in save
     assert "github.run_id" not in contents
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
