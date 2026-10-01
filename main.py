@@ -12,6 +12,7 @@ from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
+from intelligence.correlation import correlate
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
@@ -56,17 +57,6 @@ def normalize_item(item):
     return item
 
 
-# Pagination keys that hold a resumable cursor. Other pagination entries (page_fetches,
-# requests_made, ...) are per-run telemetry and must not be persisted on their own.
-CURSOR_PAGINATION_KEYS = (
-    "federal_register_terms", "ofac_recent_actions", "fincen_press_releases",
-    "treasury_press_releases", "fdic_press_releases",
-)
-
-
-def _has_cursor_progress(pagination: dict) -> bool:
-    return any(isinstance(pagination.get(key), dict) and bool(pagination.get(key))
-               for key in CURSOR_PAGINATION_KEYS)
 
 
 def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None) -> PipelineResult:
@@ -132,9 +122,21 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         detect_entities(item)
         classify_source_quality(item)
         score_relevance(item)
+    # Correlation is deliberately downstream of relevance scoring: it enriches context
+    # without changing whether an item qualifies for publication.
+    correlate(fresh)
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates or _has_cursor_progress(result.pagination):
+            if result.state_updates or (isinstance(result.pagination.get("federal_register_terms"), dict)
+                                        and bool(result.pagination.get("federal_register_terms"))) or (
+                    isinstance(result.pagination.get("ofac_recent_actions"), dict)
+                    and bool(result.pagination.get("ofac_recent_actions"))) or (
+                    isinstance(result.pagination.get("fincen_press_releases"), dict)
+                    and bool(result.pagination.get("fincen_press_releases"))) or (
+                    isinstance(result.pagination.get("treasury_press_releases"), dict)
+                    and bool(result.pagination.get("treasury_press_releases"))) or (
+                    isinstance(result.pagination.get("fdic_press_releases"), dict)
+                    and bool(result.pagination.get("fdic_press_releases"))):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
