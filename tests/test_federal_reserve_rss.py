@@ -124,6 +124,23 @@ def test_federal_reserve_release_identity_and_date_are_preserved_without_article
     assert len(http.calls) == 6
 
 
+def test_utf8_payload_with_stale_ascii_declaration_is_parsed():
+    body = b'''<?xml version="1.0" encoding="us-ascii"?>
+    <rss version="2.0"><channel><title>Federal Reserve</title><item>
+    <title>Federal Reserve Board requests public comment on Caf\xc3\xa9 banking data</title>
+    <link>https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm</link>
+    <pubDate>Thu, 24 Sep 2026 16:00:00 +0000</pubDate><guid>fed-utf8</guid>
+    </item></channel></rss>'''
+    fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
+    http = FakeHttp([response(body)] + [response(fixture) for _ in range(5)])
+    configured = load_discovery_sources()
+    fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
+    result = collect_source(fed, http=http, now=lambda: STAMP)
+    assert result.status == "success"
+    candidate = next(item for item in result.candidates if item.source_native_id == "bcreg20260924a")
+    assert "Café" in candidate.title
+
+
 def test_invalid_external_article_url_is_skipped_and_feed_validator_is_not_saved():
     body = b'''<rss version="2.0"><channel><title>Federal Reserve</title><item>
     <title>Bad URL</title><link>https://example.org/not-fed</link>
