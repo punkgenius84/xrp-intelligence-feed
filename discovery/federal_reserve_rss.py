@@ -107,7 +107,15 @@ def _parse_feed(content: bytes) -> Any:
     """Parse Federal Reserve RSS while tolerating a stale ASCII declaration."""
     if re.search(rb"encoding\\s*=\\s*[\\\"']us-ascii[\\\"']", content[:512], re.IGNORECASE):
         try:
-            return feedparser.parse(content.decode("utf-8"))
+            decoded = content.decode("utf-8")
+            decoded = re.sub(
+                r"encoding\s*=\s*[\"']us-ascii[\"']",
+                'encoding="utf-8"',
+                decoded,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            return feedparser.parse(decoded)
         except UnicodeDecodeError:
             pass
     return feedparser.parse(content)
