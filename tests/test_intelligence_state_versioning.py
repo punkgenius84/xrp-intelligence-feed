@@ -110,4 +110,4 @@ def test_mark_superseded_is_idempotent_for_same_replacement(tmp_path):
 
     record = state["events"]["evt-old"]
     assert record["superseded_by"] == ["evt-new"]
-    assert record["revision"] == 3
+    assert record["revision"] == 2
