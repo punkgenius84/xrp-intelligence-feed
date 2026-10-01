@@ -140,3 +140,116 @@ def test_intelligence_state_upsert_replaces_same_event(tmp_path):
     loaded = store.load()
     assert len(loaded["events"]) == 1
     assert loaded["events"]["evt-1"]["summary"] == "updated"
+
+
+def test_enrichment_failure_does_not_abort_other_items():
+    from intelligence.pipeline import enrich_items
+
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=2,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+
+    class Provider:
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, **kwargs):
+            from intelligence.llm.base import LLMResponse, LLMUnavailable
+
+            self.calls += 1
+            if self.calls == 1:
+                return LLMResponse(
+                    '{"event_type":"announcement","event_summary":"First","significance":"Source-backed","claims":[]}',
+                    model="test-model",
+                )
+            raise LLMUnavailable("offline")
+
+    events, failures = enrich_items(
+        [item(90, "first"), item(80, "second")],
+        Provider(),
+        config,
+    )
+    assert len(events) == 1
+    assert events[0].summary == "First"
+    assert len(failures) == 1
+
+
+def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
+    import main
+    from intelligence.llm.base import LLMResponse
+    from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
+
+    class FakeProvider:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Source-backed event",'
+                '"significance":"Relevant to the monitored domain.",'
+                '"entities":["Ripple"],"claims":[{"text":"The source reports an announcement.",'
+                '"certainty":"high","evidence":["summary"]}]}',
+                model="test-model",
+            )
+
+    class FakeCollector:
+        def __init__(self, source):
+            self.last_report = None
+
+        def collect(self):
+            return [NewsItem(
+                title="Ripple announces institutional payments partnership",
+                url="https://example.test/ripple-partnership",
+                source="Example",
+                source_id="example",
+                summary="Ripple announced a partnership with an institutional payments provider.",
+                published_at=datetime.now(timezone.utc),
+            )]
+
+    monkeypatch.setenv("INTELLIGENCE_ENABLED", "true")
+    monkeypatch.setenv("INTELLIGENCE_MIN_SCORE", "0")
+    monkeypatch.setenv("INTELLIGENCE_MAX_ITEMS", "1")
+    monkeypatch.setattr(main, "OllamaProvider", FakeProvider)
+    monkeypatch.setattr(main, "RSSCollector", FakeCollector)
+
+    intelligence_store = JsonIntelligenceState(tmp_path / "intelligence.json")
+    correlation_store = JsonCorrelationState(tmp_path / "correlation.json")
+    result = main.run_pipeline(
+        sources=[{"source_id": "example", "collection_type": "rss"}],
+        state=JsonState(tmp_path / "seen.json"),
+        correlation_state=correlation_store,
+        intelligence_state=intelligence_store,
+    )
+    assert len(result.intelligence_events) == 1
+    assert result.intelligence_events[0].summary == "Source-backed event"
+    persisted = intelligence_store.load()
+    assert len(persisted["events"]) == 1
+
+
+def test_run_pipeline_keeps_intelligence_disabled_by_default(monkeypatch, tmp_path):
+    import main
+    from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
+
+    monkeypatch.delenv("INTELLIGENCE_ENABLED", raising=False)
+    monkeypatch.setattr(
+        main,
+        "OllamaProvider",
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("Ollama must not be constructed when intelligence is disabled")
+        ),
+    )
+
+    result = main.run_pipeline(
+        sources=[],
+        state=JsonState(tmp_path / "seen.json"),
+        correlation_state=JsonCorrelationState(tmp_path / "correlation.json"),
+        intelligence_state=JsonIntelligenceState(tmp_path / "intelligence.json"),
+    )
+    assert result.intelligence_events == []
+    assert result.intelligence_failures == []

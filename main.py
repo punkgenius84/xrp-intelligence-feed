@@ -14,6 +14,11 @@ from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
 from intelligence.correlation import build_correlation_card, correlate
+from intelligence.configuration import load_intelligence_config
+from intelligence.llm.ollama import OllamaProvider
+from intelligence.pipeline import enrich_items
+from intelligence.events import event_to_dict
+
 from intelligence.buried_signals import detect_buried_signals
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
@@ -23,6 +28,8 @@ from storage.correlation_state import CorrelationStateError, JsonCorrelationStat
 from storage.database import JsonState, StateFileError
 from storage.outbox import JsonOutboxState, OutboxError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
+from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
+
 
 
 # Only these pagination keys represent durable continuation progress. Fetch counters
@@ -53,6 +60,8 @@ class PipelineResult:
     health: dict[str, dict] = field(default_factory=dict)
     buried_signals: list = field(default_factory=list)
     publishable: list = field(default_factory=list)
+    intelligence_events: list = field(default_factory=list)
+    intelligence_failures: list[str] = field(default_factory=list)
 
 
 class _PlainText(HTMLParser):
@@ -87,6 +96,7 @@ def run_pipeline(
     discovery_state=None,
     correlation_state=None,
     outbox_state=None,
+    intelligence_state=None,
 ) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -101,6 +111,13 @@ def run_pipeline(
     thresholds = validate_thresholds(read_object("config/thresholds.json", "thresholds"))
     state = state or JsonState()
     seen = state.load()
+
+    intelligence_config = load_intelligence_config()
+    intelligence_store = None
+    intelligence_state_value = None
+    if intelligence_config.enabled:
+        intelligence_store = intelligence_state or JsonIntelligenceState()
+        intelligence_state_value = intelligence_store.load()
 
     correlation_store = correlation_state or JsonCorrelationState()
     correlation_state_value = correlation_store.load()
@@ -201,6 +218,28 @@ def run_pipeline(
     if outbox_state is not None:
         outbox_state.enqueue(publishable)
 
+    intelligence_events = []
+    intelligence_failures: list[str] = []
+    if intelligence_config.enabled:
+        provider = OllamaProvider(
+            model=intelligence_config.model,
+            timeout=intelligence_config.timeout_seconds,
+        )
+        intelligence_events, intelligence_failures = enrich_items(
+            fresh,
+            provider,
+            intelligence_config,
+        )
+        if intelligence_state_value is not None:
+            now = datetime.now().astimezone().isoformat()
+            for event in intelligence_events:
+                JsonIntelligenceState.upsert(
+                    intelligence_state_value,
+                    event.event_id,
+                    event_to_dict(event),
+                    now,
+                )
+
     # Persist only the thin, bounded correlation memory after enrichment. This must
     # succeed before the shared seen set is saved, so a failed memory write leaves
     # candidates eligible for pairing on the next run.
@@ -222,6 +261,9 @@ def run_pipeline(
                 ),
             )
     correlation_store.save(correlation_state_value)
+
+    if intelligence_store is not None and intelligence_state_value is not None:
+        intelligence_store.save(intelligence_state_value)
 
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
@@ -259,7 +301,18 @@ def run_pipeline(
         for result in discovery_results
         if discovery_state_value is not None
     }
-    return PipelineResult(collected, fresh, failures, reports, discovery_results, health, buried_signals, publishable)
+    return PipelineResult(
+        collected,
+        fresh,
+        failures,
+        reports,
+        discovery_results,
+        health,
+        buried_signals,
+        publishable,
+        intelligence_events,
+        intelligence_failures,
+    )
 
 
 class _NoSaveState:
@@ -291,6 +344,7 @@ def main() -> None:
                 state=_NoSaveState(JsonState()),
                 discovery_state=_NoSaveState(JsonDiscoveryState()),
                 correlation_state=_NoSaveState(JsonCorrelationState()),
+                intelligence_state=_NoSaveState(JsonIntelligenceState()),
             )
         else:
             outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
@@ -298,7 +352,13 @@ def main() -> None:
                 result = run_pipeline()
             else:
                 result = run_pipeline(outbox_state=outbox_store)
-    except (StateFileError, DiscoveryStateError, CorrelationStateError, OutboxError) as exc:
+    except (
+        StateFileError,
+        DiscoveryStateError,
+        CorrelationStateError,
+        IntelligenceStateError,
+        OutboxError,
+    ) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except SourceRegistryError as exc:
         raise SystemExit(f"Source configuration error: {exc}") from exc
@@ -310,11 +370,13 @@ def main() -> None:
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
     buried_signals = result.buried_signals
+    intelligence_events = result.intelligence_events
+    intelligence_failures = result.intelligence_failures
     publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
     relevant = result.publishable or [item for item in fresh if item.relevance_score >= publish_score]
     print(
         f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} "
-        f"| Buried signals: {len(buried_signals)}"
+        f"| Buried signals: {len(buried_signals)} | Intelligence events: {len(intelligence_events)}"
     )
     for item in relevant:
         print(f"[{item.relevance_score}] {item.title} — {item.source} "
@@ -322,6 +384,15 @@ def main() -> None:
               f"| quality: {item.source_quality}")
         for reason in item.score_reasons:
             print(f"  - {reason}")
+    for failure in intelligence_failures:
+        print(f"Intelligence failed: {failure}")
+
+    for event in intelligence_events:
+        print(
+            f"[intelligence {event.event_type}] {event.summary} "
+            f"| entities: {', '.join(event.entities) or 'none'}"
+        )
+
     for item in buried_signals:
         print(f"[buried {item.buried_signal_score}] {item.title} — {item.source} "
               f"| correlation: {item.correlation_score} "
