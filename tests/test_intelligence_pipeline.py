@@ -182,6 +182,7 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
     import main
     from intelligence.llm.base import LLMResponse
     from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
 
     class FakeProvider:
         def __init__(self, **kwargs):
@@ -196,26 +197,31 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
                 model="test-model",
             )
 
+    class FakeCollector:
+        def __init__(self, source):
+            self.last_report = None
+
+        def collect(self):
+            return [NewsItem(
+                title="Ripple announces institutional payments partnership",
+                url="https://example.test/ripple-partnership",
+                source="Example",
+                source_id="example",
+                summary="Ripple announced a partnership with an institutional payments provider.",
+                published_at=datetime.now(timezone.utc),
+            )]
+
     monkeypatch.setenv("INTELLIGENCE_ENABLED", "true")
     monkeypatch.setenv("INTELLIGENCE_MIN_SCORE", "0")
     monkeypatch.setenv("INTELLIGENCE_MAX_ITEMS", "1")
     monkeypatch.setattr(main, "OllamaProvider", FakeProvider)
+    monkeypatch.setattr(main, "RSSCollector", FakeCollector)
 
-    item_value = NewsItem(
-        title="Ripple announces institutional payments partnership",
-        url="https://example.test/ripple-partnership",
-        source="Example",
-        source_id="example",
-        summary="Ripple announced a partnership with an institutional payments provider.",
-        published_at=datetime.now(timezone.utc),
-    )
     intelligence_store = JsonIntelligenceState(tmp_path / "intelligence.json")
     correlation_store = JsonCorrelationState(tmp_path / "correlation.json")
     result = main.run_pipeline(
-        sources=[item_value],
-        state=__import__("storage.database", fromlist=["JsonState"]).JsonState(
-            tmp_path / "seen.json"
-        ),
+        sources=[{"source_id": "example", "collection_type": "rss"}],
+        state=JsonState(tmp_path / "seen.json"),
         correlation_state=correlation_store,
         intelligence_state=intelligence_store,
     )
