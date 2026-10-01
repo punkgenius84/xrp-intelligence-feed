@@ -158,7 +158,7 @@ def test_enrichment_failure_does_not_abort_other_items():
             self.calls = 0
 
         def generate(self, **kwargs):
-            from intelligence.llm.base import LLMResponse
+            from intelligence.llm.base import LLMResponse, LLMUnavailable
 
             self.calls += 1
             if self.calls == 1:
@@ -166,7 +166,7 @@ def test_enrichment_failure_does_not_abort_other_items():
                     '{"event_type":"announcement","event_summary":"First","significance":"Source-backed","claims":[]}',
                     model="test-model",
                 )
-            raise RuntimeError("unexpected provider error")
+            raise LLMUnavailable("offline")
 
     events, failures = enrich_items(
         [item(90, "first"), item(80, "second")],
