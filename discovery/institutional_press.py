@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
+import json
 import re
 from typing import Any, Callable
 from urllib.parse import parse_qs, urljoin, urlsplit
@@ -133,6 +134,52 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
     return source
 
 
+def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]:
+    """Extract article metadata from official JSON-LD when page markup is JS-heavy."""
+    rows: list[dict[str, Any]] = []
+
+    def walk(value: object):
+        if isinstance(value, dict):
+            yield value
+            for child in value.values():
+                yield from walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from walk(child)
+
+    scripts = re.findall(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        text, re.IGNORECASE | re.DOTALL,
+    )
+    for raw in scripts:
+        try:
+            payload = json.loads(raw.strip())
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        for item in walk(payload):
+            types = item.get("@type")
+            if isinstance(types, str):
+                types = [types]
+            if not isinstance(types, list) or not any(
+                isinstance(kind, str) and kind.casefold() in {"article", "newsarticle", "pressrelease"}
+                for kind in types
+            ):
+                continue
+            title = _clean(item.get("headline") or item.get("name"))
+            href = item.get("url") or item.get("mainEntityOfPage")
+            if isinstance(href, dict):
+                href = href.get("@id") or href.get("url")
+            published = _parse_date(item.get("datePublished") or item.get("dateCreated"))
+            safe = _official_article(source, href)
+            if safe is None or not title or published is None:
+                continue
+            rows.append({"url": safe[0], "native_id": safe[1], "title": title, "date": published})
+    unique: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        unique.setdefault(row["native_id"], row)
+    return list(unique.values())
+
+
 def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, Any]], bool]:
     try:
         text = content.decode("utf-8-sig")
@@ -143,8 +190,9 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
-    if not matches:
-        raise ValueError("institutional response is missing links")
+    structured_rows = _json_ld_articles(source, text)
+    if not matches and not structured_rows:
+        raise ValueError("institutional response is missing links and structured article metadata")
 
     rows: list[dict[str, Any]] = []
     complete = True
@@ -173,7 +221,13 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             "date": published,
         })
     if not rows:
+        if structured_rows:
+            return structured_rows, True
         raise ValueError("institutional response has no dated official articles")
+    known_ids = {item["native_id"] for item in rows}
+    for row in structured_rows:
+        if row["native_id"] not in known_ids:
+            rows.append(row)
     return rows, complete
 
 
