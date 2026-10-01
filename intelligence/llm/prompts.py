@@ -50,5 +50,5 @@ def build_cluster_user_prompt(items) -> str:
             f"--- END UNTRUSTED SOURCE {index} ---",
             "",
         ])
-    parts.append("Analyze only the supplied source material. Do not browse or add facts.")
+    parts.append("Analyze only the supplied source material. Do not browse or add facts. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
     return "\n".join(parts)
