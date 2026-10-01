@@ -119,3 +119,30 @@ def test_save_is_atomic_and_deterministic(tmp_path):
     assert saved.endswith("\n")
     assert list(json.loads(saved)["cards"]) == ["a", "z"]
     assert not path.with_suffix(".json.tmp").exists()
+
+
+def test_touch_card_updates_last_seen_without_replacing_card(tmp_path):
+    store = JsonCorrelationState(tmp_path / "correlation.json")
+    state = store.load()
+    JsonCorrelationState.upsert_card(
+        state,
+        candidate_id="sec:1",
+        source_id="sec",
+        published_at=STAMP,
+        high_value_entities=["SEC"],
+        title_tokens=["old"],
+        content_hash="hash-1",
+        last_seen=STAMP,
+    )
+    later = STAMP + timedelta(hours=2)
+    JsonCorrelationState.touch_card(state, candidate_id="sec:1", last_seen=later)
+    assert state["cards"]["sec:1"]["content_hash"] == "hash-1"
+    assert state["cards"]["sec:1"]["last_seen"] == later.isoformat()
+
+
+def test_touch_missing_card_is_noop(tmp_path):
+    state = JsonCorrelationState(tmp_path / "correlation.json").load()
+    JsonCorrelationState.touch_card(
+        state, candidate_id="missing", last_seen=STAMP,
+    )
+    assert state["cards"] == {}
