@@ -78,6 +78,19 @@ def test_parser_keeps_only_official_releases():
     assert rows[1]["date"] == datetime(2026, 6, 24, tzinfo=timezone.utc)
 
 
+def test_parser_does_not_require_article_wrapper_elements():
+    html = b'''<main>
+      <div class="card"><h3><a href="/ripple-press/ripple-treasury-brings-governed-ai/">Ripple Treasury Brings Governed AI</a></h3>
+      <p>Sep 10, 2026</p></div>
+      <section><a href="/ripple-press/ripple-prime-launches-delta-one/">Ripple Prime Launches Delta One</a>
+      <span>Aug 27, 2026</span></section>
+    </main>'''
+    rows, complete = _parse_page(html)
+    assert complete is True
+    assert len(rows) == 2
+    assert rows[0]["date"] == datetime(2026, 9, 10, tzinfo=timezone.utc)
+
+
 def test_collect_deduplicates_and_uses_official_page_pagination():
     payload = FIXTURE.read_bytes()
     result = RipplePressCenterDiscovery(
