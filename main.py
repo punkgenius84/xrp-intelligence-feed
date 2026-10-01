@@ -12,6 +12,7 @@ from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
+from intelligence.correlation import correlate
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
@@ -132,7 +133,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         detect_entities(item)
         classify_source_quality(item)
         score_relevance(item)
-    if discovery_store is not None and discovery_state_value is not None:
+    # Correlation is deliberately downstream of relevance scoring: it enriches context\n    # without changing whether an item qualifies for publication.\n    correlate(fresh)\n    if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
             if result.state_updates or _has_cursor_progress(result.pagination):
                 source_update_time = result.fetched_at
