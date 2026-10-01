@@ -162,34 +162,37 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("Ripple Press Center response is not valid UTF-8") from exc
-    parser = _PressParser()
-    parser.feed(text)
-    parser.close()
-    if not parser.articles:
-        raise ValueError("Ripple Press Center response is missing press-release articles")
+
+    matches = list(re.finditer(
+        r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    if not matches:
+        raise ValueError("Ripple Press Center response is missing press-release links")
+
     rows: list[dict[str, Any]] = []
     complete = True
-    for article in parser.articles:
-        try:
-            if not article["links"]:
-                raise ValueError("missing official Ripple press-release link")
-            url, slug, title = article["links"][0]
-            if not title:
-                raise ValueError("missing Ripple press-release title")
-            published = _parse_date(article["date"]) or _parse_date(article["text"])
-            if published is None:
-                raise ValueError("missing Ripple press-release date")
-            rows.append({
-                "url": url,
-                "slug": slug,
-                "title": title,
-                "date": published,
-            })
-        except (KeyError, TypeError, ValueError):
-            if article.get("links"):
-                complete = False
+    for index, match in enumerate(matches):
+        safe = _official_url(match.group("href"))
+        if safe is None:
+            continue
+        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
+        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+        window = text[previous:following]
+        date_matches = list(_DATE_TEXT.finditer(window))
+        published = None
+        if date_matches:
+            anchor_position = match.start() - previous
+            nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+            published = _parse_date(nearest.group(0))
+        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        if not title or published is None:
+            complete = False
+            continue
+        rows.append({"url": safe[0], "slug": safe[1], "title": title, "date": published})
+
     if not rows:
-        raise ValueError("Ripple Press Center response has no official press releases")
+        raise ValueError("Ripple Press Center response has no dated official press releases")
     return rows, complete
 
 
