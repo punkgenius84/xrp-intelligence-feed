@@ -1,6 +1,7 @@
 import html
 import re
 import unicodedata
+from datetime import datetime
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
@@ -154,13 +155,13 @@ def run_pipeline(
                 correlation_state_value,
                 candidate_id=card["candidate_id"],
                 source_id=card["source_id"],
-                published_at=__import__("datetime").datetime.fromisoformat(
+                published_at=datetime.fromisoformat(
                     card["published_at"].replace("Z", "+00:00")
                 ),
                 high_value_entities=card["high_value_entities"],
                 title_tokens=card["title_tokens"],
                 content_hash=card["content_hash"],
-                last_seen=__import__("datetime").datetime.fromisoformat(
+                last_seen=datetime.fromisoformat(
                     card["last_seen"].replace("Z", "+00:00")
                 ),
             )
