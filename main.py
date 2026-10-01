@@ -12,12 +12,13 @@ from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
 from intelligence.deduplication import deduplicate
-from intelligence.correlation import correlate
+from intelligence.correlation import build_correlation_card, correlate
 from intelligence.buried_signals import detect_buried_signals
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
 from sources.registry import SourceRegistryError, enabled_sources
+from storage.correlation_state import CorrelationStateError, JsonCorrelationState
 from storage.database import JsonState, StateFileError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 
@@ -31,7 +32,6 @@ class PipelineResult:
     discovery_results: list[DiscoveryResult] = field(default_factory=list)
     health: dict[str, dict] = field(default_factory=dict)
     buried_signals: list = field(default_factory=list)
-
 
 
 class _PlainText(HTMLParser):
@@ -59,9 +59,13 @@ def normalize_item(item):
     return item
 
 
-
-
-def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_state=None) -> PipelineResult:
+def run_pipeline(
+    sources=None,
+    state=None,
+    discovery_sources=None,
+    discovery_state=None,
+    correlation_state=None,
+) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
 
@@ -75,12 +79,17 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     thresholds = validate_thresholds(read_object("config/thresholds.json", "thresholds"))
     state = state or JsonState()
     seen = state.load()
+
+    correlation_store = correlation_state or JsonCorrelationState()
+    correlation_state_value = correlation_store.load()
+
     discovery_store = None
     discovery_state_value = None
     discovery_results: list[DiscoveryResult] = []
     if run_discovery:
         discovery_store = discovery_state or JsonDiscoveryState()
         discovery_state_value = discovery_store.load()
+
     collected = []
     failures = []
     reports = []
@@ -90,7 +99,10 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
             collection_type = source.get("collection_type", "rss")
             collector_factory = {"rss": RSSCollector}.get(collection_type)
             if collector_factory is None:
-                raise ValueError(f"Unsupported collection_type {collection_type!r} for {source.get('source_id', 'unknown source')}")
+                raise ValueError(
+                    f"Unsupported collection_type {collection_type!r} for "
+                    f"{source.get('source_id', 'unknown source')}"
+                )
             collector = collector_factory(source)
             items = collector.collect()
             collected.extend(items)
@@ -124,22 +136,39 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
         detect_entities(item)
         classify_source_quality(item)
         score_relevance(item)
+
     # Correlation is deliberately downstream of relevance scoring: it enriches context
     # without changing whether an item qualifies for publication.
-    correlate(fresh)
-    buried_signals = detect_buried_signals(fresh, publish_score=thresholds["publish_score"])
+    correlate(fresh, history=list(correlation_state_value["cards"].values()))
+    buried_signals = detect_buried_signals(
+        fresh, publish_score=thresholds["publish_score"]
+    )
+
+    # Persist only the thin, bounded correlation memory after enrichment. This must
+    # succeed before the shared seen set is saved, so a failed memory write leaves
+    # candidates eligible for pairing on the next run.
+    for item in fresh:
+        if item.source_id:
+            card = build_correlation_card(item)
+            JsonCorrelationState.upsert_card(
+                correlation_state_value,
+                candidate_id=card["candidate_id"],
+                source_id=card["source_id"],
+                published_at=__import__("datetime").datetime.fromisoformat(
+                    card["published_at"].replace("Z", "+00:00")
+                ),
+                high_value_entities=card["high_value_entities"],
+                title_tokens=card["title_tokens"],
+                content_hash=card["content_hash"],
+                last_seen=__import__("datetime").datetime.fromisoformat(
+                    card["last_seen"].replace("Z", "+00:00")
+                ),
+            )
+    correlation_store.save(correlation_state_value)
+
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates or (isinstance(result.pagination.get("federal_register_terms"), dict)
-                                        and bool(result.pagination.get("federal_register_terms"))) or (
-                    isinstance(result.pagination.get("ofac_recent_actions"), dict)
-                    and bool(result.pagination.get("ofac_recent_actions"))) or (
-                    isinstance(result.pagination.get("fincen_press_releases"), dict)
-                    and bool(result.pagination.get("fincen_press_releases"))) or (
-                    isinstance(result.pagination.get("treasury_press_releases"), dict)
-                    and bool(result.pagination.get("treasury_press_releases"))) or (
-                    isinstance(result.pagination.get("fdic_press_releases"), dict)
-                    and bool(result.pagination.get("fdic_press_releases"))):
+            if result.state_updates or result.pagination:
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
@@ -163,9 +192,10 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
                     candidate.content_hash, result.fetched_at,
                 )
         discovery_store.save(discovery_state_value)
-    # Discovery validators/candidate state must persist before discovery items
-    # enter the shared seen set. If that save fails, a later run can rediscover them.
-    # RSS-only runs retain the same save behavior and state shape as v0.2.
+
+    # Discovery validators/candidate state and correlation memory must persist before
+    # discovery items enter the shared seen set. If either save fails, a later run
+    # can rediscover them.
     state.save(seen)
     health = {
         result.source_id: discovery_state_value["sources"].get(result.source_id, {}).get("health", {})
@@ -190,6 +220,7 @@ class _NoSaveState:
 
 def main() -> None:
     from intelligence.configuration import read_object, validate_thresholds
+
     # Validate Discord settings before collecting: a bad setting must not fail the run after
     # state has been saved, because a later run would then re-post items that already went out.
     try:
@@ -200,21 +231,28 @@ def main() -> None:
         if discord_settings.dry_run:
             # A preview must not mark items as seen, or the live run would find nothing new.
             result = run_pipeline(
-                state=_NoSaveState(JsonState()), discovery_state=_NoSaveState(JsonDiscoveryState()))
+                state=_NoSaveState(JsonState()),
+                discovery_state=_NoSaveState(JsonDiscoveryState()),
+                correlation_state=_NoSaveState(JsonCorrelationState()),
+            )
         else:
             result = run_pipeline()
-    except (StateFileError, DiscoveryStateError) as exc:
+    except (StateFileError, DiscoveryStateError, CorrelationStateError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
-    except (DiscoveryRegistryError, DiscoveryDispatchError) as exc:
+    except (DiscoveryRegistryError, DiscoveryDispatchError, ValueError) as exc:
         raise SystemExit(f"Discovery configuration error: {exc}") from exc
     except SourceRegistryError as exc:
         raise SystemExit(f"Source configuration error: {exc}") from exc
+
     collected, fresh, failures = result.collected, result.fresh, result.failures
     reports, discovery_results = result.reports, result.discovery_results
     buried_signals = result.buried_signals
     publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
     relevant = [item for item in fresh if item.relevance_score >= publish_score]
-    print(f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} | Buried signals: {len(buried_signals)}")
+    print(
+        f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} "
+        f"| Buried signals: {len(buried_signals)}"
+    )
     for item in relevant:
         print(f"[{item.relevance_score}] {item.title} — {item.source} "
               f"| entities: {', '.join(item.detected_entities) or 'none'} "
