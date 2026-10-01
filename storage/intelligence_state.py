@@ -15,11 +15,18 @@ class IntelligenceStateError(RuntimeError):
 
 
 def _validate(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict) or value.get("schema_version") != SCHEMA_VERSION or not isinstance(value.get("events"), dict):
+    if (
+        not isinstance(value, dict)
+        or value.get("schema_version") != SCHEMA_VERSION
+        or not isinstance(value.get("events"), dict)
+    ):
         raise IntelligenceStateError("invalid intelligence state schema")
     for key, event in value["events"].items():
         if not isinstance(key, str) or not isinstance(event, dict):
             raise IntelligenceStateError("invalid intelligence event record")
+        updated_at = event.get("updated_at")
+        if not isinstance(updated_at, str) or not updated_at.strip():
+            raise IntelligenceStateError("intelligence event updated_at must be a non-empty string")
     return value
 
 
@@ -37,11 +44,18 @@ class JsonIntelligenceState:
             raise IntelligenceStateError(f"cannot load intelligence state: {exc}") from exc
 
     @staticmethod
-    def upsert(state: dict[str, Any], event_id: str, event: dict[str, Any], updated_at: str) -> None:
+    def upsert(
+        state: dict[str, Any],
+        event_id: str,
+        event: dict[str, Any],
+        updated_at: str,
+    ) -> None:
         if not isinstance(event_id, str) or not event_id.strip():
             raise IntelligenceStateError("event_id must be a non-empty string")
         if not isinstance(event, dict):
             raise IntelligenceStateError("event must be an object")
+        if not isinstance(updated_at, str) or not updated_at.strip():
+            raise IntelligenceStateError("updated_at must be a non-empty string")
         record = dict(event)
         record["updated_at"] = updated_at
         state["events"][event_id] = record
@@ -54,11 +68,24 @@ class JsonIntelligenceState:
         _validate(state)
         events = state["events"]
         if len(events) > MAX_EVENTS:
-            ordered = sorted(events.items(), key=lambda pair: str(pair[1].get("updated_at", "")), reverse=True)[:MAX_EVENTS]
+            ordered = sorted(
+                events.items(),
+                key=lambda pair: str(pair[1].get("updated_at", "")),
+                reverse=True,
+            )[:MAX_EVENTS]
             state["events"] = dict(sorted(ordered, key=lambda pair: pair[0]))
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\\n"
-        fd, temp_name = tempfile.mkstemp(prefix=self.path.name + ".", suffix=".tmp", dir=self.path.parent)
+        payload = json.dumps(
+            state,
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ) + "\n"
+        fd, temp_name = tempfile.mkstemp(
+            prefix=self.path.name + ".",
+            suffix=".tmp",
+            dir=self.path.parent,
+        )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(payload)
