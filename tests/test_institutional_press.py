@@ -173,3 +173,19 @@ def test_optional_native_id_query_parameter_is_valid():
         native_id_query_param="newsId",
     )
     assert validate_institutional_source(dbs)["native_id_query_param"] == "newsId"
+
+
+def test_json_ld_fallback_handles_js_heavy_institutional_index():
+    html = b'''<html><head><script type="application/ld+json">{"@graph":[{"@type":"NewsArticle","headline":"Citi Token Services Expands Global Footprint","url":"https://www.citigroup.com/global/news/press-release/2026/citi-token-services-expands","datePublished":"2026-09-28T12:00:00Z"}]}</script></head><body></body></html>'''
+    citi = source(
+        source_id="citi-press-releases",
+        name="Citi",
+        source_url="https://www.citigroup.com/global/news/press-release",
+        allowed_hosts=["www.citigroup.com", "citigroup.com"],
+        article_path_regex=r"/global/news/press-release/(?:\d{4}/)?[^/?#]+",
+    )
+    rows, complete = _parse_page(citi, html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Citi Token Services Expands Global Footprint"
+    assert rows[0]["date"] == datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
