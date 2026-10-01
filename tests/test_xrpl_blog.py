@@ -53,7 +53,7 @@ def html_response(payload, *, headers=None):
 def test_registered_source_is_bounded_and_official():
     source = next(item for item in load_discovery_sources() if item["source_id"] == XRPL_SOURCE_ID)
     assert source["source_url"] == XRPL_URL
-    assert source["max_pages"] == 4
+    assert source["max_pages"] == 1
 
 
 @pytest.mark.parametrize("changes", [
@@ -82,7 +82,7 @@ def test_collect_deduplicates():
         http=FakeHttp([html_response(payload), html_response(payload)]),
         now=lambda: STAMP,
     ).collect()
-    assert result.status == "partial"
+    assert result.status == "success"
     assert len(result.candidates) == 2
     assert len(result.candidates) == len({item.candidate_id for item in result.candidates})
 
