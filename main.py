@@ -127,7 +127,16 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     correlate(fresh)
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates or _has_cursor_progress(result.pagination):
+            if result.state_updates or (isinstance(result.pagination.get("federal_register_terms"), dict)
+                                        and bool(result.pagination.get("federal_register_terms"))) or (
+                    isinstance(result.pagination.get("ofac_recent_actions"), dict)
+                    and bool(result.pagination.get("ofac_recent_actions"))) or (
+                    isinstance(result.pagination.get("fincen_press_releases"), dict)
+                    and bool(result.pagination.get("fincen_press_releases"))) or (
+                    isinstance(result.pagination.get("treasury_press_releases"), dict)
+                    and bool(result.pagination.get("treasury_press_releases"))) or (
+                    isinstance(result.pagination.get("fdic_press_releases"), dict)
+                    and bool(result.pagination.get("fdic_press_releases"))):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
