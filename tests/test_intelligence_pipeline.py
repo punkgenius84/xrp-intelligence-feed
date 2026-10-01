@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from intelligence.configuration import load_config
+from intelligence.configuration import load_intelligence_config
 from intelligence.pipeline import event_id_for, select_items
 from models import NewsItem
 from storage.intelligence_state import JsonIntelligenceState, IntelligenceStateError
@@ -13,7 +13,7 @@ def item(score, candidate):
 
 
 def test_select_items_is_bounded_and_score_ordered():
-    config = load_config()
+    config = load_intelligence_config()
     config = config.__class__(enabled=False, model=config.model, max_items_per_run=2, min_relevance_score=50, timeout_seconds=45)
     selected = select_items([item(55, "a"), item(90, "b"), item(70, "c"), item(20, "d")], config)
     assert [x.candidate_id for x in selected] == ["b", "c"]
