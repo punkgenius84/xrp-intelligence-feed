@@ -36,6 +36,20 @@ class JsonIntelligenceState:
         except (OSError, json.JSONDecodeError, IntelligenceStateError) as exc:
             raise IntelligenceStateError(f"cannot load intelligence state: {exc}") from exc
 
+    @staticmethod
+    def upsert(state: dict[str, Any], event_id: str, event: dict[str, Any], updated_at: str) -> None:
+        if not isinstance(event_id, str) or not event_id.strip():
+            raise IntelligenceStateError("event_id must be a non-empty string")
+        if not isinstance(event, dict):
+            raise IntelligenceStateError("event must be an object")
+        record = dict(event)
+        record["updated_at"] = updated_at
+        state["events"][event_id] = record
+
+    @staticmethod
+    def remove(state: dict[str, Any], event_id: str) -> None:
+        state["events"].pop(event_id, None)
+
     def save(self, state: dict[str, Any]) -> None:
         _validate(state)
         events = state["events"]
