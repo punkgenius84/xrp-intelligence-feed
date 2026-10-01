@@ -155,6 +155,11 @@ class JsonIntelligenceState:
         if existing is None:
             return
 
+        replacements = list(existing.get("superseded_by", []))
+        if existing.get("status") == "superseded" and replacement_event_id in replacements:
+            existing["updated_at"] = updated_at
+            return
+
         history = list(existing.get("history", []))
         history.append(
             {
