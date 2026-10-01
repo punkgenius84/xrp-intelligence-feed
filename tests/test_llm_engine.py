@@ -170,3 +170,31 @@ def test_cluster_analysis_uses_all_supplied_sources():
     assert result.event_type == "partnership"
     assert result.source_url == first.url
     assert result.model == "test-model"
+
+
+def test_parse_analysis_preserves_conflicts():
+    result = parse_analysis(
+        '{"event_type":"policy_change","event_summary":"Status differs",'
+        '"significance":"Sources disagree on status.",'
+        '"claims":[],"conflicts":["source-1 says planned; source-2 says launched"],'
+        '"uncertainties":[]}',
+        source_url="https://example.test",
+        model="test-model",
+    )
+    assert result.conflicts == ["source-1 says planned; source-2 says launched"]
+
+
+def test_parse_analysis_bounds_conflicts():
+    import json
+
+    raw = json.dumps({
+        "event_type": "other",
+        "event_summary": "x",
+        "significance": "y",
+        "claims": [],
+        "conflicts": ["a" * 600],
+        "uncertainties": [],
+    })
+    result = parse_analysis(raw, source_url="https://example.test")
+    assert len(result.conflicts) == 1
+    assert len(result.conflicts[0]) == 500

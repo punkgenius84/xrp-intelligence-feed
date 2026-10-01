@@ -16,6 +16,7 @@ class IntelligenceEvent:
     member_ids: list[str] = field(default_factory=list)
     supersedes: list[str] = field(default_factory=list)
     claims: list[Claim] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
     uncertainties: list[str] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
     model: str = ""
@@ -35,6 +36,7 @@ def event_from_analysis(
         member_ids=[],
         supersedes=[],
         claims=list(analysis.claims),
+        conflicts=list(analysis.conflicts),
         uncertainties=list(analysis.uncertainties),
         evidence=list(evidence),
         model=analysis.model,
@@ -50,6 +52,7 @@ def event_to_dict(event: IntelligenceEvent) -> dict:
         "entities": list(event.entities),
         "member_ids": list(event.member_ids),
         "supersedes": list(event.supersedes),
+        "conflicts": list(event.conflicts),
         "claims": [
             {
                 "text": claim.text,
@@ -85,6 +88,10 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
     significance = value.get("significance")
     if not all(isinstance(item, str) for item in (event_id, event_type, summary, significance)):
         raise ValueError("intelligence event identity fields must be strings")
+
+    conflicts = value.get("conflicts", [])
+    if not isinstance(conflicts, list) or any(not isinstance(item, str) for item in conflicts):
+        raise ValueError("intelligence event conflicts must be a string list")
 
     claims: list[Claim] = []
     raw_claims = value.get("claims", [])
@@ -166,6 +173,7 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
         member_ids=list(member_ids),
         supersedes=list(supersedes),
         claims=claims,
+        conflicts=list(conflicts),
         uncertainties=list(uncertainties),
         evidence=evidence,
         model=model,

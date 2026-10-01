@@ -26,6 +26,7 @@ class IntelligenceAnalysis:
     significance: str = ""
     entities: list[str] = field(default_factory=list)
     claims: list[Claim] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
     uncertainties: list[str] = field(default_factory=list)
     source_url: str = ""
     model: str = ""
@@ -83,6 +84,7 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "") -> Intelligenc
         significance=str(value.get("significance") or "").strip()[:1000],
         entities=_strings(value.get("entities"), max_items=20, max_length=120),
         claims=claims,
+        conflicts=_strings(value.get("conflicts"), max_items=12, max_length=500),
         uncertainties=_strings(value.get("uncertainties"), max_items=12, max_length=400),
         source_url=source_url,
         model=model,

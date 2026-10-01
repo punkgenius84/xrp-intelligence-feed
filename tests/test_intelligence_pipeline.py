@@ -59,6 +59,7 @@ def test_event_round_trip_serialization():
                 evidence=["summary"],
             )
         ],
+        conflicts=["Source A says planned; Source B says launched."],
         uncertainties=["The article does not establish implementation timing."],
         member_ids=["a", "b"],
         supersedes=["evt-a", "evt-b"],
