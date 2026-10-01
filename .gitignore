@@ -7,3 +7,5 @@ state/seen.json
 state/seen.json.tmp
 state/discovery.json
 state/discovery.json.tmp
+state/correlation.json
+state/correlation.json.tmp
