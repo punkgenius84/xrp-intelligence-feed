@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 
 from intelligence.evidence import build_evidence_bundle
-from intelligence.llm.base import LLMResponse, LLMUnavailable
+from intelligence.llm.base import LLMError, LLMResponse, LLMUnavailable
 from intelligence.llm.enrichment import analyze_item
 from intelligence.llm.prompts import build_user_prompt
 from intelligence.llm.schemas import parse_analysis
@@ -103,7 +103,7 @@ def test_llm_analysis_rejects_malformed_provider_json():
         def generate(self, **kwargs):
             return LLMResponse("not json", model="test-model")
 
-    with pytest.raises(Exception, match="LLM analysis rejected"):
+    with pytest.raises(LLMError, match="LLM analysis rejected"):
         analyze_item(item(), FakeProvider())
 
 
