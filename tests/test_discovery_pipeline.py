@@ -203,8 +203,8 @@ def test_unknown_pagination_does_not_persist_without_state_updates(tmp_path, mon
         sources=[], state=JsonState(str(tmp_path / "seen.json")),
         discovery_sources=[{"source_id": "new-paginated-source"}], discovery_state=discovery,
     )
-    saved = discovery.load()["sources"]["new-paginated-source"]["pagination"]
-    assert saved["opaque_cursor"]["next"] == "cursor-2"
+    saved = discovery.load()["sources"]["new-paginated-source"]
+    assert "pagination" not in saved
 
 
 def test_correlation_state_save_failure_does_not_mark_candidate_seen(
