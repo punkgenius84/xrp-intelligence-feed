@@ -234,9 +234,11 @@ def run_pipeline(
             now = datetime.now().astimezone().isoformat()
             for event in intelligence_events:
                 for superseded_id in event.supersedes:
-                    JsonIntelligenceState.remove(
+                    JsonIntelligenceState.mark_superseded(
                         intelligence_state_value,
                         superseded_id,
+                        event.event_id,
+                        now,
                     )
                 JsonIntelligenceState.upsert(
                     intelligence_state_value,
