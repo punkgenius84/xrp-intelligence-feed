@@ -167,20 +167,23 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
-    if not matches:
+    official_matches = [(match, _official_url(match.group("href"))) for match in matches]
+    official_matches = [(match, safe) for match, safe in official_matches if safe is not None]
+    if not official_matches:
         raise ValueError("Ripple Press Center response is missing press-release links")
 
     rows: list[dict[str, Any]] = []
     complete = True
-    for index, match in enumerate(matches):
-        safe = _official_url(match.group("href"))
-        if safe is None:
-            continue
-        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
-        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+    for index, (match, safe) in enumerate(official_matches):
+        previous = official_matches[index - 1][0].start() if index else max(0, match.start() - 800)
+        following = (
+            official_matches[index + 1][0].start()
+            if index + 1 < len(official_matches)
+            else min(len(text), match.end() + 1200)
+        )
         window = text[previous:following]
         published = None
-        datetime_values = re.findall(r"\bdatetime=[\"']([^\"']+)[\"']", window, re.IGNORECASE)
+        datetime_values = re.findall(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE)
         for value in datetime_values:
             published = _parse_date(value)
             if published is not None:
