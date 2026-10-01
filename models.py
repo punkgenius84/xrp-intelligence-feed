@@ -1,4 +1,32 @@
-    duplicate_sources: list[str] = field(default_factory=list)\n    duplicate_urls: list[str] = field(default_factory=list)\n    # Conservative cross-source correlation metadata. Correlation never implies truth or relevance.
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from hashlib import sha256
+import re
+import unicodedata
+
+
+@dataclass(slots=True)
+class NewsItem:
+    title: str
+    url: str
+    source: str
+    published_at: datetime | None = None
+    summary: str = ""
+    source_type: str = "discovery"
+    collected_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    source_id: str = ""
+    authority_tier: int = 3
+    category: str = "discovery"
+    entity_coverage: list[str] = field(default_factory=list)
+    detected_entities: list[str] = field(default_factory=list)
+    source_quality: str = "discovery"
+    relevance_score: int = 0
+    score_reasons: list[str] = field(default_factory=list)
+    score_signals: list[str] = field(default_factory=list)
+    relevance_categories: list[str] = field(default_factory=list)
+    duplicate_sources: list[str] = field(default_factory=list)
+    duplicate_urls: list[str] = field(default_factory=list)
+    # Conservative cross-source correlation metadata. Correlation never implies truth or relevance.
     correlated_source_ids: list[str] = field(default_factory=list)
     correlated_candidate_ids: list[str] = field(default_factory=list)
     correlation_reasons: list[str] = field(default_factory=list)
