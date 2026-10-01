@@ -199,12 +199,18 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
         following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
         window = text[previous:following]
-        date_matches = list(_DATE_TEXT.finditer(window))
         published = None
-        if date_matches:
-            anchor_position = match.start() - previous
-            nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
-            published = _parse_date(nearest.group(0))
+        datetime_values = re.findall(r"\\bdatetime=[\"']([^\"']+)[\"']", window, re.IGNORECASE)
+        for value in datetime_values:
+            published = _parse_date(value)
+            if published is not None:
+                break
+        if published is None:
+            date_matches = list(_DATE_TEXT.finditer(window))
+            if date_matches:
+                anchor_position = match.start() - previous
+                nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+                published = _parse_date(nearest.group(0))
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         if not title or published is None:
             complete = False
