@@ -207,7 +207,7 @@ def test_cap_keeps_highest_scores_and_posts_oldest_first():
     # Kept: Top (90) and both 60s, dropped: Low (40). Posted by publication time: minutes 2, 5, 10.
     assert order == ["**Also mid story here**", "**Top score story here**", "**Mid score story here**"]
     assert (report.posted, report.not_selected, report.failed) == (3, 1, 0)
-    assert "over the 3-post cap" in lines[-1] and "not be retried" in lines[-1]
+    assert "over the 3-post cap" in lines[-1]
 
 
 def test_posts_are_spaced_but_not_after_the_last_one():
@@ -252,6 +252,7 @@ def test_a_single_failure_does_not_block_later_posts():
              item("Third story here", 50, 2)]
     report = publish(items, live(), webhook=hook, sleep=lambda _: None, out=lines.append)
     assert (report.posted, report.failed) == (2, 1)
+    assert len(report.posted_keys) == 2 and len(report.failed_keys) == 1
     assert any(line.startswith("::warning::Discord post failed") for line in lines)
 
 
@@ -277,7 +278,7 @@ def test_failure_lines_never_contain_the_webhook_token():
 def test_main_publishes_only_items_at_or_above_publish_score(monkeypatch):
     relevant, weak = item("Relevant story here", 50), item("Weak story here", 10)
     captured = {}
-    monkeypatch.setattr(main, "run_pipeline", lambda: main.PipelineResult(fresh=[relevant, weak]))
+    monkeypatch.setattr(main, "run_pipeline", lambda **kwargs: main.PipelineResult(fresh=[relevant, weak]))
     monkeypatch.setattr(main, "publish", lambda items, settings: captured.update(items=items, settings=settings))
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
     monkeypatch.delenv("DISCORD_DRY_RUN", raising=False)
@@ -293,7 +294,7 @@ def test_main_prints_discovery_health_and_still_publishes(monkeypatch, capsys):
     discovery = main.DiscoveryResult("sec-edgar", "sec_edgar", "ok")
     health = {"sec-edgar": {"consecutive_failures": 2, "consecutive_empty": 1}}
     captured = {}
-    monkeypatch.setattr(main, "run_pipeline", lambda: main.PipelineResult(
+    monkeypatch.setattr(main, "run_pipeline", lambda **kwargs: main.PipelineResult(
         fresh=[relevant], discovery_results=[discovery], health=health))
     monkeypatch.setattr(main, "publish", lambda items, settings: captured.update(items=items))
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
