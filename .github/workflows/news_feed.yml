@@ -28,6 +28,7 @@ jobs:
           path: |
             state/seen.json
             state/discovery.json
+            state/correlation.json
           key: xrp-state-${{ github.ref_name }}-v1-bootstrap
           restore-keys: |
             xrp-state-${{ github.ref_name }}-v1-
@@ -49,4 +50,4 @@ jobs:
           path: |
             state/seen.json
             state/discovery.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json') }}
