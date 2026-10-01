@@ -163,6 +163,8 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
         summary=summary,
         significance=significance,
         entities=list(entities),
+        member_ids=list(member_ids),
+        supersedes=list(supersedes),
         claims=claims,
         uncertainties=list(uncertainties),
         evidence=evidence,
