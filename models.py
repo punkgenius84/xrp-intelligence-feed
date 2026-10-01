@@ -31,6 +31,10 @@ class NewsItem:
     correlated_candidate_ids: list[str] = field(default_factory=list)
     correlation_reasons: list[str] = field(default_factory=list)
     correlation_score: int = 0
+    # Conservative buried-signal metadata. This never changes relevance scoring.
+    buried_signal: bool = False
+    buried_signal_score: int = 0
+    buried_signal_reasons: list[str] = field(default_factory=list)
     # Optional discovery metadata. Existing RSS callers and positional fields remain compatible.
     candidate_id: str = ""
     discovery_method: str = ""
