@@ -26,7 +26,7 @@ class NewsItem:
     relevance_categories: list[str] = field(default_factory=list)
     duplicate_sources: list[str] = field(default_factory=list)
     duplicate_urls: list[str] = field(default_factory=list)
-    # Optional discovery metadata. Existing RSS callers and positional fields remain compatible.
+    # Conservative cross-source correlation metadata. Correlation never implies truth or relevance.\n    correlated_source_ids: list[str] = field(default_factory=list)\n    correlated_candidate_ids: list[str] = field(default_factory=list)\n    correlation_reasons: list[str] = field(default_factory=list)\n    correlation_score: int = 0\n    # Optional discovery metadata. Existing RSS callers and positional fields remain compatible.
     candidate_id: str = ""
     discovery_method: str = ""
     source_url: str = ""
