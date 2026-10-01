@@ -72,7 +72,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     validate_word_groups(read_object("config/entities.json", "entities"),
                          ("assets", "companies", "regulators", "government", "finance"), "entities")
     validate_keyword_groups(read_object("config/keywords.json", "keywords"))
-    validate_thresholds(read_object("config/thresholds.json", "thresholds"))
+    thresholds = validate_thresholds(read_object("config/thresholds.json", "thresholds"))
     state = state or JsonState()
     seen = state.load()
     discovery_store = None
@@ -127,7 +127,7 @@ def run_pipeline(sources=None, state=None, discovery_sources=None, discovery_sta
     # Correlation is deliberately downstream of relevance scoring: it enriches context
     # without changing whether an item qualifies for publication.
     correlate(fresh)
-    buried_signals = detect_buried_signals(fresh)
+    buried_signals = detect_buried_signals(fresh, publish_score=thresholds["publish_score"])
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
             if result.state_updates or (isinstance(result.pagination.get("federal_register_terms"), dict)
