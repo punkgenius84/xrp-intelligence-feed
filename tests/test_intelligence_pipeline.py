@@ -140,3 +140,39 @@ def test_intelligence_state_upsert_replaces_same_event(tmp_path):
     loaded = store.load()
     assert len(loaded["events"]) == 1
     assert loaded["events"]["evt-1"]["summary"] == "updated"
+
+
+def test_enrichment_failure_does_not_abort_other_items():
+    from intelligence.pipeline import enrich_items
+
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=2,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+
+    class Provider:
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, **kwargs):
+            from intelligence.llm.base import LLMResponse
+
+            self.calls += 1
+            if self.calls == 1:
+                return LLMResponse(
+                    '{"event_type":"announcement","event_summary":"First","significance":"Source-backed","claims":[]}',
+                    model="test-model",
+                )
+            raise RuntimeError("unexpected provider error")
+
+    events, failures = enrich_items(
+        [item(90, "first"), item(80, "second")],
+        Provider(),
+        config,
+    )
+    assert len(events) == 1
+    assert events[0].summary == "First"
+    assert len(failures) == 1
