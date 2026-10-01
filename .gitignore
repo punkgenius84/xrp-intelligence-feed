@@ -9,3 +9,5 @@ state/discovery.json
 state/discovery.json.tmp
 state/correlation.json
 state/correlation.json.tmp
+state/outbox.json
+state/outbox.json.tmp
