@@ -64,3 +64,40 @@ def validate_thresholds(value: dict) -> dict:
         if type(weights[key]) is not int or weights[key] < 0:
             raise ConfigurationError(f"thresholds.weights.{key} must be a non-negative integer")
     return value
+
+
+# Optional local intelligence runtime settings. These are intentionally separate from
+# source/relevance configuration so enabling the LLM never changes discovery scoring.
+import os
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class IntelligenceRuntimeConfig:
+    enabled: bool = False
+    model: str = "qwen2.5:7b"
+    max_items_per_run: int = 5
+    min_relevance_score: int = 50
+    timeout_seconds: float = 45.0
+
+
+def load_intelligence_config() -> IntelligenceRuntimeConfig:
+    def boolean(value: str | None) -> bool:
+        return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    max_items = int(os.getenv("INTELLIGENCE_MAX_ITEMS", "5"))
+    minimum = int(os.getenv("INTELLIGENCE_MIN_SCORE", "50"))
+    timeout = float(os.getenv("INTELLIGENCE_TIMEOUT", "45"))
+    if not 0 <= max_items <= 50:
+        raise ConfigurationError("INTELLIGENCE_MAX_ITEMS must be between 0 and 50")
+    if not 0 <= minimum <= 100:
+        raise ConfigurationError("INTELLIGENCE_MIN_SCORE must be between 0 and 100")
+    if not 5 <= timeout <= 180:
+        raise ConfigurationError("INTELLIGENCE_TIMEOUT must be between 5 and 180 seconds")
+    return IntelligenceRuntimeConfig(
+        enabled=boolean(os.getenv("INTELLIGENCE_ENABLED")),
+        model=os.getenv("OLLAMA_MODEL", "qwen2.5:7b").strip() or "qwen2.5:7b",
+        max_items_per_run=max_items,
+        min_relevance_score=minimum,
+        timeout_seconds=timeout,
+    )

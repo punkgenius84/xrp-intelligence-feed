@@ -11,3 +11,5 @@ state/correlation.json
 state/correlation.json.tmp
 state/outbox.json
 state/outbox.json.tmp
+state/intelligence.json
+state/intelligence.json.tmp
