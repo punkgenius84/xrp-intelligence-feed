@@ -127,6 +127,6 @@ def publish(items: list[Any], settings: DiscordSettings, *, webhook: DiscordWebh
         line += f"; {report.failed} failed"
     if report.not_selected:
         line += (f"; {report.not_selected} over the {settings.max_posts}-post cap "
-                 "were not posted and will not be retried")
+                 "remain queued for a later run")
     out(line)
     return report
