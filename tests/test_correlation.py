@@ -77,3 +77,89 @@ def test_does_not_correlate_items_from_the_same_source():
 
     assert first.correlation_score == 0
     assert second.correlation_score == 0
+
+
+def test_correlates_against_recent_prior_run_card():
+    current = item(
+        "Treasury and Ripple announce digital asset payment framework",
+        "treasury-press-releases",
+        "treasury:2",
+        ["Treasury", "Ripple"],
+        day="2026-09-30",
+    )
+    history = [{
+        "candidate_id": "ripple:prior",
+        "source_id": "ripple-press-center",
+        "published_at": "2026-09-29T12:00:00+00:00",
+        "high_value_entities": ["Ripple", "Treasury"],
+        "title_tokens": ["treasury", "ripple", "announce", "digital", "asset", "payment", "framework"],
+        "content_hash": "prior-hash",
+        "last_seen": "2026-09-29T12:00:00+00:00",
+    }]
+    correlate([current], history=history)
+    assert current.correlation_score >= 75
+    assert current.correlated_source_ids == ["ripple-press-center"]
+    assert current.correlated_candidate_ids == ["ripple:prior"]
+
+
+def test_does_not_correlate_history_outside_one_day_window():
+    current = item(
+        "Treasury and Ripple announce digital asset payment framework",
+        "treasury-press-releases",
+        "treasury:3",
+        ["Treasury", "Ripple"],
+        day="2026-09-30",
+    )
+    history = [{
+        "candidate_id": "ripple:old",
+        "source_id": "ripple-press-center",
+        "published_at": "2026-09-28T12:00:00+00:00",
+        "high_value_entities": ["Ripple", "Treasury"],
+        "title_tokens": ["treasury", "ripple", "announce", "digital", "asset", "payment", "framework"],
+        "content_hash": "old-hash",
+        "last_seen": "2026-09-28T12:00:00+00:00",
+    }]
+    correlate([current], history=history)
+    assert current.correlation_score == 0
+    assert current.correlated_source_ids == []
+
+
+def test_does_not_correlate_same_source_history_card():
+    current = item(
+        "Treasury and Ripple announce digital asset payment framework",
+        "treasury-press-releases",
+        "treasury:4",
+        ["Treasury", "Ripple"],
+    )
+    history = [{
+        "candidate_id": "treasury:prior",
+        "source_id": "treasury-press-releases",
+        "published_at": "2026-09-30T11:00:00+00:00",
+        "high_value_entities": ["Ripple", "Treasury"],
+        "title_tokens": ["treasury", "ripple", "announce", "digital", "asset", "payment", "framework"],
+        "content_hash": "same-source",
+        "last_seen": "2026-09-30T11:00:00+00:00",
+    }]
+    correlate([current], history=history)
+    assert current.correlation_score == 0
+
+
+def test_history_match_preserves_existing_relevance_score():
+    current = item(
+        "Treasury and Ripple announce digital asset payment framework",
+        "treasury-press-releases",
+        "treasury:5",
+        ["Treasury", "Ripple"],
+    )
+    current.relevance_score = 17
+    history = [{
+        "candidate_id": "ripple:prior-2",
+        "source_id": "ripple-press-center",
+        "published_at": "2026-09-30T11:00:00+00:00",
+        "high_value_entities": ["Ripple", "Treasury"],
+        "title_tokens": ["treasury", "ripple", "announce", "digital", "asset", "payment", "framework"],
+        "content_hash": "prior-hash",
+        "last_seen": "2026-09-30T11:00:00+00:00",
+    }]
+    correlate([current], history=history)
+    assert current.relevance_score == 17
