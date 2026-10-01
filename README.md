@@ -13,7 +13,7 @@ Discovery sources persist lightweight health telemetry in `state/discovery.json`
 
 ## Pipeline result model
 
-The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, and discovery health. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
+The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, discovery health, and separately flagged buried signals. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
 
 ## Buried-signal detection
 
