@@ -15,6 +15,10 @@ Discovery sources persist lightweight health telemetry in `state/discovery.json`
 
 The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, and discovery health. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
 
+## Cross-source correlation
+
+Fresh candidates are conservatively compared across different sources for likely same-event relationships. Correlation requires a shared high-value entity, publication dates within one day, and meaningful headline overlap. It enriches each item with related source/candidate IDs and a correlation score, but it does not deduplicate items, increase relevance scores, or treat independent reporting as proof of the underlying claim.
+
 ## Institutional coverage
 
 The discovery registry includes official institutional sources for Citi, Circle, Mastercard, Coinbase, Swift, Visa, DBS, J.P. Morgan/Kinexys, and BNY. Institutional candidates use the same normalization, entity detection, source-quality, relevance, deduplication, and Discord publishing path as government and XRPL sources. The feed favors primary-source evidence and does not treat an institution's involvement as proof that XRP is being used.
