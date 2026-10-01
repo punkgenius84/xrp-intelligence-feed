@@ -293,8 +293,11 @@ def main() -> None:
                 correlation_state=_NoSaveState(JsonCorrelationState()),
             )
         else:
-            outbox_store = JsonOutboxState() if discord_settings.webhook_url else None
-            result = run_pipeline(outbox_state=outbox_store)
+            outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
+            if outbox_store is None:
+                result = run_pipeline()
+            else:
+                result = run_pipeline(outbox_state=outbox_store)
     except (StateFileError, DiscoveryStateError, CorrelationStateError, OutboxError) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except SourceRegistryError as exc:
@@ -343,10 +346,10 @@ def main() -> None:
         publish(relevant, discord_settings)
         return
 
-    outbox_store = JsonOutboxState() if discord_settings.webhook_url else None
+    outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
     pending = outbox_store.load() if outbox_store is not None else relevant
     report = publish(pending, discord_settings)
-    if outbox_store is not None and report.posted_keys:
+    if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
 
 
