@@ -258,7 +258,7 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://www.coinbase.com/blog",
+      "source_url": "https://www.coinbase.com/blog/landing",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
@@ -290,14 +290,14 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html",
+      "source_url": "https://corporate.visa.com/en/sites/visa-perspectives/newsroom.html",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
-        "usa.visa.com"
+        "corporate.visa.com"
       ],
-      "article_path_regex": "/about-visa/newsroom/press-releases\\.releaseId\\.[^/?#]+"
+      "article_path_regex": "/en/sites/visa-perspectives/newsroom/[^/?#]+"
     },
     {
       "source_id": "jpmorgan-payments-newsroom",
@@ -337,7 +337,7 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://www.dbs.com/media/default.page",
+      "source_url": "https://www.dbs.com/media/news-list.page",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
