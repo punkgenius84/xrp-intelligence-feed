@@ -151,10 +151,12 @@ def _parse_date(value: object) -> datetime | None:
     match = _DATE_TEXT.search(raw)
     if not match:
         return None
-    try:
-        return datetime.strptime(match.group(0), "%B %d, %Y").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(match.group(0), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
@@ -183,11 +185,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         )
         window = text[previous:following]
         published = None
-        datetime_values = re.findall(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE)
-        for value in datetime_values:
-            published = _parse_date(value)
-            if published is not None:
-                break
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", window, re.IGNORECASE))
+        if datetime_matches:
+            anchor_position = match.start() - previous
+            nearest = min(datetime_matches, key=lambda item: abs(item.start() - anchor_position))
+            published = _parse_date(nearest.group(1))
         if published is None:
             date_matches = list(_DATE_TEXT.finditer(window))
             if date_matches:
