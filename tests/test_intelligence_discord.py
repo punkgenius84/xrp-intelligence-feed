@@ -1,4 +1,4 @@
-from intelligence.discord import format_intelligence_event
+from discord.intelligence import format_intelligence_event
 from dataclasses import replace
 
 from intelligence.events import IntelligenceEvent
