@@ -87,3 +87,54 @@ def test_source_health_warning_ignores_recent_or_healthy_sources(capsys):
         now=datetime(2026, 9, 23, 12, tzinfo=timezone.utc),
     )
     assert capsys.readouterr().out == ""
+
+
+def test_intelligence_publish_requires_evidence_url():
+    from intelligence.events import IntelligenceEvent
+    from types import SimpleNamespace
+    event = IntelligenceEvent(
+        event_id="evt-1",
+        event_type="announcement",
+        summary="Test event",
+        significance="Test significance",
+        evidence=[],
+    )
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
+    with pytest.raises(SystemExit, match="evidence URL"):
+        main.publish_intelligence_events([event], settings, publish_enabled=True)
+
+
+def test_intelligence_publish_posts_to_existing_channel(monkeypatch):
+    from intelligence.events import IntelligenceEvent
+    from intelligence.evidence import Evidence
+    from types import SimpleNamespace
+
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+        def send(self, message):
+            sent.append(message)
+
+    event = IntelligenceEvent(
+        event_id="evt-1",
+        event_type="announcement",
+        summary="Test event",
+        significance="Test significance",
+        evidence=[
+            Evidence(
+                source_id="source-1",
+                source="Official source",
+                url="https://example.com/source",
+                published_at="2026-09-23T12:00:00+00:00",
+                title="Source title",
+                source_quality="primary",
+            )
+        ],
+    )
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
+    assert main.publish_intelligence_events([event], settings, publish_enabled=True) == 1
+    assert sent
+    assert "https://example.com/source" in sent[0]
