@@ -198,3 +198,26 @@ def test_parse_analysis_bounds_conflicts():
     result = parse_analysis(raw, source_url="https://example.test")
     assert len(result.conflicts) == 1
     assert len(result.conflicts[0]) == 500
+
+
+
+def test_parse_analysis_rejects_unsupported_evidence_reference():
+    import pytest
+
+    with pytest.raises(ValueError, match="unsupported evidence"):
+        parse_analysis(
+            '{"event_type":"announcement","event_summary":"x","significance":"y",'
+            '"claims":[{"text":"Claim","evidence":["source-9 summary"]}]}',
+            source_url="https://example.test",
+            allowed_evidence={"source-1 title", "source-1 summary"},
+        )
+
+
+def test_single_source_analysis_accepts_only_controlled_evidence():
+    result = parse_analysis(
+        '{"event_type":"announcement","event_summary":"x","significance":"y",'
+        '"claims":[{"text":"Claim","evidence":["source title","source summary"]}]}',
+        source_url="https://example.test",
+        allowed_evidence={"source title", "source summary"},
+    )
+    assert result.claims[0].evidence == ["source title", "source summary"]
