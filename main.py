@@ -488,29 +488,49 @@ def publish_intelligence_events(
     *,
     publish_enabled: bool,
     out=print,
+    outbox_store=None,
 ) -> int:
-    if not events or not publish_enabled:
+    if not events and outbox_store is None:
+        return 0
+    if not publish_enabled:
         return 0
     if discord_settings.dry_run:
         out("Intelligence publish: dry run; nothing posted")
         return 0
     if not discord_settings.webhook_url:
         raise SystemExit("Intelligence publish refused: DISCORD_WEBHOOK_URL is not set")
-    if any(not any(evidence.url.strip() for evidence in event.evidence) for event in events):
+
+    queue = outbox_store or JsonIntelligenceOutboxState()
+    if events:
+        queue.enqueue(events)
+    pending = queue.load()
+    if not pending:
+        return 0
+
+    if any(
+        not any(evidence.url.strip() for evidence in item.event.evidence)
+        for item in pending
+    ):
         raise SystemExit(
             "Intelligence publish refused: every event must contain at least one evidence URL"
         )
+
+    limit = max(1, int(discord_settings.max_posts))
+    selected = pending[:limit]
     hook = DiscordWebhook(discord_settings.webhook_url)
-    posted = 0
-    for event in events:
+    posted_keys: set[str] = set()
+    for item in selected:
         try:
-            hook.send(format_intelligence_event(event))
+            hook.send(format_intelligence_event(item.event))
         except DiscordError as exc:
-            out(f"::warning::Intelligence post failed for {event.event_id}: {exc}")
+            out(f"::warning::Intelligence post failed for {item.event.event_id}: {exc}")
             continue
-        posted += 1
-    out(f"Intelligence: posted {posted} of {len(events)} events")
-    return posted
+        posted_keys.add(item.key)
+
+    if posted_keys:
+        queue.remove(posted_keys)
+    out(f"Intelligence: posted {len(posted_keys)} of {len(selected)} queued events")
+    return len(posted_keys)
 
 
 def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) -> None:
