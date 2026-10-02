@@ -363,8 +363,16 @@ def collect_feed(discord_settings):
                 None,
             )
         outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
-        result = run_pipeline(outbox_state=outbox_store) if outbox_store is not None else run_pipeline()
-        return result, outbox_store
+        intelligence_outbox_store = (
+            JsonIntelligenceOutboxState()
+            if getattr(discord_settings, "webhook_url", "")
+            else None
+        )
+        result = run_pipeline(
+            outbox_state=outbox_store,
+            intelligence_outbox=intelligence_outbox_store,
+        ) if outbox_store is not None else run_pipeline()
+        return result, outbox_store, intelligence_outbox_store
     except (
         StateFileError,
         DiscoveryStateError,
@@ -542,7 +550,7 @@ def main() -> None:
 
     # Keep the top-level orchestration deliberately boring:
     # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
-    result, outbox_store = collect_feed(discord_settings)
+    result, outbox_store, intelligence_outbox_store = collect_feed(discord_settings)
     relevant = score_feed(result)
     publish_feed(relevant, result.intelligence_events, discord_settings, outbox_store)
 
