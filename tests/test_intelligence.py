@@ -145,3 +145,21 @@ def test_normalization_removes_source_name_suffix():
                     "https://example.com/a", "U.S. Securities and Exchange Commission")
     normalize_item(item)
     assert item.title == "Ripple files update"
+
+
+def test_intelligence_publish_gate_defaults_off(monkeypatch):
+    from intelligence.configuration import load_intelligence_config
+    monkeypatch.delenv("INTELLIGENCE_ENABLED", raising=False)
+    monkeypatch.delenv("INTELLIGENCE_PUBLISH", raising=False)
+    config = load_intelligence_config()
+    assert config.enabled is False
+    assert config.publish_enabled is False
+
+
+def test_intelligence_publish_gate_is_independent(monkeypatch):
+    from intelligence.configuration import load_intelligence_config
+    monkeypatch.setenv("INTELLIGENCE_ENABLED", "true")
+    monkeypatch.setenv("INTELLIGENCE_PUBLISH", "false")
+    config = load_intelligence_config()
+    assert config.enabled is True
+    assert config.publish_enabled is False

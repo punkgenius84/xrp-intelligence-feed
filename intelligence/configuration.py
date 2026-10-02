@@ -75,6 +75,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class IntelligenceRuntimeConfig:
     enabled: bool = False
+    publish_enabled: bool = False
     model: str = "qwen2.5:7b"
     max_items_per_run: int = 5
     min_relevance_score: int = 50
@@ -96,6 +97,7 @@ def load_intelligence_config() -> IntelligenceRuntimeConfig:
         raise ConfigurationError("INTELLIGENCE_TIMEOUT must be between 5 and 180 seconds")
     return IntelligenceRuntimeConfig(
         enabled=boolean(os.getenv("INTELLIGENCE_ENABLED")),
+        publish_enabled=boolean(os.getenv("INTELLIGENCE_PUBLISH")),
         model=os.getenv("OLLAMA_MODEL", "qwen2.5:7b").strip() or "qwen2.5:7b",
         max_items_per_run=max_items,
         min_relevance_score=minimum,
