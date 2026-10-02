@@ -68,7 +68,7 @@ class JsonDiscoveryState:
             if health is not None:
                 if (not isinstance(health, dict)
                         or set(health) != {"last_attempt", "last_status", "last_candidate_count",
-                                            "last_error", "consecutive_failures", "consecutive_empty"}
+                                            "last_error", "consecutive_failures", "consecutive_empty", "status_started_at"}
                         or not isinstance(health["last_status"], str)
                         or not isinstance(health["last_candidate_count"], int)
                         or not isinstance(health["last_error"], str)
@@ -76,7 +76,7 @@ class JsonDiscoveryState:
                         or type(health["consecutive_empty"]) is not int
                         or health["consecutive_failures"] < 0
                         or health["consecutive_empty"] < 0
-                        or not _valid_timestamp(health["last_attempt"])):
+                        or not _valid_timestamp(health["last_attempt"]) or not _valid_timestamp(health["status_started_at"])):
                     raise DiscoveryStateError(f"Discovery state source {source_id!r} has invalid health")
             for field in ("watermark", "pagination"):
                 if field in source and not isinstance(source[field], (dict, str, int, float, type(None))):
@@ -179,6 +179,12 @@ class JsonDiscoveryState:
         previous_empty = previous.get("consecutive_empty", 0) if isinstance(previous, dict) else 0
         failure = status == "failed"
         empty = status in {"empty", "partial"}
+        previous_status = previous.get("last_status") if isinstance(previous, dict) else None
+        previous_started = previous.get("status_started_at") if isinstance(previous, dict) else None
+        if status in {"failed", "empty", "partial"} and status == previous_status and previous_started:
+            status_started_at = previous_started
+        else:
+            status_started_at = attempted_at.astimezone(timezone.utc).isoformat()
         source["health"] = {
             "last_attempt": attempted_at.astimezone(timezone.utc).isoformat(),
             "last_status": status,
@@ -186,6 +192,7 @@ class JsonDiscoveryState:
             "last_error": error[:1000],
             "consecutive_failures": previous_failures + 1 if failure else 0,
             "consecutive_empty": previous_empty + 1 if empty else 0,
+            "status_started_at": status_started_at,
         }
 
     @staticmethod
