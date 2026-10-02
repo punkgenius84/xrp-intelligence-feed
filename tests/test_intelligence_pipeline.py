@@ -196,7 +196,7 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
                 '{"event_type":"announcement","event_summary":"Source-backed event",'
                 '"significance":"Relevant to the monitored domain.",'
                 '"entities":["Ripple"],"claims":[{"text":"The source reports an announcement.",'
-                '"certainty":"high","evidence":["summary"]}]}',
+                '"certainty":"high","evidence":["source-1 summary"]}]}',
                 model="test-model",
             )
 
