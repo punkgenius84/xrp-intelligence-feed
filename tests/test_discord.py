@@ -191,7 +191,7 @@ def test_message_escapes_markdown_and_is_bounded():
     message = format_message(item(title="**bold** _x_ `code` | " + "long " * 200))
     assert message.split("\n")[1].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
     assert len(message) < 2000
-    assert "…" in message.split("\n")[0]
+    assert "…" in message.split("\n")[1]
 
 
 # ---- publishing --------------------------------------------------------------------------
