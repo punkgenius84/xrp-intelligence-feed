@@ -221,3 +221,16 @@ def test_single_source_analysis_accepts_only_controlled_evidence():
         allowed_evidence={"source title", "source summary"},
     )
     assert result.claims[0].evidence == ["source title", "source summary"]
+
+
+
+def test_parse_analysis_rejects_claim_without_evidence():
+    import pytest
+
+    with pytest.raises(ValueError, match="missing an evidence reference"):
+        parse_analysis(
+            '{"event_type":"announcement","event_summary":"x","significance":"y",'
+            '"claims":[{"text":"Unsupported claim"}]}',
+            source_url="https://example.test",
+            allowed_evidence={"source title", "source summary"},
+        )
