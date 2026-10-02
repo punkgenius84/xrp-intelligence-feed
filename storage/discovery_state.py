@@ -65,20 +65,30 @@ class JsonDiscoveryState:
             if last_success is not None and not _valid_timestamp(last_success):
                 raise DiscoveryStateError(f"Discovery state source {source_id!r} has invalid last_successful_fetch")
             health = source.get("health")
-        if isinstance(health, dict) and "status_started_at" not in health and _valid_timestamp(health.get("last_attempt")):
-            health["status_started_at"] = health["last_attempt"]
-        if health is not None:
-                if (not isinstance(health, dict)
-                        or set(health) != {"last_attempt", "last_status", "last_candidate_count",
-                                            "last_error", "consecutive_failures", "consecutive_empty", "status_started_at"}
-                        or not isinstance(health["last_status"], str)
-                        or not isinstance(health["last_candidate_count"], int)
-                        or not isinstance(health["last_error"], str)
-                        or type(health["consecutive_failures"]) is not int
-                        or type(health["consecutive_empty"]) is not int
-                        or health["consecutive_failures"] < 0
-                        or health["consecutive_empty"] < 0
-                        or not _valid_timestamp(health["last_attempt"]) or not _valid_timestamp(health["status_started_at"])):
+            if isinstance(health, dict) and "status_started_at" not in health and _valid_timestamp(health.get("last_attempt")):
+                health["status_started_at"] = health["last_attempt"]
+            if health is not None:
+                if (
+                    not isinstance(health, dict)
+                    or set(health) != {
+                        "last_attempt",
+                        "last_status",
+                        "last_candidate_count",
+                        "last_error",
+                        "consecutive_failures",
+                        "consecutive_empty",
+                        "status_started_at",
+                    }
+                    or not isinstance(health["last_status"], str)
+                    or not isinstance(health["last_candidate_count"], int)
+                    or not isinstance(health["last_error"], str)
+                    or type(health["consecutive_failures"]) is not int
+                    or type(health["consecutive_empty"]) is not int
+                    or health["consecutive_failures"] < 0
+                    or health["consecutive_empty"] < 0
+                    or not _valid_timestamp(health["last_attempt"])
+                    or not _valid_timestamp(health["status_started_at"])
+                ):
                     raise DiscoveryStateError(f"Discovery state source {source_id!r} has invalid health")
             for field in ("watermark", "pagination"):
                 if field in source and not isinstance(source[field], (dict, str, int, float, type(None))):
