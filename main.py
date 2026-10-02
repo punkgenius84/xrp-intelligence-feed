@@ -31,6 +31,7 @@ from storage.database import JsonState, StateFileError
 from storage.outbox import JsonOutboxState, OutboxError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
+from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
 from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
 
@@ -62,7 +63,7 @@ class PipelineResult:
     discovery_results: list[DiscoveryResult] = field(default_factory=list)
     health: dict[str, dict] = field(default_factory=dict)
     buried_signals: list = field(default_factory=list)
-    publishable: list = field(default_factory=list)
+    publishable: list | None = None
     intelligence_events: list = field(default_factory=list)
     intelligence_failures: list[str] = field(default_factory=list)
 
@@ -100,6 +101,7 @@ def run_pipeline(
     correlation_state=None,
     outbox_state=None,
     intelligence_state=None,
+    intelligence_outbox=None,
 ) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -256,6 +258,8 @@ def run_pipeline(
                     event_to_dict(event),
                     now,
                 )
+        if intelligence_outbox is not None and intelligence_events:
+            intelligence_outbox.enqueue(intelligence_events)
 
     # Persist only the thin, bounded correlation memory after enrichment. This must
     # succeed before the shared seen set is saved, so a failed memory write leaves
@@ -367,6 +371,7 @@ def collect_feed(discord_settings):
         CorrelationStateError,
         IntelligenceStateError,
         OutboxError,
+        IntelligenceOutboxError,
     ) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except SourceRegistryError as exc:
@@ -396,7 +401,7 @@ def print_source_health_warnings(result: PipelineResult, *, now: datetime | None
         if age < cutoff_seconds:
             continue
         hours = age / 3600
-        label = "failing" if status == "failed" else "empty"
+        label = {"failed": "failing", "empty": "empty", "partial": "partially failing"}[status]
         print(
             f"WARNING: Source health — {discovery_result.source_id} is {label} "
             f"for {hours:.1f}h (last attempt {health.get('last_attempt', 'unknown')})"
@@ -413,7 +418,7 @@ def score_feed(result: PipelineResult) -> list:
     publish_score = validate_thresholds(
         read_object("config/thresholds.json", "thresholds")
     )["publish_score"]
-    relevant = result.publishable or [
+    relevant = result.publishable if result.publishable is not None else [
         item for item in result.fresh if item.relevance_score >= publish_score
     ]
 
