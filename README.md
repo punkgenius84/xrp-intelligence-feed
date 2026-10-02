@@ -33,6 +33,10 @@ The discovery registry includes official institutional sources for Citi, Circle,
 
 Every push and pull request to `main` runs the full pytest suite on Python 3.12 before changes are merged. Production scheduled runs also execute the test suite before collection and publishing.
 
+## License
+
+This repository is released under the MIT License. See `LICENSE`.
+
 ## Discord posting
 
 Relevant new items (score at or above `publish_score`) are posted to a Discord channel through a webhook. Configuration is by environment variable only; the webhook URL is never stored in the repository.
@@ -43,7 +47,9 @@ Relevant new items (score at or above `publish_score`) are posted to a Discord c
 | `DISCORD_MAX_POSTS` | Most posts per run, 1 to 25 (default 5). If more items qualify, the highest-scoring are selected, oldest first. The rest remain in the persistent delivery outbox and can be posted on a later run. |
 | `DISCORD_DRY_RUN` | `true` prints what would be posted, posts nothing, and saves no state, so a live run afterwards still sees the same items as new. |
 
-Each post shows the headline, source, score, matched entities, up to two scoring reasons, and the link. Posts cannot ping `@everyone` or roles. Live Discord delivery uses a bounded `state/outbox.json` queue. Relevant items are queued before `seen.json` is saved; successful posts are removed, while failed or over-cap items remain queued for later scheduled runs. This is deliberately at-least-once delivery: if an outbox cleanup write fails after Discord accepted a post, a duplicate is possible on a later run. The outbox is bounded at 250 items and cached with the other persistent state. A Discord rate limit is retried once if Discord asks for a short wait. Error messages never include the webhook URL.
+Each post leads with the source and publication date, followed by the headline and a plain-English `Why this fired` line from the deterministic scoring reasons. Matched entities follow, with the numeric relevance score at the bottom. The source link is always included. Posts cannot ping `@everyone` or roles. Live Discord delivery uses a bounded `state/outbox.json` queue. Relevant items are queued before `seen.json` is saved; successful posts are removed, while failed or over-cap items remain queued for later scheduled runs. This is deliberately at-least-once delivery: if an outbox cleanup write fails after Discord accepted a post, a duplicate is possible on a later run. The outbox is bounded at 250 items and cached with the other persistent state. A Discord rate limit is retried once if Discord asks for a short wait. Error messages never include the webhook URL.
+
+The optional local Ollama intelligence layer is disabled by default and is explicitly disabled in GitHub Actions. Intelligence analysis is not automatically published to Discord; local preview/validation comes before any future separate intelligence-publication gate.
 
 On GitHub Actions, add the webhook as the repository secret `DISCORD_INTELLIGENCE_DISCORD_WEBHOOK`; the workflow passes it to the program as `DISCORD_WEBHOOK_URL`. Manual runs have a `dry_run` checkbox that defaults to on; untick it to post for real. Dry runs do not save the state cache.
 
