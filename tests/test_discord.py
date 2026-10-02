@@ -176,13 +176,15 @@ def test_empty_secret_means_not_configured_not_an_error():
 
 # ---- message format ----------------------------------------------------------------------
 
-def test_message_has_title_meta_two_reasons_and_link_last():
+def test_message_leads_with_source_date_title_reason_and_score_last():
     lines = format_message(item(url="https://www.fincen.gov/news/news-releases/x")).split("\n")
-    assert lines[0] == "**FinCEN issues digital asset guidance**"
-    assert lines[1] == "FinCEN · score 50 · FinCEN, XRP"
-    assert lines[2:4] == ["• digital asset signal", "• regulatory action"]
+    assert lines[0] == "**Source:** FinCEN · **Date:** 2026-09-27"
+    assert lines[1] == "**FinCEN issues digital asset guidance**"
+    assert lines[2] == "**Why this fired:** digital asset signal"
+    assert lines[3] == "**Entities:** FinCEN, XRP"
+    assert lines[4] == "**Score:** 50"
     assert lines[-1] == "https://www.fincen.gov/news/news-releases/x"
-    assert len(lines) == 5
+    assert len(lines) == 6
 
 
 def test_message_escapes_markdown_and_is_bounded():
