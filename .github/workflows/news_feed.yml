@@ -45,6 +45,7 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_INTELLIGENCE_DISCORD_WEBHOOK }}
           DISCORD_MAX_POSTS: "5"
           INTELLIGENCE_ENABLED: "false"
+          INTELLIGENCE_PUBLISH: "false"
           DISCORD_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
       - name: Save persistent state
         if: success() && (github.event_name == 'schedule' || !inputs.dry_run)
