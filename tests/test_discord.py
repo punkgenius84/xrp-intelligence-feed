@@ -189,7 +189,7 @@ def test_message_leads_with_source_date_title_reason_and_score_last():
 
 def test_message_escapes_markdown_and_is_bounded():
     message = format_message(item(title="**bold** _x_ `code` | " + "long " * 200))
-    assert message.startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
+    assert message.split("\n")[1].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
     assert len(message) < 2000
     assert "…" in message.split("\n")[0]
 
@@ -205,7 +205,7 @@ def test_cap_keeps_highest_scores_and_posts_oldest_first():
              item("Mid score story here", 60, 10), item("Also mid story here", 60, 2)]
     hook, lines = FakeHook(), []
     report = publish(items, live(3), webhook=hook, sleep=lambda _: None, out=lines.append)
-    order = [message.split("\n")[0] for message in hook.sent]
+    order = [message.split("\n")[1] for message in hook.sent]
     # Kept: Top (90) and both 60s, dropped: Low (40). Posted by publication time: minutes 2, 5, 10.
     assert order == ["**Also mid story here**", "**Top score story here**", "**Mid score story here**"]
     assert (report.posted, report.not_selected, report.failed) == (3, 1, 0)
