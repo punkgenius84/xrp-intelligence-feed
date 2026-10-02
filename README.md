@@ -15,6 +15,10 @@ Discovery sources persist lightweight health telemetry in `state/discovery.json`
 
 The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, discovery health, publishable items, and separately flagged buried signals. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
 
+## Intelligence state retention
+
+Persistent intelligence state is bounded at 500 current event records, with at most 10 revisions retained per event. Oldest records are evicted deterministically so a 15-minute schedule cannot grow `state/intelligence.json` without limit.
+
 ## Buried-signal detection
 
 Fresh candidates that remain below the normal publish threshold can be flagged as buried signals when they have strong cross-source correlation, primary-source quality, and a configured high-value entity. The detector is intentionally separate from relevance scoring: it does not raise relevance scores, bypass the normal publish threshold, deduplicate items, or treat corroboration as proof. Buried signals are currently reported in the run output for later intelligence/publishing policy work; they are deliberately not automatically posted to Discord until live scheduled-run behavior has been observed.
