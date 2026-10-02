@@ -80,6 +80,7 @@ class IntelligenceRuntimeConfig:
     max_items_per_run: int = 5
     min_relevance_score: int = 50
     timeout_seconds: float = 45.0
+    stale_after_days: int = 30
 
 
 def load_intelligence_config() -> IntelligenceRuntimeConfig:
