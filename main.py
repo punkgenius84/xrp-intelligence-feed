@@ -367,6 +367,35 @@ def collect_feed(discord_settings):
         raise SystemExit(f"Pipeline configuration error: {exc}") from exc
 
 
+def print_source_health_warnings(result: PipelineResult, *, now: datetime | None = None) -> None:
+    current = now or datetime.now().astimezone()
+    cutoff_seconds = 24 * 60 * 60
+    for discovery_result in result.discovery_results:
+        health = result.health.get(discovery_result.source_id, {})
+        status = health.get("last_status")
+        started_raw = health.get("status_started_at")
+        if status not in {"failed", "empty", "partial"} or not started_raw:
+            continue
+        try:
+            started = datetime.fromisoformat(started_raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=current.tzinfo)
+        age = (current.astimezone() - started.astimezone()).total_seconds()
+        if age < cutoff_seconds:
+            continue
+        hours = age / 3600
+        label = "failing" if status == "failed" else "empty"
+        print(
+            f"WARNING: Source health — {discovery_result.source_id} is {label} "
+            f"for {hours:.1f}h (last attempt {health.get('last_attempt', 'unknown')})"
+        )
+        error = health.get("last_error", "")
+        if error:
+            print(f"  Last error: {error}")
+
+
 def score_feed(result: PipelineResult) -> list:
     """Select and report publishable scored items without changing scoring behavior."""
     from intelligence.configuration import read_object, validate_thresholds
@@ -427,6 +456,7 @@ def score_feed(result: PipelineResult) -> list:
                 f"  Health: failures={health.get('consecutive_failures', 0)} "
                 f"empty={health.get('consecutive_empty', 0)}"
             )
+    print_source_health_warnings(result)
     return relevant
 
 

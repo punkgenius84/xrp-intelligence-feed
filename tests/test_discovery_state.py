@@ -75,3 +75,39 @@ def test_corrupt_file_is_preserved_when_valid_value_is_saved(tmp_path):
     with pytest.raises(DiscoveryStateError, match="malformed JSON"):
         JsonDiscoveryState(path).save({"schema_version": 1, "sources": {}, "candidates": {}})
     assert path.read_text(encoding="utf-8") == "not-json"
+
+
+def test_health_tracks_status_duration_and_resets_on_recovery(tmp_path):
+    store = JsonDiscoveryState(tmp_path / "discovery.json")
+    state = store.load()
+    failed_at = datetime(2026, 9, 22, 12, tzinfo=timezone.utc)
+    retry_at = datetime(2026, 9, 23, 12, tzinfo=timezone.utc)
+    JsonDiscoveryState.record_health(state, "swift", failed_at, "failed", 0, "HTTP 403")
+    JsonDiscoveryState.record_health(state, "swift", retry_at, "failed", 0, "HTTP 403")
+    assert state["sources"]["swift"]["health"]["status_started_at"] == failed_at.isoformat()
+    JsonDiscoveryState.record_health(state, "swift", retry_at, "success", 3)
+    assert state["sources"]["swift"]["health"]["status_started_at"] == retry_at.isoformat()
+    assert state["sources"]["swift"]["health"]["consecutive_failures"] == 0
+
+
+def test_legacy_health_derives_status_started_at(tmp_path):
+    path = tmp_path / "discovery.json"
+    path.write_text(json.dumps({
+        "schema_version": 1,
+        "sources": {
+            "swift": {
+                "requests": {},
+                "health": {
+                    "last_attempt": "2026-09-23T12:00:00+00:00",
+                    "last_status": "failed",
+                    "last_candidate_count": 0,
+                    "last_error": "HTTP 403",
+                    "consecutive_failures": 4,
+                    "consecutive_empty": 0,
+                },
+            }
+        },
+        "candidates": {},
+    }), encoding="utf-8")
+    loaded = JsonDiscoveryState(path).load()
+    assert loaded["sources"]["swift"]["health"]["status_started_at"] == "2026-09-23T12:00:00+00:00"
