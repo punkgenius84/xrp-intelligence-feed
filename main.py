@@ -361,6 +361,7 @@ def collect_feed(discord_settings):
                     intelligence_state=_NoSaveState(JsonIntelligenceState()),
                 ),
                 None,
+                None,
             )
         outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
         intelligence_outbox_store = (
