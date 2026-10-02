@@ -534,8 +534,14 @@ def publish_intelligence_events(
     return len(posted_keys)
 
 
-def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) -> None:
-    """Publish exactly the same items through the existing Discord/outbox path."""
+def publish_feed(
+    relevant,
+    intelligence_events,
+    discord_settings,
+    outbox_store,
+    intelligence_outbox_store=None,
+) -> None:
+    """Publish normal and intelligence items through durable delivery paths."""
     if discord_settings.dry_run:
         publish(relevant, discord_settings)
         return
@@ -560,6 +566,7 @@ def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) 
         intelligence_events,
         discord_settings,
         publish_enabled=intelligence_config.enabled and intelligence_config.publish_enabled,
+        outbox_store=intelligence_outbox_store,
     )
 
 
