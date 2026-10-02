@@ -62,11 +62,20 @@ def _clean(value: str, limit: int) -> str:
 
 
 def format_message(item: Any) -> str:
-    meta = [_clean(item.source, 80) or "Unknown source", f"score {item.relevance_score}"]
+    when = _when(item).astimezone(timezone.utc).strftime("%Y-%m-%d")
+    source = _clean(item.source, 100) or "Unknown source"
+    lines = [
+        f"**Source:** {source} · **Date:** {when}",
+        f"**{_clean(item.title, 220)}**",
+        "**Why this fired:** " + (
+            _clean(item.score_reasons[0], 240)
+            if item.score_reasons
+            else "Matched configured relevance criteria."
+        ),
+    ]
     if item.detected_entities:
-        meta.append(_clean(", ".join(item.detected_entities[:6]), 120))
-    lines = [f"**{_clean(item.title, 220)}**", " · ".join(meta)]
-    lines.extend(f"• {_clean(reason, 160)}" for reason in item.score_reasons[:2])
+        lines.append("**Entities:** " + _clean(", ".join(item.detected_entities[:6]), 120))
+    lines.append(f"**Score:** {item.relevance_score}")
     lines.append(item.url.strip())  # last, so Discord unfurls the link preview
     return "\n".join(lines)
 

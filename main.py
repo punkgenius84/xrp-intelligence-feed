@@ -335,30 +335,22 @@ class _NoSaveState:
         return None
 
 
-def main() -> None:
-    from intelligence.configuration import read_object, validate_thresholds
-
-    # Validate Discord settings before collecting: a bad setting must not fail the run after
-    # state has been saved, because a later run would then re-post items that already went out.
-    try:
-        discord_settings = settings_from_env()
-    except ValueError as exc:
-        raise SystemExit(f"Discord configuration error: {exc}") from exc
+def collect_feed(discord_settings):
+    """Run collection/state processing with the same dry-run semantics as main()."""
     try:
         if discord_settings.dry_run:
-            # A preview must not mark items as seen, or the live run would find nothing new.
-            result = run_pipeline(
-                state=_NoSaveState(JsonState()),
-                discovery_state=_NoSaveState(JsonDiscoveryState()),
-                correlation_state=_NoSaveState(JsonCorrelationState()),
-                intelligence_state=_NoSaveState(JsonIntelligenceState()),
+            return (
+                run_pipeline(
+                    state=_NoSaveState(JsonState()),
+                    discovery_state=_NoSaveState(JsonDiscoveryState()),
+                    correlation_state=_NoSaveState(JsonCorrelationState()),
+                    intelligence_state=_NoSaveState(JsonIntelligenceState()),
+                ),
+                None,
             )
-        else:
-            outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
-            if outbox_store is None:
-                result = run_pipeline()
-            else:
-                result = run_pipeline(outbox_state=outbox_store)
+        outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
+        result = run_pipeline(outbox_state=outbox_store) if outbox_store is not None else run_pipeline()
+        return result, outbox_store
     except (
         StateFileError,
         DiscoveryStateError,
@@ -374,63 +366,95 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(f"Pipeline configuration error: {exc}") from exc
 
-    collected, fresh, failures = result.collected, result.fresh, result.failures
-    reports, discovery_results = result.reports, result.discovery_results
+
+def score_feed(result: PipelineResult) -> list:
+    """Select and report publishable scored items without changing scoring behavior."""
+    from intelligence.configuration import read_object, validate_thresholds
+
+    publish_score = validate_thresholds(
+        read_object("config/thresholds.json", "thresholds")
+    )["publish_score"]
+    relevant = result.publishable or [
+        item for item in result.fresh if item.relevance_score >= publish_score
+    ]
+
+    collected, fresh = result.collected, result.fresh
     buried_signals = result.buried_signals
-    intelligence_events = result.intelligence_events
-    intelligence_failures = result.intelligence_failures
-    publish_score = validate_thresholds(read_object("config/thresholds.json", "thresholds"))["publish_score"]
-    relevant = result.publishable or [item for item in fresh if item.relevance_score >= publish_score]
     print(
         f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} "
-        f"| Buried signals: {len(buried_signals)} | Intelligence events: {len(intelligence_events)}"
+        f"| Buried signals: {len(buried_signals)} | Intelligence events: {len(result.intelligence_events)}"
     )
     for item in relevant:
-        print(f"[{item.relevance_score}] {item.title} — {item.source} "
-              f"| entities: {', '.join(item.detected_entities) or 'none'} "
-              f"| quality: {item.source_quality}")
+        print(
+            f"[{item.relevance_score}] {item.title} — {item.source} "
+            f"| entities: {', '.join(item.detected_entities) or 'none'} "
+            f"| quality: {item.source_quality}"
+        )
         for reason in item.score_reasons:
             print(f"  - {reason}")
-    for failure in intelligence_failures:
-        print(f"Intelligence failed: {failure}")
-
-    for event in intelligence_events:
+    for event in result.intelligence_events:
         print(
             f"[intelligence {event.event_type}] {event.summary} "
             f"| entities: {', '.join(event.entities) or 'none'}"
         )
-
     for item in buried_signals:
-        print(f"[buried {item.buried_signal_score}] {item.title} — {item.source} "
-              f"| correlation: {item.correlation_score} "
-              f"| entities: {', '.join(item.detected_entities) or 'none'}")
+        print(
+            f"[buried {item.buried_signal_score}] {item.title} — {item.source} "
+            f"| correlation: {item.correlation_score} "
+            f"| entities: {', '.join(item.detected_entities) or 'none'}"
+        )
         for reason in item.buried_signal_reasons:
             print(f"  - {reason}")
-    for failure in failures:
+    for failure in result.intelligence_failures:
+        print(f"Intelligence failed: {failure}")
+    for failure in result.failures:
         print(f"Source failed: {failure}")
-    for report in reports:
+    for report in result.reports:
         if report is not None:
-            print(f"Source {report.source_name}: {report.status} ({report.item_count} items)"
-                  + (f"; HTTP {report.http_status}" if report.http_status else "")
-                  + (f"; {report.error}" if report.error else ""))
-    for discovery_result in discovery_results:
-        print(f"Discovery source {discovery_result.source_id}: {discovery_result.status} "
-              f"({len(discovery_result.candidates)} candidates)")
+            print(
+                f"Source {report.source_name}: {report.status} ({report.item_count} items)"
+                + (f"; HTTP {report.http_status}" if report.http_status else "")
+                + (f"; {report.error}" if report.error else "")
+            )
+    for discovery_result in result.discovery_results:
+        print(
+            f"Discovery source {discovery_result.source_id}: "
+            f"{discovery_result.status} ({len(discovery_result.candidates)} candidates)"
+        )
         health = result.health.get(discovery_result.source_id, {})
         if health:
-            print(f"  Health: failures={health.get('consecutive_failures', 0)} "
-                  f"empty={health.get('consecutive_empty', 0)}")
+            print(
+                f"  Health: failures={health.get('consecutive_failures', 0)} "
+                f"empty={health.get('consecutive_empty', 0)}"
+            )
+    return relevant
+
+
+def publish_feed(relevant, discord_settings, outbox_store) -> None:
+    """Publish exactly the same items through the existing Discord/outbox path."""
     if discord_settings.dry_run:
         publish(relevant, discord_settings)
         return
 
-    outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
     pending = outbox_store.load() if outbox_store is not None else relevant
     if outbox_store is not None and not pending:
         pending = relevant
     report = publish(pending, discord_settings)
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
+
+
+def main() -> None:
+    try:
+        discord_settings = settings_from_env()
+    except ValueError as exc:
+        raise SystemExit(f"Discord configuration error: {exc}") from exc
+
+    # Keep the top-level orchestration deliberately boring:
+    # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
+    result, outbox_store = collect_feed(discord_settings)
+    relevant = score_feed(result)
+    publish_feed(relevant, discord_settings, outbox_store)
 
 
 if __name__ == "__main__":
