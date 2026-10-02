@@ -1,7 +1,7 @@
 import html
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
@@ -121,6 +121,13 @@ def run_pipeline(
     if intelligence_config.enabled:
         intelligence_store = intelligence_state or JsonIntelligenceState()
         intelligence_state_value = intelligence_store.load()
+        stale_ids = JsonIntelligenceState.mark_stale_older_than(
+            intelligence_state_value,
+            now=datetime.now().astimezone(),
+            max_age=timedelta(days=intelligence_config.stale_after_days),
+        )
+        if stale_ids:
+            print(f"Intelligence lifecycle: marked {len(stale_ids)} event(s) stale")
 
     correlation_store = correlation_state or JsonCorrelationState()
     correlation_state_value = correlation_store.load()
