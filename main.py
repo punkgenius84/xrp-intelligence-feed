@@ -516,7 +516,7 @@ def publish_intelligence_events(
             "Intelligence publish refused: every event must contain at least one evidence URL"
         )
 
-    limit = max(1, int(discord_settings.max_posts))
+    limit = max(1, int(getattr(discord_settings, "max_posts", 5)))
     selected = pending[:limit]
     hook = DiscordWebhook(discord_settings.webhook_url)
     posted_keys: set[str] = set()
