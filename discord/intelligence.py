@@ -11,6 +11,9 @@ MAX_UNCERTAINTIES = 3
 
 def _clean(value: str, limit: int) -> str:
     text = " ".join(str(value).split())
+    for character in ("\\", "*", "_", "~", "`", "|", ">"):
+        text = text.replace(character, "\\" + character)
+    text = text.replace("@", "@\u200b")
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 

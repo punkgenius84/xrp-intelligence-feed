@@ -31,6 +31,7 @@ from storage.database import JsonState, StateFileError
 from storage.outbox import JsonOutboxState, OutboxError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
+from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
 from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
 
@@ -62,7 +63,7 @@ class PipelineResult:
     discovery_results: list[DiscoveryResult] = field(default_factory=list)
     health: dict[str, dict] = field(default_factory=dict)
     buried_signals: list = field(default_factory=list)
-    publishable: list = field(default_factory=list)
+    publishable: list | None = None
     intelligence_events: list = field(default_factory=list)
     intelligence_failures: list[str] = field(default_factory=list)
 
@@ -100,6 +101,7 @@ def run_pipeline(
     correlation_state=None,
     outbox_state=None,
     intelligence_state=None,
+    intelligence_outbox=None,
 ) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -256,6 +258,8 @@ def run_pipeline(
                     event_to_dict(event),
                     now,
                 )
+        if intelligence_outbox is not None and intelligence_events:
+            intelligence_outbox.enqueue(intelligence_events)
 
     # Persist only the thin, bounded correlation memory after enrichment. This must
     # succeed before the shared seen set is saved, so a failed memory write leaves
@@ -357,16 +361,26 @@ def collect_feed(discord_settings):
                     intelligence_state=_NoSaveState(JsonIntelligenceState()),
                 ),
                 None,
+                None,
             )
         outbox_store = JsonOutboxState() if getattr(discord_settings, "webhook_url", "") else None
-        result = run_pipeline(outbox_state=outbox_store) if outbox_store is not None else run_pipeline()
-        return result, outbox_store
+        intelligence_outbox_store = (
+            JsonIntelligenceOutboxState()
+            if getattr(discord_settings, "webhook_url", "")
+            else None
+        )
+        result = run_pipeline(
+            outbox_state=outbox_store,
+            intelligence_outbox=intelligence_outbox_store,
+        ) if outbox_store is not None else run_pipeline()
+        return result, outbox_store, intelligence_outbox_store
     except (
         StateFileError,
         DiscoveryStateError,
         CorrelationStateError,
         IntelligenceStateError,
         OutboxError,
+        IntelligenceOutboxError,
     ) as exc:
         raise SystemExit(f"State error: {exc}") from exc
     except SourceRegistryError as exc:
@@ -396,7 +410,7 @@ def print_source_health_warnings(result: PipelineResult, *, now: datetime | None
         if age < cutoff_seconds:
             continue
         hours = age / 3600
-        label = "failing" if status == "failed" else "empty"
+        label = {"failed": "failing", "empty": "empty", "partial": "partially failing"}[status]
         print(
             f"WARNING: Source health — {discovery_result.source_id} is {label} "
             f"for {hours:.1f}h (last attempt {health.get('last_attempt', 'unknown')})"
@@ -413,7 +427,7 @@ def score_feed(result: PipelineResult) -> list:
     publish_score = validate_thresholds(
         read_object("config/thresholds.json", "thresholds")
     )["publish_score"]
-    relevant = result.publishable or [
+    relevant = result.publishable if result.publishable is not None else [
         item for item in result.fresh if item.relevance_score >= publish_score
     ]
 
@@ -475,33 +489,59 @@ def publish_intelligence_events(
     *,
     publish_enabled: bool,
     out=print,
+    outbox_store=None,
 ) -> int:
-    if not events or not publish_enabled:
+    if not events and outbox_store is None:
+        return 0
+    if not publish_enabled:
         return 0
     if discord_settings.dry_run:
         out("Intelligence publish: dry run; nothing posted")
         return 0
     if not discord_settings.webhook_url:
         raise SystemExit("Intelligence publish refused: DISCORD_WEBHOOK_URL is not set")
-    if any(not any(evidence.url.strip() for evidence in event.evidence) for event in events):
+
+    queue = outbox_store or JsonIntelligenceOutboxState()
+    if events:
+        queue.enqueue(events)
+    pending = queue.load()
+    if not pending:
+        return 0
+
+    if any(
+        not any(evidence.url.strip() for evidence in item.event.evidence)
+        for item in pending
+    ):
         raise SystemExit(
             "Intelligence publish refused: every event must contain at least one evidence URL"
         )
+
+    limit = max(1, int(getattr(discord_settings, "max_posts", 5)))
+    selected = pending[:limit]
     hook = DiscordWebhook(discord_settings.webhook_url)
-    posted = 0
-    for event in events:
+    posted_keys: set[str] = set()
+    for item in selected:
         try:
-            hook.send(format_intelligence_event(event))
+            hook.send(format_intelligence_event(item.event))
         except DiscordError as exc:
-            out(f"::warning::Intelligence post failed for {event.event_id}: {exc}")
+            out(f"::warning::Intelligence post failed for {item.event.event_id}: {exc}")
             continue
-        posted += 1
-    out(f"Intelligence: posted {posted} of {len(events)} events")
-    return posted
+        posted_keys.add(item.key)
+
+    if posted_keys:
+        queue.remove(posted_keys)
+    out(f"Intelligence: posted {len(posted_keys)} of {len(selected)} queued events")
+    return len(posted_keys)
 
 
-def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) -> None:
-    """Publish exactly the same items through the existing Discord/outbox path."""
+def publish_feed(
+    relevant,
+    intelligence_events,
+    discord_settings,
+    outbox_store,
+    intelligence_outbox_store=None,
+) -> None:
+    """Publish normal and intelligence items through durable delivery paths."""
     if discord_settings.dry_run:
         publish(relevant, discord_settings)
         return
@@ -526,6 +566,7 @@ def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) 
         intelligence_events,
         discord_settings,
         publish_enabled=intelligence_config.enabled and intelligence_config.publish_enabled,
+        outbox_store=intelligence_outbox_store,
     )
 
 
@@ -537,7 +578,7 @@ def main() -> None:
 
     # Keep the top-level orchestration deliberately boring:
     # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
-    result, outbox_store = collect_feed(discord_settings)
+    result, outbox_store, intelligence_outbox_store = collect_feed(discord_settings)
     relevant = score_feed(result)
     publish_feed(relevant, result.intelligence_events, discord_settings, outbox_store)
 

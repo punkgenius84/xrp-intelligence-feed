@@ -20,6 +20,7 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
         assert "state/seen.json" in block
         assert "state/discovery.json" in block
         assert "state/correlation.json" in block
+        assert "state/intelligence_outbox.json" in block
 
 
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
@@ -31,7 +32,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "key: xrp-state-${{ github.ref_name }}-v1-bootstrap" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert "actions/cache/save@v5" in save
-    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
+    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
     assert "github.run_id" not in contents
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
@@ -39,7 +40,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "if: success()" in save
 
 
-def test_state_restore_precedes_setup_install_and_execution_without_dependency_cache():
+def test_state_restore_follows_tests_and_precedes_execution_without_dependency_cache():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore_at = contents.index("uses: actions/cache/restore@v5")
     setup_at = contents.index("uses: actions/setup-python@v6")
@@ -48,6 +49,6 @@ def test_state_restore_precedes_setup_install_and_execution_without_dependency_c
     app_at = contents.index("python main.py")
     save_at = contents.index("uses: actions/cache/save@v5")
 
-    assert restore_at < setup_at < install_at < test_at < app_at < save_at
+    assert setup_at < install_at < test_at < restore_at < app_at < save_at
     assert "cache: pip" not in contents
     assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@v5")
