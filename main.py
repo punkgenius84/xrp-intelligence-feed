@@ -424,10 +424,9 @@ def score_feed(result: PipelineResult) -> list:
         for reason in item.score_reasons:
             print(f"  - {reason}")
     for event in result.intelligence_events:
-        print(
-            f"[intelligence {event.event_type}] {event.summary} "
-            f"| entities: {', '.join(event.entities) or 'none'}"
-        )
+        print("[intelligence preview]")
+        print(format_intelligence_event(event))
+        print()
     for item in buried_signals:
         print(
             f"[buried {item.buried_signal_score}] {item.title} — {item.source} "
