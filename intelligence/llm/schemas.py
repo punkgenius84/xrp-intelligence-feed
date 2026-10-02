@@ -76,6 +76,8 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
                 max_items=4,
                 max_length=300,
             )
+            if not evidence:
+                raise ValueError("LLM claim is missing an evidence reference")
             if allowed_evidence is not None:
                 invalid = [reference for reference in evidence if reference not in allowed_evidence]
                 if invalid:
