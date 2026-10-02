@@ -417,3 +417,24 @@ def test_intelligence_state_stale_sweep_is_idempotent(tmp_path):
     assert JsonIntelligenceState.mark_stale_older_than(
         state, now=now, max_age=timedelta(days=14)
     ) == []
+
+def test_event_round_trip_rejects_claim_without_evidence():
+    with pytest.raises(ValueError, match="missing an evidence reference"):
+        event_from_dict({
+            "event_id": "evt-1",
+            "event_type": "other",
+            "summary": "x",
+            "significance": "y",
+            "claims": [{"text": "Unsupported persisted claim", "evidence": []}],
+            "entities": [],
+            "uncertainties": [],
+            "evidence": [{
+                "source_id": "example",
+                "source": "Example",
+                "url": "https://example.test/article",
+                "published_at": "2026-10-01T00:00:00+00:00",
+                "title": "Example",
+                "source_quality": "primary",
+            }],
+            "model": "test",
+        })
