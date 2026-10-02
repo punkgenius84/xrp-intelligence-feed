@@ -55,9 +55,7 @@ def test_format_includes_evidence_and_conflicts():
 
 
 def test_format_is_bounded():
-    event = make_event()
-    event.summary = "x" * 5000
-    event.significance = "y" * 5000
+    event = replace(make_event(), summary="x" * 5000, significance="y" * 5000)
     message = format_intelligence_event(event)
     assert len(message) <= 2000
 
