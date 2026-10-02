@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 import main
+import intelligence.configuration as intelligence_configuration
 from discord.intelligence import format_intelligence_event
 from intelligence.events import IntelligenceEvent
 from intelligence.evidence import Evidence
@@ -85,7 +86,7 @@ def test_intelligence_formatter_escapes_markdown_and_mentions():
         )
     )
     assert "\\*bold\\*" in value
-    assert "@\\u200b" in value
+    assert "@\u200b" in value
     assert "\\>" in value
 
 
@@ -112,7 +113,7 @@ def test_partial_source_health_warning_is_labeled_partial(capsys):
 
 def test_score_feed_respects_explicit_empty_publishable(monkeypatch):
     monkeypatch.setattr(
-        main,
+        intelligence_configuration,
         "read_object",
         lambda path, label: {"publish_score": 50, "weights": {
             "high_keyword": 1, "medium_keyword": 1, "context_keyword": 1,
