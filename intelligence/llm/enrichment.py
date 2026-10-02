@@ -24,6 +24,7 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
             response.content,
             source_url=item.url,
             model=response.model,
+            allowed_evidence={"source title", "source summary"},
         )
     except ValueError as exc:
         raise LLMError(f"LLM analysis rejected: {exc}") from exc
@@ -43,6 +44,7 @@ def analyze_cluster(
             response.content,
             source_url=primary.url,
             model=response.model,
+            allowed_evidence=({f"source-{index} title" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} summary" for index in range(1, len(cluster.members) + 1)}),
         )
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc

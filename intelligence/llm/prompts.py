@@ -13,8 +13,7 @@ policy_change, product_launch, institutional_adoption, funding, acquisition,
 litigation, executive_action, other.
 
 Claims must distinguish what the source states from uncertainty.
-If two supplied sources make materially incompatible factual/status/date claims, list the disagreement in "conflicts". Do not resolve it or choose which source is correct. Evidence entries may only refer to
-material present in the supplied source material (for example: "source-1 title" or "source-2 summary").
+If two supplied sources make materially incompatible factual/status/date claims, list the disagreement in "conflicts". Do not resolve it or choose which source is correct. Evidence entries must use only the exact labels provided for the supplied material. For a single source, valid labels are "source title" and "source summary".
 When multiple sources disagree, preserve the disagreement as uncertainty; do not choose a winner.
 """
 
