@@ -42,7 +42,7 @@ def _strings(value: Any, *, max_items: int = 12, max_length: int = 500) -> list[
     return result
 
 
-def parse_analysis(raw: str, *, source_url: str, model: str = "") -> IntelligenceAnalysis:
+def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_evidence: set[str] | None = None) -> IntelligenceAnalysis:
     """Parse and strictly bound LLM JSON. Unrecognized fields are ignored."""
     import json
 
@@ -71,11 +71,20 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "") -> Intelligenc
                 claim_type = "reported_fact"
             if not isinstance(certainty, str):
                 certainty = "unknown"
+            evidence = _strings(
+                raw_claim.get("evidence"),
+                max_items=4,
+                max_length=300,
+            )
+            if allowed_evidence is not None:
+                invalid = [reference for reference in evidence if reference not in allowed_evidence]
+                if invalid:
+                    raise ValueError("LLM output contains unsupported evidence reference")
             claims.append(Claim(
                 text=text.strip()[:500],
                 claim_type=claim_type.strip()[:80],
                 certainty=certainty.strip()[:80],
-                evidence=_strings(raw_claim.get("evidence"), max_items=4, max_length=300),
+                evidence=evidence,
             ))
 
     return IntelligenceAnalysis(
