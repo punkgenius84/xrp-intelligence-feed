@@ -12,6 +12,8 @@ from discovery.dispatch import (DiscoveryDispatchError, DiscoveryRegistryError,
 from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
 from discord.publisher import publish, settings_from_env
+from discord.intelligence import format_intelligence_event
+from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
 from intelligence.correlation import build_correlation_card, correlate
 from intelligence.configuration import load_intelligence_config
@@ -460,7 +462,38 @@ def score_feed(result: PipelineResult) -> list:
     return relevant
 
 
-def publish_feed(relevant, discord_settings, outbox_store) -> None:
+def publish_intelligence_events(
+    events: list,
+    discord_settings,
+    *,
+    publish_enabled: bool,
+    out=print,
+) -> int:
+    if not events or not publish_enabled:
+        return 0
+    if discord_settings.dry_run:
+        out("Intelligence publish: dry run; nothing posted")
+        return 0
+    if not discord_settings.webhook_url:
+        raise SystemExit("Intelligence publish refused: DISCORD_WEBHOOK_URL is not set")
+    if any(not any(evidence.url.strip() for evidence in event.evidence) for event in events):
+        raise SystemExit(
+            "Intelligence publish refused: every event must contain at least one evidence URL"
+        )
+    hook = DiscordWebhook(discord_settings.webhook_url)
+    posted = 0
+    for event in events:
+        try:
+            hook.send(format_intelligence_event(event))
+        except DiscordError as exc:
+            out(f"::warning::Intelligence post failed for {event.event_id}: {exc}")
+            continue
+        posted += 1
+    out(f"Intelligence: posted {posted} of {len(events)} events")
+    return posted
+
+
+def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) -> None:
     """Publish exactly the same items through the existing Discord/outbox path."""
     if discord_settings.dry_run:
         publish(relevant, discord_settings)
@@ -473,6 +506,13 @@ def publish_feed(relevant, discord_settings, outbox_store) -> None:
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
 
+    intelligence_config = load_intelligence_config()
+    publish_intelligence_events(
+        intelligence_events,
+        discord_settings,
+        publish_enabled=intelligence_config.enabled and intelligence_config.publish_enabled,
+    )
+
 
 def main() -> None:
     try:
@@ -484,7 +524,7 @@ def main() -> None:
     # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
     result, outbox_store = collect_feed(discord_settings)
     relevant = score_feed(result)
-    publish_feed(relevant, discord_settings, outbox_store)
+    publish_feed(relevant, result.intelligence_events, discord_settings, outbox_store)
 
 
 if __name__ == "__main__":
