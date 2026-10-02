@@ -22,6 +22,7 @@ def test_health_tracks_failures_and_resets_after_success(tmp_path):
         "last_error": "one malformed item",
         "consecutive_failures": 0,
         "consecutive_empty": 1,
+        "status_started_at": STAMP.isoformat(),
     }
 
     JsonDiscoveryState.record_health(state, "sec", STAMP, "success", 4)
