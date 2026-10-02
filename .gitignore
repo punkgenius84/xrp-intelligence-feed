@@ -13,3 +13,5 @@ state/outbox.json
 state/outbox.json.tmp
 state/intelligence.json
 state/intelligence.json.tmp
+state/intelligence_outbox.json
+state/intelligence_outbox.json.tmp
