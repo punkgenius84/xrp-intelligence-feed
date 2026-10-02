@@ -31,6 +31,7 @@ jobs:
             state/correlation.json
             state/intelligence.json
             state/outbox.json
+            state/delivery_history.json
           key: xrp-state-${{ github.ref_name }}-v1-bootstrap
           restore-keys: |
             xrp-state-${{ github.ref_name }}-v1-
@@ -57,4 +58,4 @@ jobs:
             state/correlation.json
             state/intelligence.json
             state/outbox.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/outbox.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/outbox.json', 'state/delivery_history.json') }}
