@@ -301,3 +301,119 @@ def test_cluster_enrichment_creates_one_event_with_all_evidence():
     assert events[0].member_ids == ["a", "b"]
     assert events[0].supersedes == [event_id_for(first), event_id_for(second)]
     assert {e.source_id for e in events[0].evidence} == {"source-a", "source-b"}
+
+
+def test_intelligence_state_stales_from_evidence_not_updated_at(tmp_path):
+    from datetime import timedelta
+
+    state = JsonIntelligenceState(tmp_path / "intelligence.json").load()
+    JsonIntelligenceState.upsert(
+        state,
+        "evt-old",
+        {"summary": "old", "evidence": [{
+            "source_id": "example", "source": "Example",
+            "url": "https://example.test/old",
+            "published_at": "2026-09-01T00:00:00+00:00",
+            "title": "Old", "source_quality": "primary"
+        }]},
+        "2026-10-01T00:00:00+00:00",
+    )
+    found = JsonIntelligenceState.mark_stale_older_than(
+        state, now=datetime(2026, 10, 2, tzinfo=timezone.utc),
+        max_age=timedelta(days=14),
+    )
+    assert found == ["evt-old"]
+    assert state["events"]["evt-old"]["status"] == "stale"
+
+
+def test_intelligence_state_keeps_recent_evidence_active(tmp_path):
+    from datetime import timedelta
+
+    state = JsonIntelligenceState(tmp_path / "intelligence.json").load()
+    JsonIntelligenceState.upsert(
+        state,
+        "evt-recent",
+        {"summary": "recent", "evidence": [{
+            "source_id": "example", "source": "Example",
+            "url": "https://example.test/recent",
+            "published_at": "2026-10-01T00:00:00+00:00",
+            "title": "Recent", "source_quality": "primary"
+        }]},
+        "2026-10-01T12:00:00+00:00",
+    )
+    assert JsonIntelligenceState.mark_stale_older_than(
+        state, now=datetime(2026, 10, 2, tzinfo=timezone.utc),
+        max_age=timedelta(days=14),
+    ) == []
+    assert state["events"]["evt-recent"]["status"] == "active"
+
+
+def test_intelligence_state_leaves_superseded_events_alone(tmp_path):
+    from datetime import timedelta
+
+    state = JsonIntelligenceState(tmp_path / "intelligence.json").load()
+    JsonIntelligenceState.upsert(
+        state,
+        "evt-old",
+        {"summary": "old", "evidence": [{
+            "source_id": "example", "source": "Example",
+            "url": "https://example.test/old",
+            "published_at": "2026-09-01T00:00:00+00:00",
+            "title": "Old", "source_quality": "primary"
+        }]},
+        "2026-09-01T00:00:00+00:00",
+    )
+    JsonIntelligenceState.mark_superseded(
+        state, "evt-old", "evt-new", "2026-10-01T00:00:00+00:00"
+    )
+    assert JsonIntelligenceState.mark_stale_older_than(
+        state, now=datetime(2026, 10, 2, tzinfo=timezone.utc),
+        max_age=timedelta(days=14),
+    ) == []
+    assert state["events"]["evt-old"]["status"] == "superseded"
+
+
+def test_intelligence_state_skips_malformed_evidence_dates(tmp_path):
+    from datetime import timedelta
+
+    state = JsonIntelligenceState(tmp_path / "intelligence.json").load()
+    JsonIntelligenceState.upsert(
+        state,
+        "evt-unknown-age",
+        {"summary": "unknown", "evidence": [{
+            "source_id": "example", "source": "Example",
+            "url": "https://example.test/unknown",
+            "published_at": "not-a-date",
+            "title": "Unknown", "source_quality": "primary"
+        }]},
+        "2026-09-01T00:00:00+00:00",
+    )
+    assert JsonIntelligenceState.mark_stale_older_than(
+        state, now=datetime(2026, 10, 2, tzinfo=timezone.utc),
+        max_age=timedelta(days=14),
+    ) == []
+    assert state["events"]["evt-unknown-age"]["status"] == "active"
+
+
+def test_intelligence_state_stale_sweep_is_idempotent(tmp_path):
+    from datetime import timedelta
+
+    state = JsonIntelligenceState(tmp_path / "intelligence.json").load()
+    JsonIntelligenceState.upsert(
+        state,
+        "evt-old",
+        {"summary": "old", "evidence": [{
+            "source_id": "example", "source": "Example",
+            "url": "https://example.test/old",
+            "published_at": "2026-09-01T00:00:00+00:00",
+            "title": "Old", "source_quality": "primary"
+        }]},
+        "2026-09-01T00:00:00+00:00",
+    )
+    now = datetime(2026, 10, 2, tzinfo=timezone.utc)
+    assert JsonIntelligenceState.mark_stale_older_than(
+        state, now=now, max_age=timedelta(days=14)
+    ) == ["evt-old"]
+    assert JsonIntelligenceState.mark_stale_older_than(
+        state, now=now, max_age=timedelta(days=14)
+    ) == []
