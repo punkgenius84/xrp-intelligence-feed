@@ -31,6 +31,7 @@ from storage.database import JsonState, StateFileError
 from storage.outbox import JsonOutboxState, OutboxError
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
+from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
 
 
@@ -502,6 +503,14 @@ def publish_feed(relevant, intelligence_events, discord_settings, outbox_store) 
     if outbox_store is not None and not pending:
         pending = relevant
     report = publish(pending, discord_settings)
+    if report is not None and report.posted_keys:
+        try:
+            JsonDeliveryHistory().record(
+                pending,
+                set(report.posted_keys),
+            )
+        except DeliveryHistoryError as exc:
+            print(f"WARNING: Discord delivery history could not be saved: {exc}")
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
 
