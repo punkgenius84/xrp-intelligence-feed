@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -177,6 +178,62 @@ class JsonIntelligenceState:
         if replacement_event_id not in replacements:
             replacements.append(replacement_event_id)
         existing["superseded_by"] = replacements
+
+    @staticmethod
+    def mark_stale_older_than(
+        state: dict[str, Any],
+        *,
+        now: datetime,
+        max_age: timedelta,
+    ) -> list[str]:
+        """Mark active events stale using their immutable evidence timestamps.
+
+        Mutable lifecycle timestamps such as updated_at are deliberately ignored:
+        refreshing an event's state must not make old source evidence look current.
+        Events with missing or malformed evidence timestamps are left active.
+        """
+        if now.tzinfo is None:
+            raise IntelligenceStateError("now must be timezone-aware")
+        if max_age.total_seconds() < 0:
+            raise IntelligenceStateError("max_age must be non-negative")
+
+        cutoff = now.astimezone() - max_age
+        stale_ids: list[str] = []
+        for event_id, event in state["events"].items():
+            if event.get("status", "active") != "active":
+                continue
+            evidence = event.get("evidence", [])
+            if not isinstance(evidence, list) or not evidence:
+                continue
+
+            published: list[datetime] = []
+            malformed = False
+            for item in evidence:
+                if not isinstance(item, dict):
+                    malformed = True
+                    break
+                raw = item.get("published_at")
+                if not isinstance(raw, str) or not raw.strip():
+                    malformed = True
+                    break
+                try:
+                    stamp = datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+                except ValueError:
+                    malformed = True
+                    break
+                if stamp.tzinfo is None:
+                    malformed = True
+                    break
+                published.append(stamp.astimezone())
+
+            if malformed or not published:
+                continue
+            if max(published) < cutoff:
+                event["status"] = "stale"
+                event["updated_at"] = now.astimezone().isoformat()
+                stale_ids.append(event_id)
+        return stale_ids
+
 
     @staticmethod
     def mark_stale(
