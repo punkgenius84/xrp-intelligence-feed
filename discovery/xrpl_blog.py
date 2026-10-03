@@ -113,6 +113,12 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("XRPL Blog response is not valid UTF-8") from exc
+    # An unclosed anchor is a strong signal that the response was truncated
+    # mid-document. Refuse to interpret any partial link as a valid article.
+    if len(re.findall(r"<a\b", text, re.IGNORECASE)) != len(
+        re.findall(r"</a\s*>", text, re.IGNORECASE)
+    ):
+        raise ValueError("XRPL Blog response contains unclosed anchor markup")
     matches = list(_LINK_RE.finditer(text))
     if not matches:
         raise ValueError("XRPL Blog response is missing blog article links")
@@ -125,9 +131,14 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 href if href.lower().startswith(("https://", "http://")) else f"https://{XRPL_HOST}{href}"
             )
             if safe is None:
+                # Official navigation/category links can live under /blog/
+                # without being article slugs. They are not source failures;
+                # only actual article-shaped links are candidates.
                 if href.lower().startswith(("http://", "https://")):
                     continue
-                raise ValueError("invalid official XRPL blog URL")
+                if not href.startswith("/blog/"):
+                    raise ValueError("invalid official XRPL blog URL")
+                continue
             start = max(0, match.start() - 1200)
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
             window = text[start:end]

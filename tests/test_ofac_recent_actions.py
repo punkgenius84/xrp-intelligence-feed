@@ -6,7 +6,7 @@ import pytest
 
 from discovery.dispatch import DiscoveryRegistryError, collect_source, load_discovery_sources, validate_discovery_sources
 from discovery.http import DiscoveryHttpError
-from discovery.ofac_recent_actions import OFACRecentActionsDiscovery, OFAC_URL
+from discovery.ofac_recent_actions import OFACRecentActionsDiscovery, OFAC_URL, _parse_page
 from intelligence.relevance import score_relevance
 from models import NewsItem
 

@@ -158,9 +158,12 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         native_id = re.search(r"/(\d{8})/?$", match.group("href"))
         if not native_id:
             continue
-        start = max(0, match.start() - 900)
-        end = min(len(text), match.end() + 1200)
-        window = text[start:end]
+        # Recovery must stay inside the action card that follows the action
+        # link. Looking backward or too far forward can borrow a date/category
+        # from a neighboring row and incorrectly turn malformed markup into a
+        # valid record.
+        end = min(len(text), match.end() + 900)
+        window = text[match.end():end]
         date_match = _DATE_TEXT.search(window)
         if not date_match:
             continue
