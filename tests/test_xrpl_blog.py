@@ -96,7 +96,16 @@ def test_old_rows_stop_pagination():
     assert result.pagination["pages_checked"] == 1
 
 
-\ndef test_official_blog_navigation_links_without_dates_are_ignored():\n    html = b'''<html><body>\n      <nav><a href="/blog/2026/">Blog</a></nav>\n      <div>Sep 25, 2026 <a href="/blog/2026/xrpld-3-4-1">Introducing XRP Ledger version 3.4.1</a></div>\n    </body></html>'''\n    rows, complete = _parse_page(html)\n    assert complete\n    assert len(rows) == 1\n    assert rows[0]["slug"] == "2026/xrpld-3-4-1"\n
+def test_official_blog_navigation_links_without_dates_are_ignored():
+    html = b"""<html><body>
+      <nav><a href="/blog/2026/">Blog</a></nav>
+      <div>Sep 25, 2026 <a href="/blog/2026/xrpld-3-4-1">Introducing XRP Ledger version 3.4.1</a></div>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert len(rows) == 1
+    assert rows[0]["slug"] == "2026/xrpld-3-4-1"
+
 def test_malformed_page_fails_closed():
     bad = b"<html><body><h4><a href='/blog/2026/bad'>Bad</a>"
     result = XRPLBlogDiscovery(
