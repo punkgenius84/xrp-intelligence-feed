@@ -55,6 +55,10 @@ def test_registered_institutional_sources_are_bounded():
         "coinbase-blog", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    visa = next(item for item in sources if item["source_id"] == "visa-press-releases")
+    assert visa["source_url"] == "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html"
+    assert visa["allowed_hosts"] == ["usa.visa.com"]
+    assert visa["article_path_regex"] == r"/about-visa/newsroom/press-releases\.releaseId\.[^/?#]+"
 
 
 def test_parser_keeps_only_dated_official_articles():
