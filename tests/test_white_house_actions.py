@@ -131,7 +131,17 @@ def test_old_rows_stop_pagination():
     assert len(http.calls) == 1
 
 
-\ndef test_official_navigation_links_without_dates_are_ignored():\n    html = b'''<html><body>\n      <nav><a href="/presidential-actions/executive-orders/">Executive Orders</a></nav>\n      <h2><a href="/presidential-actions/example-action/">Example Action</a></h2>\n      <div>Executive Orders <time datetime="2026-09-29T00:00:00Z">September 29, 2026</time></div>\n    </body></html>'''\n    rows, complete = _parse_page(html)\n    assert complete\n    assert len(rows) == 1\n    assert rows[0]["native_id"] == "example-action"\n
+def test_official_navigation_links_without_dates_are_ignored():
+    html = b"""<html><body>
+      <nav><a href="/presidential-actions/executive-orders/">Executive Orders</a></nav>
+      <h2><a href="/presidential-actions/example-action/">Example Action</a></h2>
+      <div>Executive Orders <time datetime="2026-09-29T00:00:00Z">September 29, 2026</time></div>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert len(rows) == 1
+    assert rows[0]["native_id"] == "example-action"
+
 def test_malformed_page_fails_closed_without_candidates():
     bad = b"<html><body><main><article><a href='/presidential-actions/bad/'>Bad</a>"
     result = WhiteHouseActionsDiscovery(
