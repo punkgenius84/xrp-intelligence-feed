@@ -107,7 +107,7 @@ def test_official_blog_navigation_links_without_dates_are_ignored():
     assert rows[0]["slug"] == "2026/xrpld-3-4-1"
 
 def test_malformed_page_fails_closed():
-    bad = b"<html><body><h4><a href='/blog/2026/bad'>Bad</a>"
+    bad = b"<html><body><h4><a href='/blog/2026/bad'>Bad"
     result = XRPLBlogDiscovery(
         xrpl_source(max_pages=1), http=FakeHttp([html_response(bad)]), now=lambda: STAMP,
     ).collect()
