@@ -110,6 +110,8 @@ def event_from_dict(value: dict) -> IntelligenceEvent:
             raise ValueError("intelligence event claim metadata must be strings")
         if not isinstance(evidence_refs, list) or any(not isinstance(item, str) for item in evidence_refs):
             raise ValueError("intelligence event claim evidence must be a string list")
+        if not evidence_refs:
+            raise ValueError("intelligence event claim is missing an evidence reference")
         claims.append(
             Claim(
                 text=text,
