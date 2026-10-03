@@ -133,10 +133,13 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
             window = text[start:end]
             title = _clean(match.group("title"))
             published = _parse_nearest_date(window, match.start() - start)
-            if not title:
-                raise ValueError("missing XRPL blog title")
-            if published is None:
-                raise ValueError("missing XRPL blog publication date")
+            # The blog index also contains official /blog/YYYY/... links that
+            # are navigation or related-content links without an adjacent
+            # publication date. They are not article records. Only a link with
+            # both a title and a date is a candidate; if the page has no dated
+            # official articles at all, the caller still fails closed below.
+            if not title or published is None:
+                continue
             rows.append({
                 "url": safe[0],
                 "slug": safe[1],
