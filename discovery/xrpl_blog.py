@@ -131,9 +131,14 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 href if href.lower().startswith(("https://", "http://")) else f"https://{XRPL_HOST}{href}"
             )
             if safe is None:
+                # Official navigation/category links can live under /blog/
+                # without being article slugs. They are not source failures;
+                # only actual article-shaped links are candidates.
                 if href.lower().startswith(("http://", "https://")):
                     continue
-                raise ValueError("invalid official XRPL blog URL")
+                if not href.startswith("/blog/"):
+                    raise ValueError("invalid official XRPL blog URL")
+                continue
             start = max(0, match.start() - 1200)
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
             window = text[start:end]
