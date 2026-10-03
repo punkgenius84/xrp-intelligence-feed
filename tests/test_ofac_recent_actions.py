@@ -196,6 +196,7 @@ def test_valid_empty_page_is_not_malformed_or_authoritative_expiration():
     assert result.pagination["ofac_recent_actions"]["deep_page_hint"] == 7
 
 
+\ndef test_fallback_rows_can_complete_page_when_structural_wrapper_changes():\n    html = b'''<html><body>\n      <div class="view view-recent-actions-search view-id-recent_actions_search">\n        <div class="view-content">\n          <section class="changed-wrapper">\n            <a href="/recent-actions/20260923">OFAC designates entities supporting a digital asset network</a>\n            <div>September 23, 2026 - <a href="/recent-actions/sanctions-list-updates">Sanctions List Updates</a></div>\n          </section>\n        </div>\n      </div>\n    </body></html>'''\n    from discovery.ofac_recent_actions import _parse_page\n    rows, complete = _parse_page(html)\n    assert complete\n    assert [row["native_id"] for row in rows] == ["20260923"]\n
 def test_malformed_page_retains_parsed_candidates_but_does_not_advance_state_or_hint():
     mixed = html_page([("20260923", "Valid action", "September 23, 2026", "miscellaneous", "Miscellaneous"),
                        ("20260922", "Bad row", "not a date", "miscellaneous", "Miscellaneous")])

@@ -216,8 +216,12 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 published = _parse_date(nearest.group(0))
         local_text = _clean(text[match.end():following])
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        # The Presidential Actions page contains official navigation links
+        # (for example category filters) that share the /presidential-actions/
+        # URL shape but are not action records and have no publication date.
+        # Ignore those links; a page with no dated official actions still
+        # fails closed below.
         if not title or published is None:
-            complete = False
             continue
         type_matches = []
         for kind in _ACTION_TYPES:

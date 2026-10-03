@@ -248,7 +248,12 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 text, re.IGNORECASE,
             )
         }
-        complete = complete and official_ids <= {row["native_id"] for row in parsed}
+        # When the documented row wrapper changes, the regex fallback is the
+        # recovery parser. If it recovered every official action ID on the
+        # page, the page is complete even if the structural parser could not
+        # recognize one or more wrappers. Keep fail-closed behavior when any
+        # official action ID remains unrecovered.
+        complete = official_ids <= {row["native_id"] for row in parsed}
     return parsed, complete
 
 
