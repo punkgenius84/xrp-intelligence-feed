@@ -113,6 +113,12 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("XRPL Blog response is not valid UTF-8") from exc
+    # An unclosed anchor is a strong signal that the response was truncated
+    # mid-document. Refuse to interpret any partial link as a valid article.
+    if len(re.findall(r"<a\b", text, re.IGNORECASE)) != len(
+        re.findall(r"</a\s*>", text, re.IGNORECASE)
+    ):
+        raise ValueError("XRPL Blog response contains unclosed anchor markup")
     matches = list(_LINK_RE.finditer(text))
     if not matches:
         raise ValueError("XRPL Blog response is missing blog article links")
