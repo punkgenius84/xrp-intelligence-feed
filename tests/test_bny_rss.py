@@ -45,8 +45,9 @@ def test_bny_source_is_registered_as_strict_rss():
 
 def test_bny_rss_keeps_only_official_articles():
     result = BNYRSSDiscovery(SOURCE, http=FakeHttp(), now=lambda: STAMP).collect()
-    assert result.status == "success"
+    assert result.status == "partial"
     assert len(result.candidates) == 1
+    assert result.errors
     item = result.candidates[0]
     assert item.title.startswith("BNY and Galaxy")
     assert item.published_at == datetime(2026, 8, 4, 12, tzinfo=timezone.utc)
@@ -58,5 +59,6 @@ def test_bny_rss_rejects_non_bny_article_urls():
         def get(self, url, **kwargs):
             return HttpResponse(200, {"content-type": "application/rss+xml"}, bad, url)
     result = BNYRSSDiscovery(SOURCE, http=BadHttp(), now=lambda: STAMP).collect()
-    assert result.status == "success"
+    assert result.status == "partial"
     assert len(result.candidates) == 1
+    assert result.errors
