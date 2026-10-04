@@ -51,7 +51,27 @@ def test_bny_rss_keeps_only_official_articles():
     item = result.candidates[0]
     assert item.title.startswith("BNY and Galaxy")
     assert item.published_at == datetime(2026, 8, 4, 12, tzinfo=timezone.utc)
-    assert item.url.startswith("https://www.bny.com/corporate/")
+    assert item.url == "https://www.bny.com/corporate/global/en/about-us/newsroom/press-release/bny-and-galaxy-collaborate-to-advance-digital-asset-infrastructure.html"
+
+def test_bny_rss_accepts_official_legacy_content_paths_and_canonicalizes_them():
+    legacy = RSS.replace(
+        b"https://www.bny.com/corporate/global/en/about-us/newsroom/press-release/"
+        b"bny-and-galaxy-collaborate-to-advance-digital-asset-infrastructure.html",
+        b"https://www.bny.com/content/bnymellon/global/en/about-us/newsroom/press-release/"
+        b"bny-and-galaxy-collaborate-to-advance-digital-asset-infrastructure.html",
+    )
+    class LegacyHttp:
+        def get(self, url, **kwargs):
+            return HttpResponse(200, {"content-type": "application/rss+xml"}, legacy, url)
+    result = BNYRSSDiscovery(SOURCE, http=LegacyHttp(), now=lambda: STAMP).collect()
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].url == (
+        "https://www.bny.com/corporate/global/en/about-us/newsroom/press-release/"
+        "bny-and-galaxy-collaborate-to-advance-digital-asset-infrastructure.html"
+    )
+    assert result.errors
+
 
 def test_bny_rss_rejects_non_bny_article_urls():
     bad = RSS.replace(b"https://example.com/fake", b"https://evil.example/corporate/global/en/about-us/newsroom/press-release/fake")

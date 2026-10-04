@@ -16,7 +16,7 @@ from storage.discovery_state import JsonDiscoveryState
 
 METHOD = "bny_rss"
 HOSTS = {"www.bny.com", "bny.com"}
-ARTICLE_PATH = "/corporate/global/en/about-us/newsroom/(?:press-release|company-news)/[^/?#]+"
+ARTICLE_PATH = r"/(?:corporate/global|content/bnymellon/global)/en/about-us/newsroom/(?:press-release|company-news)/[^/?#]+"
 
 def validate_bny_source(source: object) -> dict[str, Any]:
     required = {
@@ -58,7 +58,10 @@ def _identity(value: object) -> tuple[str, str] | None:
         or not re.fullmatch(ARTICLE_PATH, parts.path, re.IGNORECASE)
     ):
         return None
-    return parts.path.casefold(), f"https://{parts.hostname}{parts.path}"
+    path = parts.path
+    if path.casefold().startswith("/content/bnymellon/global/"):
+        path = "/corporate/global/" + path[len("/content/bnymellon/global/"):]
+    return path.casefold(), f"https://{parts.hostname}{path}"
 
 def _published(value: object) -> datetime:
     if not isinstance(value, str) or not value.strip():
