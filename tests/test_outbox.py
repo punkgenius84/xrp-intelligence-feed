@@ -52,11 +52,33 @@ def test_corrupt_state_fails_closed(tmp_path):
         JsonOutboxState(path).load()
 
 
-def test_bounds_keep_newest_entries(tmp_path):
+def test_capacity_overflow_refuses_to_drop_undelivered_entries(tmp_path):
     store = JsonOutboxState(tmp_path / "outbox.json")
     values = [
         item(title=f"Story {n}", candidate_id=f"source:{n}", content_hash=f"hash-{n}")
-        for n in range(MAX_OUTBOX_ENTRIES + 10)
+        for n in range(MAX_OUTBOX_ENTRIES + 1)
+    ]
+    with pytest.raises(OutboxError, match="refusing to drop undelivered publications"):
+        store.save([from_record({
+            "key": publication_key(value),
+            "candidate_id": value.candidate_id,
+            "content_hash": value.content_hash,
+            "title": value.title,
+            "url": value.url,
+            "source": value.source,
+            "published_at": value.published_at.isoformat(),
+            "collected_at": value.collected_at.isoformat(),
+            "relevance_score": value.relevance_score,
+            "detected_entities": value.detected_entities,
+            "score_reasons": value.score_reasons,
+        }) for value in values])
+    assert not (tmp_path / "outbox.json").exists()
+
+def test_capacity_limit_still_accepts_exact_bound(tmp_path):
+    store = JsonOutboxState(tmp_path / "outbox.json")
+    values = [
+        item(title=f"Story {n}", candidate_id=f"source:{n}", content_hash=f"hash-{n}")
+        for n in range(MAX_OUTBOX_ENTRIES)
     ]
     store.save([from_record({
         "key": publication_key(value),
