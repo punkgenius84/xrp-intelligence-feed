@@ -138,3 +138,18 @@ def test_intelligence_publish_posts_to_existing_channel(monkeypatch):
     assert main.publish_intelligence_events([event], settings, publish_enabled=True) == 1
     assert sent
     assert "https://example.com/source" in sent[0]
+
+
+def test_discovery_success_persists_without_validators_or_pagination():
+    result = SimpleNamespace(status="success", candidates=[object()], state_updates={}, pagination={})
+    assert main._should_persist_discovery_progress(result) is True
+
+
+def test_discovery_empty_persists_without_validators_or_pagination():
+    result = SimpleNamespace(status="empty", candidates=[], state_updates={}, pagination={})
+    assert main._should_persist_discovery_progress(result) is True
+
+
+def test_discovery_failed_does_not_count_as_successful_progress():
+    result = SimpleNamespace(status="failed", candidates=[], state_updates={}, pagination={})
+    assert main._should_persist_discovery_progress(result) is False
