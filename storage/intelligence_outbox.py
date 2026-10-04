@@ -99,8 +99,13 @@ class JsonIntelligenceOutboxState:
 
     def save(self, items: Iterable[QueuedIntelligence]) -> None:
         unique = {item.key: item for item in items}
+        if len(unique) > MAX_INTELLIGENCE_OUTBOX_ENTRIES:
+            raise IntelligenceOutboxError(
+                f"Intelligence outbox capacity exceeded: {len(unique)} queued events "
+                f"would exceed the hard limit of {MAX_INTELLIGENCE_OUTBOX_ENTRIES}; "
+                "refusing to drop undelivered intelligence events"
+            )
         ordered = sorted(unique.values(), key=lambda item: (item.queued_at, item.key))
-        ordered = ordered[-MAX_INTELLIGENCE_OUTBOX_ENTRIES:]
         payload = {
             "schema_version": SCHEMA_VERSION,
             "items": [_to_record(item) for item in ordered],
