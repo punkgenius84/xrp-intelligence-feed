@@ -134,11 +134,13 @@ class BNYRSSDiscovery:
         for entry in entries:
             try:
                 title = entry.get("title")
-                identity = _identity(entry.get("link"))
+                raw_link = entry.get("link")
+                identity = _identity(raw_link)
                 if not isinstance(title, str) or not title.strip():
                     raise ValueError("missing or invalid title")
                 if identity is None:
-                    raise ValueError("missing or invalid official BNY article URL")
+                    diagnostic_link = repr(raw_link)[:320]
+                    raise ValueError(f"missing or invalid official BNY article URL: {diagnostic_link}")
                 published = _published(entry.get("published") or entry.get("updated"))
                 if published < cutoff:
                     continue
