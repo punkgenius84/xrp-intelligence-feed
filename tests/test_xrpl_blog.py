@@ -113,6 +113,7 @@ def test_malformed_page_fails_closed():
     ).collect()
     assert result.status == "failed"
     assert not result.candidates
+    assert "unclosed anchor markup" in result.errors[0]
 
 
 def test_304_preserves_validator_state():
