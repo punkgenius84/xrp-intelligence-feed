@@ -136,13 +136,19 @@ class JsonOutboxState:
 
     def save(self, items: Iterable[QueuedPublication]) -> None:
         unique = {item.key: item for item in items}
+        if len(unique) > MAX_OUTBOX_ENTRIES:
+            raise OutboxError(
+                f"Discord outbox capacity exceeded: {len(unique)} queued items "
+                f"would exceed the hard limit of {MAX_OUTBOX_ENTRIES}; "
+                "refusing to drop undelivered publications"
+            )
         ordered = sorted(
             unique.values(),
             key=lambda item: (
                 item.published_at or item.collected_at,
                 item.key,
             ),
-        )[-MAX_OUTBOX_ENTRIES:]
+        )
         payload = {
             "schema_version": SCHEMA_VERSION,
             "items": [
