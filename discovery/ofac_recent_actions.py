@@ -215,7 +215,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         official_ids = {
             match.group("id")
             for match in re.finditer(
-                r'href=["\\\']/recent-actions/(?P<id>\\d{8})/?["\\\']',
+                r'href=["\']/recent-actions/(?P<id>\d{8})/?["\']',
                 text, re.IGNORECASE,
             )
         }
