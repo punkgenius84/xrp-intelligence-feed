@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+import re
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
@@ -54,7 +55,7 @@ def _identity(value: object) -> tuple[str, str] | None:
         or parts.port not in (None, 443)
         or parts.username is not None
         or parts.password is not None
-        or not __import__("re").fullmatch(ARTICLE_PATH, parts.path, __import__("re").IGNORECASE)
+        or not re.fullmatch(ARTICLE_PATH, parts.path, re.IGNORECASE)
     ):
         return None
     return parts.path.casefold(), f"https://{parts.hostname}{parts.path}"
