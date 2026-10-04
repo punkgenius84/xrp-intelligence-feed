@@ -202,11 +202,26 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     parser.feed(text)
     parser.close()
     fallback_rows = _regex_fallback_rows(text)
-    if (parser._div_depth != 0 or parser._view_depth is not None
-            or parser._content_depth is not None or parser._row is not None
-            or parser._date_field_depth is not None):
+    if (parser._div_depth != 0 or parser._view_depth is not None or parser._content_depth is not None
+            or parser._row is not None or parser._date_field_depth is not None):
         raise ValueError("OFAC Recent Actions HTML ended inside an incomplete listing")
     if not parser.view_found or not parser.view_content_found:
+        # OFAC has changed the wrapper classes around the same semantic action
+        # cards before. The regex fallback is deliberately narrower than the
+        # structural parser: it requires an official dated action URL, a
+        # recognized category URL, and a date inside the same bounded card.
+        # Accept that recovery only when it covers every official action ID on
+        # the page; otherwise fail closed rather than silently dropping rows.
+        official_ids = {
+            match.group("id")
+            for match in re.finditer(
+                r'href=["\']/recent-actions/(?P<id>\d{8})/?["\']',
+                text, re.IGNORECASE,
+            )
+        }
+        recovered_ids = {row["native_id"] for row in fallback_rows}
+        if official_ids and official_ids <= recovered_ids:
+            return fallback_rows, True
         raise ValueError("OFAC response is missing the Recent Actions listing structure")
     parsed: list[dict[str, Any]] = []
     complete = True

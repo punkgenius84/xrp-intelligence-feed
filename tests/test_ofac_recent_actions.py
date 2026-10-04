@@ -196,6 +196,20 @@ def test_valid_empty_page_is_not_malformed_or_authoritative_expiration():
     assert result.pagination["ofac_recent_actions"]["deep_page_hint"] == 7
 
 
+def test_fallback_rows_can_replace_missing_listing_wrapper_when_all_action_ids_recover():
+    html = b"""<html><body>
+      <main class="changed-view-wrapper">
+        <section>
+          <a href="/recent-actions/20260923">OFAC designates entities supporting a digital asset network</a>
+          <div>September 23, 2026 - <a href="/recent-actions/sanctions-list-updates">Sanctions List Updates</a></div>
+        </section>
+      </main>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert [row["native_id"] for row in rows] == ["20260923"]
+
+
 def test_fallback_rows_can_complete_page_when_structural_wrapper_changes():
     html = b"""<html><body>
       <div class="view view-recent-actions-search view-id-recent_actions_search">
