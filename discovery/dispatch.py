@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from discovery.base import DiscoveryResult, DiscoveryStrategy
+from discovery.bny_rss import BNYRSSDiscovery, validate_bny_source
 from discovery.bis_media_releases import BISMediaReleasesDiscovery, validate_bis_source
 from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.institutional_press import InstitutionalPressDiscovery, validate_institutional_source
@@ -48,6 +49,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
         method = source.get("discovery_method")
         validator = {
             "institutional_press_html": validate_institutional_source,
+            "bny_rss": validate_bny_source,
             "sec_submissions": validate_sec_source,
             "sec_press_releases_rss": validate_sec_press_source,
             "federal_register_api": validate_federal_register_source,
@@ -90,6 +92,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
     method = source.get("discovery_method")
     if method == "institutional_press_html":
         return InstitutionalPressDiscovery(source, **kwargs)
+    if method == "bny_rss":
+        return BNYRSSDiscovery(source, **kwargs)
     if method == "sec_submissions":
         return SECEdgarDiscovery(source, **kwargs)
     if method == "sec_press_releases_rss":
