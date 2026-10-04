@@ -53,6 +53,14 @@ def _has_pagination_progress(pagination: object) -> bool:
         _PAGINATION_PROGRESS_KEYS.intersection(pagination)
     )
 
+def _should_persist_discovery_progress(result: DiscoveryResult) -> bool:
+    return result.status in {"success", "empty", "partial"} and (
+        bool(result.candidates)
+        or result.status == "empty"
+        or bool(result.state_updates)
+        or _has_pagination_progress(result.pagination)
+    )
+
 
 @dataclass(slots=True)
 class PipelineResult:
@@ -288,7 +296,16 @@ def run_pipeline(
 
     if discovery_store is not None and discovery_state_value is not None:
         for result in discovery_results:
-            if result.state_updates or _has_pagination_progress(result.pagination):
+            # A successful/partial discovery attempt can make durable progress even
+            # when the adapter has no validators or pagination frontier to persist.
+            # Persisting only ETags/frontiers otherwise leaves last_successful_fetch
+            # stale for candidate-only and empty successful sources.
+            if result.status in {"success", "empty", "partial"} and (
+                result.candidates
+                or result.status == "empty"
+                or result.state_updates
+                or _has_pagination_progress(result.pagination)
+            ):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
