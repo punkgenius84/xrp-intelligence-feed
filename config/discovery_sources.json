@@ -320,16 +320,11 @@
       "name": "BNY",
       "authority_tier": 1,
       "category": "institutional",
-      "discovery_method": "institutional_press_html",
-      "source_url": "https://www.bny.com/corporate/global/en/about-us/newsroom/press-release/",
+      "discovery_method": "bny_rss",
+      "source_url": "https://www.bny.com/bin/bnymellon/rssFeedGeneratorServlet.report",
       "enabled": true,
       "lookback_days": 180,
-      "max_items": 50,
-      "allowed_hosts": [
-        "www.bny.com",
-        "bny.com"
-      ],
-      "article_path_regex": "/corporate/global/en/about-us/newsroom/(?:press-release|company-news)/[^/?#]+"
+      "max_items": 50
     },
     {
       "source_id": "dbs-newsroom",
