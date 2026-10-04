@@ -11,6 +11,11 @@ def _step_block(contents: str, marker: str) -> str:
     return contents[start:] if end < 0 else contents[start:end]
 
 
+def test_workflow_uses_staggered_quarter_hour_schedule():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    assert 'cron: "7,22,37,52 * * * *"' in contents
+
+
 def test_workflow_restores_and_saves_both_persistent_state_files():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@v5")
