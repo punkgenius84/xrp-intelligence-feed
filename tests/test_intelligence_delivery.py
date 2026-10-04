@@ -9,6 +9,8 @@ from discord.intelligence import format_intelligence_event
 from intelligence.events import IntelligenceEvent
 from intelligence.evidence import Evidence
 from storage.intelligence_outbox import (
+    MAX_INTELLIGENCE_OUTBOX_ENTRIES,
+    IntelligenceOutboxError,
     JsonIntelligenceOutboxState,
     intelligence_publication_key,
 )
@@ -154,3 +156,18 @@ def test_intelligence_publish_uses_outbox_and_removes_successful(tmp_path, monke
     ) == 1
     assert len(sent) == 1
     assert store.load() == []
+
+
+def test_intelligence_outbox_capacity_overflow_refuses_to_drop(tmp_path):
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    events = [event(event_id=f"evt-{index}") for index in range(MAX_INTELLIGENCE_OUTBOX_ENTRIES + 1)]
+    with pytest.raises(IntelligenceOutboxError, match="refusing to drop undelivered intelligence events"):
+        store.enqueue(events)
+    assert not (tmp_path / "intelligence_outbox.json").exists()
+
+
+def test_intelligence_outbox_accepts_exact_capacity(tmp_path):
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    events = [event(event_id=f"evt-{index}") for index in range(MAX_INTELLIGENCE_OUTBOX_ENTRIES)]
+    store.enqueue(events)
+    assert len(store.load()) == MAX_INTELLIGENCE_OUTBOX_ENTRIES
