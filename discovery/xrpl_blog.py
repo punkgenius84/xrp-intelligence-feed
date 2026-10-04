@@ -137,7 +137,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 if href.lower().startswith(("http://", "https://")):
                     continue
                 if not href.startswith("/blog/"):
-                    raise ValueError("invalid official XRPL blog URL")
+                    raise ValueError(f"invalid official XRPL blog URL: {href!r}")
                 continue
             start = max(0, match.start() - 1200)
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
