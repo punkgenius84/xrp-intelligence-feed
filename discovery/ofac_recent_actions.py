@@ -177,6 +177,11 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         if not date_candidates:
             continue
         date_match = date_candidates[-1]
+        # The bounded action-link window can contain the prior card's
+        # date/category when a card places those fields after its title link.
+        # Never borrow that date across another official action link.
+        if link_re.search(window, date_match.end(), category.start()):
+            continue
         try:
             published = datetime.strptime(
                 date_match.group(0), "%B %d, %Y"
