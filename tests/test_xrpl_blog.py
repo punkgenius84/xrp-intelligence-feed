@@ -106,6 +106,17 @@ def test_official_blog_navigation_links_without_dates_are_ignored():
     assert len(rows) == 1
     assert rows[0]["slug"] == "2026/xrpld-3-4-1"
 
+def test_non_blog_relative_navigation_links_are_ignored():
+    html = b"""<html><body>
+      <nav><a href="/about">About</a><a href="/developers">Developers</a></nav>
+      <div>Sep 25, 2026 <a href="/blog/2026/xrpld-3-4-1">Introducing XRP Ledger version 3.4.1</a></div>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert len(rows) == 1
+    assert rows[0]["slug"] == "2026/xrpld-3-4-1"
+
+
 def test_malformed_page_fails_closed():
     bad = b"<html><body><h4><a href='/blog/2026/bad'>Bad"
     result = XRPLBlogDiscovery(

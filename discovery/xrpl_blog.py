@@ -136,8 +136,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                 # only actual article-shaped links are candidates.
                 if href.lower().startswith(("http://", "https://")):
                     continue
-                if not href.startswith("/blog/"):
-                    raise ValueError(f"invalid official XRPL blog URL: {href!r}")
+                # Non-blog relative links are ordinary site navigation, not
+                # article candidates. Ignore them rather than marking the whole
+                # listing partial; article identity is still enforced strictly
+                # by _official_url() above.
                 continue
             start = max(0, match.start() - 1200)
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
