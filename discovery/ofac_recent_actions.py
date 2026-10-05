@@ -182,6 +182,10 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         # Never borrow that date across another official action link.
         if link_re.search(window, date_match.end(), category.start()):
             continue
+        # Likewise, a category between the date and selected category means
+        # the date belongs to an earlier card.
+        if category_re.search(window, date_match.end(), category.start()):
+            continue
         try:
             published = datetime.strptime(
                 date_match.group(0), "%B %d, %Y"
