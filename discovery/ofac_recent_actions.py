@@ -165,8 +165,26 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         start = matches[index - 1].end() if index else 0
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         window = text[start:end]
-        date_match = _DATE_TEXT.search(window)
-        if not date_match:
+        categories = list(category_re.finditer(window))
+        if not categories:
+            continue
+        # Tie the date to the category field rather than merely taking the
+        # first date in the action-link window. This prevents a malformed card
+        # from borrowing the previous card's date while supporting live cards
+        # where date/category precede the title link.
+        category = min(categories, key=lambda item: abs(item.start() - (match.start() - start)))
+        date_candidates = list(_DATE_TEXT.finditer(window, 0, category.start()))
+        if not date_candidates:
+            continue
+        date_match = date_candidates[-1]
+        # The bounded action-link window can contain the prior card's
+        # date/category when a card places those fields after its title link.
+        # Never borrow that date across another official action link.
+        if link_re.search(window, date_match.end(), category.start()):
+            continue
+        # Likewise, a category between the date and selected category means
+        # the date belongs to an earlier card.
+        if category_re.search(window, date_match.end(), category.start()):
             continue
         try:
             published = datetime.strptime(
@@ -174,10 +192,6 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
             ).date()
         except ValueError:
             continue
-        categories = list(category_re.finditer(window))
-        if not categories:
-            continue
-        category = categories[0]
         title = re.sub(r"<[^>]+>", " ", match.group("title"))
         category_text = re.sub(r"<[^>]+>", " ", category.group("category"))
         rows.append({
@@ -252,10 +266,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                            "category_slug": category[0], "category": " ".join(category[1].split())})
         except (ValueError, TypeError):
             complete = False
-    # Use regex recovery only when the structural parser found no rows at all.
-    # If it parsed any rows but rejected another, supplementing from the fallback
-    # could mask a malformed card and incorrectly advance pagination/state.
-    if fallback_rows and not parsed:
+    # The structural parser can recognize most cards while a live markup
+    # variation leaves one card outside its expected field wrappers. The fallback
+    # is safe to supplement those cards because each recovered row independently
+    # requires an official action URL, recognized category, and bounded date.
+    if fallback_rows:
         known = {row["native_id"]: row for row in parsed}
         for row in fallback_rows:
             known.setdefault(row["native_id"], row)
@@ -275,7 +290,9 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         # page, the page is complete even if the structural parser could not
         # recognize one or more wrappers. Keep fail-closed behavior when any
         # official action ID remains unrecovered.
-        complete = official_ids <= {row["native_id"] for row in parsed}
+        complete = complete and (
+            official_ids <= {row["native_id"] for row in parsed}
+        )
     return parsed, complete
 
 
