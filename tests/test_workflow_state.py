@@ -19,7 +19,7 @@ def test_workflow_uses_staggered_quarter_hour_schedule():
 def test_workflow_restores_and_saves_both_persistent_state_files():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@v5")
-    save = _step_block(contents, "uses: actions/cache/save@v5")
+    save = _step_block(contents, "name: Save persistent state")
 
     for block in (restore, save):
         assert "state/seen.json" in block
@@ -31,7 +31,7 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@v5")
-    save = _step_block(contents, "uses: actions/cache/save@v5")
+    save = _step_block(contents, "name: Save persistent state")
 
     assert "actions/cache/restore@v5" in restore
     assert "key: xrp-state-${{ github.ref_name }}-v1-bootstrap" in restore
