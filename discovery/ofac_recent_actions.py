@@ -252,10 +252,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
                            "category_slug": category[0], "category": " ".join(category[1].split())})
         except (ValueError, TypeError):
             complete = False
-    # Use regex recovery only when the structural parser found no rows at all.
-    # If it parsed any rows but rejected another, supplementing from the fallback
-    # could mask a malformed card and incorrectly advance pagination/state.
-    if fallback_rows and not parsed:
+    # The structural parser can recognize most cards while a live markup
+    # variation leaves one card outside its expected field wrappers. The fallback
+    # is safe to supplement those cards because each recovered row independently
+    # requires an official action URL, recognized category, and bounded date.
+    if fallback_rows:
         known = {row["native_id"]: row for row in parsed}
         for row in fallback_rows:
             known.setdefault(row["native_id"], row)
