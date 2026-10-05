@@ -154,16 +154,17 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         re.IGNORECASE | re.DOTALL,
     )
     rows: list[dict[str, Any]] = []
-    for match in link_re.finditer(text):
+    matches = list(link_re.finditer(text))
+    for index, match in enumerate(matches):
         native_id = re.search(r"/(\d{8})/?$", match.group("href"))
         if not native_id:
             continue
-        # Recovery must stay inside the action card that follows the action
-        # link. Looking backward or too far forward can borrow a date/category
-        # from a neighboring row and incorrectly turn malformed markup into a
-        # valid record.
-        end = min(len(text), match.end() + 900)
-        window = text[match.end():end]
+        # Live OFAC cards can place date/category before the action-title link.
+        # Bound recovery by adjacent official action links so fields cannot be
+        # borrowed from a neighboring card.
+        start = matches[index - 1].end() if index else 0
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        window = text[start:end]
         date_match = _DATE_TEXT.search(window)
         if not date_match:
             continue
