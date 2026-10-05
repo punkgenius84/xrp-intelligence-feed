@@ -290,7 +290,9 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         # page, the page is complete even if the structural parser could not
         # recognize one or more wrappers. Keep fail-closed behavior when any
         # official action ID remains unrecovered.
-        complete = official_ids <= {row["native_id"] for row in parsed}
+        complete = complete and (
+            official_ids <= {row["native_id"] for row in parsed}
+        )
     return parsed, complete
 
 
