@@ -19,7 +19,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -41,14 +41,52 @@ jobs:
           key: xrp-state-${{ github.ref_name }}-v1-bootstrap
           restore-keys: |
             xrp-state-${{ github.ref_name }}-v1-
+      - name: Restore intelligence model cache
+        id: ollama_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .ollama/models
+          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama
+        env:
+          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+        run: |
+          nohup ollama serve >/tmp/ollama.log 2>&1 &
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ollama.log
+          exit 1
+
+      - name: Pull intelligence model
+        env:
+          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+        run: ollama pull qwen2.5:3b
+
       - name: Run feed
         run: python main.py
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_INTELLIGENCE_DISCORD_WEBHOOK }}
           DISCORD_MAX_POSTS: "5"
-          INTELLIGENCE_ENABLED: "false"
+          INTELLIGENCE_ENABLED: "true"
           INTELLIGENCE_PUBLISH: "false"
+          OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
+          OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      - name: Save intelligence model cache
+        if: success() && steps.ollama_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .ollama/models
+          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
+
       - name: Save persistent state
         if: success() && (github.event_name == 'schedule' || !inputs.dry_run)
         uses: actions/cache/save@v5

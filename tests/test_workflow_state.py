@@ -19,7 +19,7 @@ def test_workflow_uses_staggered_quarter_hour_schedule():
 def test_workflow_restores_and_saves_both_persistent_state_files():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@v5")
-    save = _step_block(contents, "uses: actions/cache/save@v5")
+    save = _step_block(contents, "name: Save persistent state")
 
     for block in (restore, save):
         assert "state/seen.json" in block
@@ -31,7 +31,7 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@v5")
-    save = _step_block(contents, "uses: actions/cache/save@v5")
+    save = _step_block(contents, "name: Save persistent state")
 
     assert "actions/cache/restore@v5" in restore
     assert "key: xrp-state-${{ github.ref_name }}-v1-bootstrap" in restore
@@ -57,3 +57,22 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     assert setup_at < install_at < test_at < restore_at < app_at < save_at
     assert "cache: pip" not in contents
     assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@v5")
+
+
+def test_workflow_enables_intelligence_in_shadow_mode_with_local_model():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    run = _step_block(contents, "run: python main.py")
+    assert 'INTELLIGENCE_ENABLED: "true"' in run
+    assert 'INTELLIGENCE_PUBLISH: "false"' in run
+    assert 'OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"' in run
+    assert 'OLLAMA_MODEL: "qwen2.5:3b"' in run
+
+
+def test_workflow_prepares_ollama_before_feed_execution():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    ollama = contents.index("name: Pull intelligence model")
+    app = contents.index("run: python main.py")
+    assert "name: Install Ollama" in contents
+    assert "name: Start Ollama" in contents
+    assert ollama < app
+    assert "ollama-${{ runner.os }}-qwen2.5-3b-v1" in contents
