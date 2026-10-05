@@ -210,6 +210,20 @@ def test_fallback_rows_can_replace_missing_listing_wrapper_when_all_action_ids_r
     assert [row["native_id"] for row in rows] == ["20260923"]
 
 
+def test_fallback_recovers_fields_that_precede_action_title_link():
+    html = b"""<html><body>
+      <section class="changed-view-wrapper">
+        <div>October 02, 2026 - <a href="/recent-actions/sanctions-list-updates">Sanctions List Updates</a></div>
+        <a href="/recent-actions/20261002">Current action title</a>
+      </section>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert rows[0]["native_id"] == "20261002"
+    assert rows[0]["date"].isoformat() == "2026-10-02"
+    assert rows[0]["category_slug"] == "sanctions-list-updates"
+
+
 def test_fallback_rows_can_complete_page_when_structural_wrapper_changes():
     html = b"""<html><body>
       <div class="view view-recent-actions-search view-id-recent_actions_search">
