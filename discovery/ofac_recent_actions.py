@@ -165,19 +165,24 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         start = matches[index - 1].end() if index else 0
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         window = text[start:end]
-        date_match = _DATE_TEXT.search(window)
-        if not date_match:
+        categories = list(category_re.finditer(window))
+        if not categories:
             continue
+        # Tie the date to the category field rather than merely taking the
+        # first date in the action-link window. This prevents a malformed card
+        # from borrowing the previous card's date while supporting live cards
+        # where date/category precede the title link.
+        category = min(categories, key=lambda item: abs(item.start() - (match.start() - start)))
+        date_candidates = list(_DATE_TEXT.finditer(window, 0, category.start()))
+        if not date_candidates:
+            continue
+        date_match = date_candidates[-1]
         try:
             published = datetime.strptime(
                 date_match.group(0), "%B %d, %Y"
             ).date()
         except ValueError:
             continue
-        categories = list(category_re.finditer(window))
-        if not categories:
-            continue
-        category = categories[0]
         title = re.sub(r"<[^>]+>", " ", match.group("title"))
         category_text = re.sub(r"<[^>]+>", " ", category.group("category"))
         rows.append({
