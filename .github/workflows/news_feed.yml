@@ -76,6 +76,48 @@ jobs:
             ollama pull qwen2.5:3b
           fi
 
+      - name: Validate intelligence inference
+        env:
+          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+          OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
+          OLLAMA_MODEL: "qwen2.5:3b"
+        run: |
+          python - <<'PY'
+          from datetime import datetime, timezone
+          from intelligence.configuration import IntelligenceRuntimeConfig
+          from intelligence.llm.ollama import OllamaProvider
+          from intelligence.pipeline import enrich_clusters
+          from models import NewsItem
+
+          item = NewsItem(
+              title="Federal Reserve announces a new framework for tokenized payment assets",
+              url="https://example.com/shadow-test",
+              source="Shadow test source",
+              source_id="shadow-test",
+              summary="The Federal Reserve announced a policy framework for tokenized payment assets and digital asset settlement.",
+              published_at=datetime.now(timezone.utc),
+              source_quality="primary",
+              detected_entities=["Federal Reserve"],
+              relevance_score=90,
+              candidate_id="shadow-test-candidate",
+          )
+          config = IntelligenceRuntimeConfig(
+              enabled=True,
+              publish_enabled=False,
+              model="qwen2.5:3b",
+              max_items_per_run=1,
+              min_relevance_score=50,
+              timeout_seconds=45,
+          )
+          events, failures = enrich_clusters([item], OllamaProvider(model="qwen2.5:3b", timeout=45), config)
+          if failures or len(events) != 1:
+              raise SystemExit(f"intelligence inference smoke test failed: events={len(events)} failures={failures}")
+          event = events[0]
+          if not event.model or not event.summary or not event.claims:
+              raise SystemExit("intelligence inference smoke test returned an incomplete event")
+          print(f"Intelligence inference smoke test passed: model={event.model!r} type={event.event_type!r} claims={len(event.claims)}")
+          PY
+
       - name: Run feed
         run: python main.py
         env:
