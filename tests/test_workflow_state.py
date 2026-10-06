@@ -92,3 +92,8 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
     assert "if failures or len(events) != 1:" in smoke
     assert "INTELLIGENCE_PUBLISH" not in smoke
     assert contents.index("name: Validate intelligence inference") < app
+
+
+def test_workflow_sets_intelligence_min_score_to_relevance_threshold():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    assert 'INTELLIGENCE_MIN_SCORE: "35"' in contents
