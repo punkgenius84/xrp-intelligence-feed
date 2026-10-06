@@ -74,5 +74,9 @@ def test_workflow_prepares_ollama_before_feed_execution():
     app = contents.index("run: python main.py")
     assert "name: Install Ollama" in contents
     assert "name: Start Ollama" in contents
+    assert "sudo systemctl stop ollama || true" in contents
+    assert 'OLLAMA_MODELS="$OLLAMA_MODELS" ollama serve' in contents
+    assert "name: Ensure intelligence model is available" in contents
+    assert "already available from the restored model cache" in contents
     assert ollama < app
     assert "ollama-${{ runner.os }}-qwen2.5-3b-v1" in contents
