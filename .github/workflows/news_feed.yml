@@ -113,7 +113,7 @@ jobs:
           if failures or len(events) != 1:
               raise SystemExit(f"intelligence inference smoke test failed: events={len(events)} failures={failures}")
           event = events[0]
-          if not event.model or not event.summary or not event.claims:
+          if not event.model or not event.summary or not event.significance:
               raise SystemExit("intelligence inference smoke test returned an incomplete event")
           print(f"Intelligence inference smoke test passed: model={event.model!r} type={event.event_type!r} claims={len(event.claims)}")
           PY
