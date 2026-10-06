@@ -80,3 +80,15 @@ def test_workflow_prepares_ollama_before_feed_execution():
     assert "already available from the restored model cache" in contents
     assert ollama < app
     assert "ollama-${{ runner.os }}-qwen2.5-3b-v1" in contents
+
+
+def test_workflow_runs_real_intelligence_inference_before_feed():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    smoke = _step_block(contents, "name: Validate intelligence inference")
+    app = contents.index("run: python main.py")
+
+    assert "OllamaProvider(model=\"qwen2.5:3b\", timeout=45)" in smoke
+    assert "enrich_clusters([item]" in smoke
+    assert "if failures or len(events) != 1:" in smoke
+    assert "INTELLIGENCE_PUBLISH" not in smoke
+    assert contents.index("name: Validate intelligence inference") < app
