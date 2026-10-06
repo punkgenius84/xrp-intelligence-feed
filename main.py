@@ -169,6 +169,15 @@ def run_pipeline(
         except FeedCollectionError as exc:
             failures.append(str(exc))
             reports.append(collector.last_report if collector is not None else None)
+        except ValueError:
+            # Configuration errors (for example an unsupported collection type)
+            # must still abort the pipeline rather than being mislabeled as a
+            # source outage.
+            raise
+        except Exception as exc:
+            source_id = source.get("source_id", "unknown source")
+            failures.append(f"{source_id}: unexpected collection error: {exc}")
+            reports.append(collector.last_report if collector is not None else None)
 
     if run_discovery:
         for source in discovery_sources:
@@ -300,12 +309,7 @@ def run_pipeline(
             # when the adapter has no validators or pagination frontier to persist.
             # Persisting only ETags/frontiers otherwise leaves last_successful_fetch
             # stale for candidate-only and empty successful sources.
-            if result.status in {"success", "empty", "partial"} and (
-                result.candidates
-                or result.status == "empty"
-                or result.state_updates
-                or _has_pagination_progress(result.pagination)
-            ):
+            if _should_persist_discovery_progress(result):
                 source_update_time = result.fetched_at
                 watermarks = {}
                 for candidate in result.candidates:
@@ -429,7 +433,7 @@ def print_source_health_warnings(result: PipelineResult, *, now: datetime | None
         hours = age / 3600
         label = {"failed": "failing", "empty": "empty", "partial": "partially failing"}[status]
         print(
-            f"WARNING: Source health — {discovery_result.source_id} is {label} "
+            f"::warning::Source health — {discovery_result.source_id} is {label} "
             f"for {hours:.1f}h (last attempt {health.get('last_attempt', 'unknown')})"
         )
         error = health.get("last_error", "")
@@ -597,7 +601,13 @@ def main() -> None:
     # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
     result, outbox_store, intelligence_outbox_store = collect_feed(discord_settings)
     relevant = score_feed(result)
-    publish_feed(relevant, result.intelligence_events, discord_settings, outbox_store)
+    publish_feed(
+        relevant,
+        result.intelligence_events,
+        discord_settings,
+        outbox_store,
+        intelligence_outbox_store,
+    )
 
 
 if __name__ == "__main__":

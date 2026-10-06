@@ -98,3 +98,28 @@ def test_empty_feed_is_distinguished(monkeypatch):
     collector = RSSCollector(SOURCE)
     assert collector.collect() == []
     assert collector.last_report.status == "empty"
+
+
+def test_unexpected_feedparser_exception_remains_a_reported_collection_error(monkeypatch):
+    class Response:
+        status_code = 200
+        headers = {}
+        url = SOURCE["url"]
+        content = b"body"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("collectors.rss.requests.get", lambda *a, **kw: Response())
+    monkeypatch.setattr(
+        "collectors.rss.feedparser.parse",
+        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("parser blew up")),
+    )
+
+    collector = RSSCollector(SOURCE)
+
+    with pytest.raises(FeedCollectionError, match="malformed RSS response: parser blew up") as error:
+        collector.collect()
+
+    assert error.value.status == "malformed_feed"
+    assert collector.last_report.status == "malformed_feed"

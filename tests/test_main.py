@@ -153,3 +153,91 @@ def test_discovery_empty_persists_without_validators_or_pagination():
 def test_discovery_failed_does_not_count_as_successful_progress():
     result = SimpleNamespace(status="failed", candidates=[], state_updates={}, pagination={})
     assert main._should_persist_discovery_progress(result) is False
+
+
+def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch):
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
+    sentinel_outbox = object()
+    captured = {}
+
+    monkeypatch.setattr(main, "publish", lambda items, settings: SimpleNamespace(posted_keys=[]))
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=True, publish_enabled=True),
+    )
+
+    def capture(events, settings, *, publish_enabled, outbox_store=None):
+        captured["events"] = events
+        captured["publish_enabled"] = publish_enabled
+        captured["outbox_store"] = outbox_store
+        return 0
+
+    monkeypatch.setattr(main, "publish_intelligence_events", capture)
+    main.publish_feed([], [], settings, None, sentinel_outbox)
+
+    assert captured == {
+        "events": [],
+        "publish_enabled": True,
+        "outbox_store": sentinel_outbox,
+    }
+
+
+def test_source_health_warning_uses_github_actions_annotation(capsys):
+    from datetime import datetime, timezone
+
+    result = main.PipelineResult(
+        discovery_results=[SimpleNamespace(source_id="swift")],
+        health={
+            "swift": {
+                "last_status": "failed",
+                "status_started_at": "2026-09-22T12:00:00+00:00",
+                "last_attempt": "2026-09-23T11:45:00+00:00",
+                "last_error": "HTTP 403",
+            }
+        },
+    )
+
+    main.print_source_health_warnings(
+        result,
+        now=datetime(2026, 9, 23, 12, tzinfo=timezone.utc),
+    )
+
+    assert "::warning::Source health — swift is failing" in capsys.readouterr().out
+
+
+def test_unexpected_rss_source_exception_isolated_from_other_pipeline_work(monkeypatch, tmp_path):
+    from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
+    from storage.discovery_state import JsonDiscoveryState
+
+    source = {
+        "source_id": "rss-boom",
+        "name": "RSS boom",
+        "url": "https://example.test/feed",
+        "authority_tier": 1,
+        "category": "regulatory",
+        "entity_coverage": ["XRP"],
+        "collection_type": "rss",
+    }
+
+    def explode(self):
+        raise RuntimeError("feedparser internals exploded")
+
+    monkeypatch.setattr(main.RSSCollector, "collect", explode)
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False),
+    )
+
+    result = main.run_pipeline(
+        sources=[source],
+        discovery_sources=[],
+        state=main._NoSaveState(JsonState(tmp_path / "seen.json")),
+        correlation_state=main._NoSaveState(JsonCorrelationState(tmp_path / "correlation.json")),
+        discovery_state=main._NoSaveState(JsonDiscoveryState(tmp_path / "discovery.json")),
+    )
+
+    assert result.collected == []
+    assert result.failures == ["rss-boom: unexpected collection error: feedparser internals exploded"]
