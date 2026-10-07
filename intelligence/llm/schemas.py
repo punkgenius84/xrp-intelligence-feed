@@ -58,8 +58,9 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
         event_type = "other"
     claims: list[Claim] = []
     raw_claims = value.get("claims", [])
-    if isinstance(raw_claims, list):
-        for raw_claim in raw_claims[:12]:
+    if not isinstance(raw_claims, list) or not raw_claims:
+        raise ValueError("LLM output must contain at least one grounded claim")
+    for raw_claim in raw_claims[:12]:
             if not isinstance(raw_claim, dict):
                 continue
             text = raw_claim.get("text")
@@ -82,12 +83,12 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
                 invalid = [reference for reference in evidence if reference not in allowed_evidence]
                 if invalid:
                     raise ValueError("LLM output contains unsupported evidence reference")
-            claims.append(Claim(
-                text=text.strip()[:500],
-                claim_type=claim_type.strip()[:80],
-                certainty=certainty.strip()[:80],
-                evidence=evidence,
-            ))
+        claims.append(Claim(
+            text=text.strip()[:500],
+            claim_type=claim_type.strip()[:80],
+            certainty=certainty.strip()[:80],
+            evidence=evidence,
+        ))
 
     return IntelligenceAnalysis(
         event_type=event_type,
