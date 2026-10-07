@@ -61,34 +61,36 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
     if not isinstance(raw_claims, list) or not raw_claims:
         raise ValueError("LLM output must contain at least one grounded claim")
     for raw_claim in raw_claims[:12]:
-            if not isinstance(raw_claim, dict):
-                continue
-            text = raw_claim.get("text")
-            if not isinstance(text, str) or not text.strip():
-                continue
-            claim_type = raw_claim.get("claim_type", "reported_fact")
-            certainty = raw_claim.get("certainty", "unknown")
-            if not isinstance(claim_type, str):
-                claim_type = "reported_fact"
-            if not isinstance(certainty, str):
-                certainty = "unknown"
-            evidence = _strings(
-                raw_claim.get("evidence"),
-                max_items=4,
-                max_length=300,
-            )
-            if not evidence:
-                raise ValueError("LLM claim is missing an evidence reference")
-            if allowed_evidence is not None:
-                invalid = [reference for reference in evidence if reference not in allowed_evidence]
-                if invalid:
-                    raise ValueError("LLM output contains unsupported evidence reference")
+        if not isinstance(raw_claim, dict):
+            continue
+        text = raw_claim.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        claim_type = raw_claim.get("claim_type", "reported_fact")
+        certainty = raw_claim.get("certainty", "unknown")
+        if not isinstance(claim_type, str):
+            claim_type = "reported_fact"
+        if not isinstance(certainty, str):
+            certainty = "unknown"
+        evidence = _strings(
+            raw_claim.get("evidence"),
+            max_items=4,
+            max_length=300,
+        )
+        if not evidence:
+            raise ValueError("LLM claim is missing an evidence reference")
+        if allowed_evidence is not None:
+            invalid = [reference for reference in evidence if reference not in allowed_evidence]
+            if invalid:
+                raise ValueError("LLM output contains unsupported evidence reference")
         claims.append(Claim(
             text=text.strip()[:500],
             claim_type=claim_type.strip()[:80],
             certainty=certainty.strip()[:80],
             evidence=evidence,
         ))
+    if not claims:
+        raise ValueError("LLM output must contain at least one grounded claim")
 
     return IntelligenceAnalysis(
         event_type=event_type,
