@@ -89,7 +89,7 @@ def test_llm_analysis_uses_provider_response_and_preserves_source_url():
             assert "UNTRUSTED ARTICLE" in kwargs["user"]
             return LLMResponse(
                 '{"event_type":"partnership","event_summary":"A partnership was announced.",'
-                '"significance":"Potentially relevant.","entities":["Ripple"],"claims":[]}',
+                '"significance":"Potentially relevant.","entities":["Ripple"],"claims":[{"text":"The source reports a partnership announcement.","certainty":"high","evidence":["source summary"]}]}',
                 model="test-model",
             )
 
@@ -162,7 +162,7 @@ def test_cluster_analysis_uses_all_supplied_sources():
             return LLMResponse(
                 '{"event_type":"partnership","event_summary":"Two sources report a partnership.",'
                 '"significance":"Independent reporting supports the existence of an announcement.",'
-                '"entities":["Ripple"],"claims":[],"uncertainties":[]}',
+                '"entities":["Ripple"],"claims":[{"text":"Both sources report a partnership.","evidence":["source-1 summary"]}],"uncertainties":[]}',
                 model="test-model",
             )
 
@@ -176,7 +176,7 @@ def test_parse_analysis_preserves_conflicts():
     result = parse_analysis(
         '{"event_type":"policy_change","event_summary":"Status differs",'
         '"significance":"Sources disagree on status.",'
-        '"claims":[],"conflicts":["source-1 says planned; source-2 says launched"],'
+        '"claims":[{"text":"The sources disagree on status.","evidence":["source title"]}],"conflicts":["source-1 says planned; source-2 says launched"],'
         '"uncertainties":[]}',
         source_url="https://example.test",
         model="test-model",
@@ -191,7 +191,7 @@ def test_parse_analysis_bounds_conflicts():
         "event_type": "other",
         "event_summary": "x",
         "significance": "y",
-        "claims": [],
+        "claims": [{"text": "The source reports an event.", "evidence": ["source title"]}],
         "conflicts": ["a" * 600],
         "uncertainties": [],
     })
@@ -233,4 +233,12 @@ def test_parse_analysis_rejects_claim_without_evidence():
             '"claims":[{"text":"Unsupported claim"}]}',
             source_url="https://example.test",
             allowed_evidence={"source title", "source summary"},
+        )
+
+
+def test_parse_analysis_rejects_empty_claims():
+    with pytest.raises(ValueError, match="at least one grounded claim"):
+        parse_analysis(
+            '{"event_type":"announcement","event_summary":"x","significance":"y","claims":[]}',
+            source_url="https://example.test",
         )

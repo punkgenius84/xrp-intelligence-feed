@@ -166,7 +166,7 @@ def test_enrichment_failure_does_not_abort_other_items():
             self.calls += 1
             if self.calls == 1:
                 return LLMResponse(
-                    '{"event_type":"announcement","event_summary":"First","significance":"Source-backed","claims":[]}',
+                    '{"event_type":"announcement","event_summary":"First","significance":"Source-backed","claims":[{"text":"The source reports the first event.","evidence":["source summary"]}]}',
                     model="test-model",
                 )
             raise LLMUnavailable("offline")
@@ -284,7 +284,7 @@ def test_cluster_enrichment_creates_one_event_with_all_evidence():
             return LLMResponse(
                 '{"event_type":"partnership","event_summary":"Shared event",'
                 '"significance":"Two independent sources report the same event.",'
-                '"entities":["Ripple","DBS"],"claims":[],"uncertainties":[]}',
+                '"entities":["Ripple","DBS"],"claims":[{"text":"Both sources report the shared event.","evidence":["source-1 summary"]}],"uncertainties":[]}',
                 model="test-model",
             )
 

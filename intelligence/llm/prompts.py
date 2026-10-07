@@ -12,9 +12,10 @@ announcement, partnership, regulatory_action, enforcement, filing, legislation,
 policy_change, product_launch, institutional_adoption, funding, acquisition,
 litigation, executive_action, other.
 
-Claims must distinguish what the source states from uncertainty. If the supplied material contains factual assertions, return at least one claim grounded in that material; never omit all claims merely to shorten the response.
+Claims must distinguish what the source states from uncertainty. The "claims" array MUST contain at least one object whenever the supplied material contains factual assertions. Each claim must contain "text" and a non-empty "evidence" array. Never return an empty claims array merely to shorten the response.
 If two supplied sources make materially incompatible factual/status/date claims, list the disagreement in "conflicts". Do not resolve it or choose which source is correct. Evidence entries must use only the exact labels provided for the supplied material. For a single source, valid labels are "source title" and "source summary".
 When multiple sources disagree, preserve the disagreement as uncertainty; do not choose a winner.
+For a single source, a valid claim looks like: {"text":"The source reports X.","claim_type":"reported_fact","certainty":"high","evidence":["source summary"]}.
 """
 
 
