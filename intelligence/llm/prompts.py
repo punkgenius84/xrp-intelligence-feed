@@ -51,5 +51,5 @@ def build_cluster_user_prompt(items) -> str:
             f"--- END UNTRUSTED SOURCE {index} ---",
             "",
         ])
-    parts.append("Analyze only the supplied source material. Do not browse or add facts. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
+    parts.append("Evidence labels are exact and case-sensitive. For source 1, use only \"source-1 title\" or \"source-1 summary\"; for source 2, use only \"source-2 title\" or \"source-2 summary\"; continue that exact pattern for each supplied source. Do not use \"source title\", \"source summary\", source names, URLs, or any other evidence labels. Analyze only the supplied source material. Do not browse or add facts. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
     return "\n".join(parts)
