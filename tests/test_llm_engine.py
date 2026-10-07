@@ -162,7 +162,7 @@ def test_cluster_analysis_uses_all_supplied_sources():
             return LLMResponse(
                 '{"event_type":"partnership","event_summary":"Two sources report a partnership.",'
                 '"significance":"Independent reporting supports the existence of an announcement.",'
-                '"entities":["Ripple"],"claims":[],"uncertainties":[]}',
+                '"entities":["Ripple"],"claims":[{"text":"Both sources report a partnership.","evidence":["source-1 summary"]}],"uncertainties":[]}',
                 model="test-model",
             )
 
@@ -191,7 +191,7 @@ def test_parse_analysis_bounds_conflicts():
         "event_type": "other",
         "event_summary": "x",
         "significance": "y",
-        "claims": [],
+        "claims": [{"text": "The source reports an event.", "evidence": ["source title"]}],
         "conflicts": ["a" * 600],
         "uncertainties": [],
     })
