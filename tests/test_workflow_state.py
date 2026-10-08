@@ -51,6 +51,10 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     setup_at = contents.index("uses: actions/setup-python@v6")
     install_at = contents.index("python -m pip install -r requirements-dev.txt")
     test_at = contents.index("python -m pytest -q")
+
+    # The install command must be an actual YAML step, not text swallowed by a comment.
+    install_lines = [line.strip() for line in contents.splitlines() if "python -m pip install -r requirements-dev.txt" in line]
+    assert install_lines == ["- run: python -m pip install -r requirements-dev.txt"]
     app_at = contents.index("python main.py")
     save_at = contents.index("uses: actions/cache/save@v5")
 
