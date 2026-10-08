@@ -41,8 +41,7 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
             model=response.model,
             allowed_evidence={"source title", "source summary"},
         )
-        return _validate_event_type(analysis, f"{item.title}
-{item.summary}")
+        return _validate_event_type(analysis, f"{item.title}\n{item.summary}")
     except ValueError as exc:
         raise LLMError(f"LLM analysis rejected: {exc}") from exc
 
@@ -63,9 +62,7 @@ def analyze_cluster(
             model=response.model,
             allowed_evidence=({f"source-{index} title" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} summary" for index in range(1, len(cluster.members) + 1)}),
         )
-        source_text = "
-".join(f"{item.title}
-{item.summary}" for item in cluster.members)
+        source_text = "\n".join(f"{item.title}\n{item.summary}" for item in cluster.members)
         return _validate_event_type(analysis, source_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc
