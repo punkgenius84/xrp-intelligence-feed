@@ -91,7 +91,6 @@ def _validate_event_metadata_grounding(
         [
             analysis.event_summary,
             analysis.significance,
-            " ".join(analysis.entities),
         ]
     ).lower()
 
