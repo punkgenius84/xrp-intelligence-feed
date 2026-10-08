@@ -83,6 +83,14 @@ def test_prompt_keeps_hostile_article_inside_untrusted_boundary():
     assert prompt[end:].strip() == "--- END UNTRUSTED ARTICLE ---\nAnalyze only this supplied material."
 
 
+def test_prompt_defines_acquisition_as_ownership_or_control_change():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert 'Use "acquisition" ONLY when the source explicitly reports a purchase, acquisition, takeover, merger' in SYSTEM_PROMPT
+    assert 'A partnership, integration, collaboration, commercial relationship, rollout, or product/payment launch is NOT an acquisition.' in SYSTEM_PROMPT
+    assert 'Do not infer an acquisition from words such as "deal", "agreement", "investment", "integration", or "relationship".' in SYSTEM_PROMPT
+
+
 def test_llm_analysis_uses_provider_response_and_preserves_source_url():
     class FakeProvider:
         def generate(self, **kwargs):
