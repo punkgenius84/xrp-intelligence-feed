@@ -28,7 +28,8 @@ _NON_FINAL_ACQUISITION_PATTERNS = (
     r"\b(?:rumou?red|speculated)\s+(?:an?\s+)?acquisition\b",
     r"\bacquisition\s+(?:talks|discussions|negotiations)\b",
     r"\b(?:talks|discussions|negotiations)\s+to\s+acquire\b",
-    r"\b(?:considering|exploring|seeking|seeks|plans?\s+to|may|might|could|would)\s+acquir(?:e|ing)\b",
+    r"\b(?:considering|exploring|seeking|seeks|plans?\s+to|may|might|could|would|potentially|possibly)\s+acquir(?:e|ing)\b",
+    r"\b(?:potentially|possibly|may|might|could|would)\s+be\s+(?:an?\s+)?acquisition\b",
 )
 
 
