@@ -10,6 +10,21 @@ from .prompts import SYSTEM_PROMPT, build_cluster_user_prompt, build_user_prompt
 from .schemas import IntelligenceAnalysis, parse_analysis
 
 
+def _validate_event_type(analysis: IntelligenceAnalysis, source_text: str) -> IntelligenceAnalysis:
+    """Fail closed when a high-specificity event type is unsupported by source text."""
+    if analysis.event_type == "acquisition":
+        acquisition_terms = (
+            "acquire", "acquired", "acquires", "acquisition",
+            "takeover", "merger", "merged", "purchase", "purchased",
+            "bought", "buyout",
+        )
+        if not any(term in source_text.lower() for term in acquisition_terms):
+            raise LLMError(
+                "LLM analysis rejected: acquisition event type is unsupported by source text"
+            )
+    return analysis
+
+
 def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
     response = provider.generate(
         system=SYSTEM_PROMPT,
@@ -20,12 +35,14 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
         ),
     )
     try:
-        return parse_analysis(
+        analysis = parse_analysis(
             response.content,
             source_url=item.url,
             model=response.model,
             allowed_evidence={"source title", "source summary"},
         )
+        return _validate_event_type(analysis, f"{item.title}
+{item.summary}")
     except ValueError as exc:
         raise LLMError(f"LLM analysis rejected: {exc}") from exc
 
@@ -40,11 +57,15 @@ def analyze_cluster(
         user=build_cluster_user_prompt(cluster.members),
     )
     try:
-        return parse_analysis(
+        analysis = parse_analysis(
             response.content,
             source_url=primary.url,
             model=response.model,
             allowed_evidence=({f"source-{index} title" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} summary" for index in range(1, len(cluster.members) + 1)}),
         )
+        source_text = "
+".join(f"{item.title}
+{item.summary}" for item in cluster.members)
+        return _validate_event_type(analysis, source_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc
