@@ -49,7 +49,7 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore_at = contents.index("uses: actions/cache/restore@v5")
     setup_at = contents.index("uses: actions/setup-python@v6")
-    install_at = contents.index("python -m pip install -r requirements.txt")
+    install_at = contents.index("python -m pip install -r requirements-dev.txt")
     test_at = contents.index("python -m pytest -q")
     app_at = contents.index("python main.py")
     save_at = contents.index("uses: actions/cache/save@v5")

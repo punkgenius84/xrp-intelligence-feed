@@ -529,16 +529,26 @@ def publish_intelligence_events(
     if not pending:
         return 0
 
-    if any(
-        not any(evidence.url.strip() for evidence in item.event.evidence)
-        for item in pending
-    ):
-        raise SystemExit(
-            "Intelligence publish refused: every event must contain at least one evidence URL"
-        )
+    invalid_pending = [
+        item for item in pending
+        if not any(evidence.url.strip() for evidence in item.event.evidence)
+    ]
+    publishable_pending = [item for item in pending if item not in invalid_pending]
+    if invalid_pending:
+        for item in invalid_pending:
+            out(
+                f"::warning::Intelligence event held from publication for missing evidence URL: "
+                f"{item.event.event_id}"
+            )
+        if not publishable_pending:
+            raise SystemExit(
+                "Intelligence publish refused: every pending event lacks an evidence URL"
+            )
 
     limit = max(1, int(getattr(discord_settings, "max_posts", 5)))
-    selected = pending[:limit]
+    # A malformed event must never be published, but it also must not poison the
+    # entire queue and prevent independently valid events behind it from delivery.
+    selected = publishable_pending[:limit]
     hook = DiscordWebhook(discord_settings.webhook_url)
     posted_keys: set[str] = set()
     for item in selected:

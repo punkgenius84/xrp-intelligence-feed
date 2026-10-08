@@ -171,3 +171,36 @@ def test_intelligence_outbox_accepts_exact_capacity(tmp_path):
     events = [event(event_id=f"evt-{index}") for index in range(MAX_INTELLIGENCE_OUTBOX_ENTRIES)]
     store.enqueue(events)
     assert len(store.load()) == MAX_INTELLIGENCE_OUTBOX_ENTRIES
+
+
+def test_invalid_intelligence_event_does_not_poison_valid_queue_entries(tmp_path, monkeypatch, capsys):
+    invalid = event(event_id="evt-invalid")
+    invalid.evidence = []
+    valid = event(event_id="evt-valid")
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([invalid, valid])
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    assert main.publish_intelligence_events(
+        [],
+        settings,
+        publish_enabled=True,
+        outbox_store=store,
+    ) == 1
+    assert len(sent) == 1
+    remaining = store.load()
+    assert [item.event.event_id for item in remaining] == ["evt-invalid"]
+    assert "evt-invalid" in capsys.readouterr().out

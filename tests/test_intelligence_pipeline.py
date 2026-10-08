@@ -5,6 +5,8 @@ import pytest
 from intelligence.configuration import load_intelligence_config
 from intelligence.events import event_from_dict, event_to_dict
 from intelligence.llm.schemas import Claim
+from intelligence.llm.base import LLMError, LLMResponse
+from intelligence.llm.enrichment import analyze_item
 from intelligence.pipeline import cluster_event_id, enrich_clusters, event_id_for, select_items
 from models import NewsItem
 from storage.intelligence_state import JsonIntelligenceState, IntelligenceStateError
@@ -440,3 +442,95 @@ def test_event_round_trip_rejects_claim_without_evidence():
             }],
             "model": "test",
         })
+
+
+
+def test_claim_grounding_rejects_unsupported_named_entity():
+    source = NewsItem(
+        title="Ripple announces partnership with DBS",
+        url="https://example.test/ripple-dbs",
+        source="Example",
+        source_id="example",
+        summary="Ripple and DBS announced a partnership for institutional payments.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Partnership",'
+                '"significance":"Relevant","claims":[{"text":"Circle announced the partnership.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported evidence anchor"):
+        analyze_item(source, Provider())
+
+
+def test_claim_grounding_rejects_unsupported_numeric_fact():
+    source = NewsItem(
+        title="Ripple announces partnership",
+        url="https://example.test/partnership",
+        source="Example",
+        source_id="example",
+        summary="Ripple announced a partnership with an institutional payments provider.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Partnership",'
+                '"significance":"Relevant","claims":[{"text":"The partnership is worth $5 billion.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported evidence anchor"):
+        analyze_item(source, Provider())
+
+
+def test_claim_grounding_accepts_supported_named_entity():
+    source = NewsItem(
+        title="Ripple announces partnership with DBS",
+        url="https://example.test/ripple-dbs",
+        source="Example",
+        source_id="example",
+        summary="Ripple and DBS announced a partnership for institutional payments.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Partnership",'
+                '"significance":"Relevant","claims":[{"text":"Ripple announced the partnership with DBS.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    assert analyze_item(source, Provider()).claims
+
+
+def test_acquisition_guard_rejects_potentially_acquire_language():
+    source = NewsItem(
+        title="Example signs agreement to potentially acquire Company",
+        url="https://example.test/acquisition",
+        source="Example",
+        source_id="example",
+        summary="The company signed an agreement to potentially acquire Company.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"acquisition","event_summary":"Acquisition",'
+                '"significance":"Relevant","claims":[{"text":"An acquisition was announced.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="acquisition event type"):
+        analyze_item(source, Provider())
