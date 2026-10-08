@@ -2,6 +2,7 @@ from intelligence.deduplication import deduplicate
 from intelligence.configuration import (ConfigurationError, validate_thresholds,
                                         validate_word_groups)
 from intelligence.entities import detect_entities
+from intelligence.llm.enrichment import analyze_item
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
 from main import normalize_item
