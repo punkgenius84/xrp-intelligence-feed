@@ -163,3 +163,54 @@ def test_intelligence_publish_gate_is_independent(monkeypatch):
     config = load_intelligence_config()
     assert config.enabled is True
     assert config.publish_enabled is False
+
+
+def test_event_metadata_grounding_rejects_unsupported_xrp_reference():
+    from intelligence.llm.base import LLMError, LLMResponse
+    source = NewsItem(
+        title="Bank announces tokenization partnership",
+        url="https://example.test/tokenization",
+        source="Example",
+        source_id="example",
+        summary="The bank announced a tokenization partnership for institutional settlement.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"The bank will use XRP for settlement",'
+                '"significance":"This directly expands XRP utility.",'
+                '"entities":["XRP"],'
+                '"claims":[{"text":"The bank announced a tokenization partnership.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported xrp reference"):
+        analyze_item(source, Provider())
+
+
+def test_event_metadata_grounding_accepts_xrpl_alias_from_xrp_ledger():
+    from intelligence.llm.base import LLMResponse
+    source = NewsItem(
+        title="Ripple expands payments on XRP Ledger",
+        url="https://example.test/xrpl",
+        source="Example",
+        source_id="example",
+        summary="Ripple announced expanded payments on the XRP Ledger.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Ripple expands payments on XRPL",'
+                '"significance":"The move expands XRPL payment utility.",'
+                '"entities":["Ripple","XRPL"],'
+                '"claims":[{"text":"Ripple announced expanded payments on the XRP Ledger.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    assert analyze_item(source, Provider()).entities == ["Ripple", "XRPL"]

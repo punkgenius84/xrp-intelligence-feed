@@ -32,6 +32,14 @@ _NON_FINAL_ACQUISITION_PATTERNS = (
     r"\b(?:potentially|possibly|may|might|could|would)\s+be\s+(?:an?\s+)?acquisition\b",
 )
 
+_DOMAIN_GROUNDING_ALIASES = {
+    "xrp": ("xrp",),
+    "xrpl": ("xrpl", "xrp ledger"),
+    "ripple": ("ripple",),
+    "rlusd": ("rlusd", "ripple usd"),
+}
+
+
 _GROUNDING_STOPWORDS = {
     "the", "this", "that", "these", "those", "both", "source", "sources",
     "report", "reports", "reported", "according", "after", "before", "during",
@@ -73,6 +81,33 @@ def _validate_claim_grounding(
     return analysis
 
 
+def _validate_event_metadata_grounding(
+    analysis: IntelligenceAnalysis,
+    source_text: str,
+) -> IntelligenceAnalysis:
+    """Reject unsupported XRP-family assertions outside the claim array."""
+    normalized_source = source_text.lower()
+    metadata = " ".join(
+        [
+            analysis.event_summary,
+            analysis.significance,
+            " ".join(analysis.entities),
+        ]
+    ).lower()
+
+    for term, aliases in _DOMAIN_GROUNDING_ALIASES.items():
+        if re.search(r"\b" + re.escape(term) + r"\b", metadata):
+            if not any(
+                re.search(r"\b" + re.escape(alias) + r"\b", normalized_source)
+                for alias in aliases
+            ):
+                raise LLMError(
+                    "LLM analysis rejected: event metadata contains an unsupported "
+                    f"{term} reference"
+                )
+    return analysis
+
+
 def _validate_event_type(analysis: IntelligenceAnalysis, source_text: str) -> IntelligenceAnalysis:
     """Fail closed when a high-specificity event type is unsupported by source text."""
     if analysis.event_type != "acquisition":
@@ -108,12 +143,14 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
             model=response.model,
             allowed_evidence={"source title", "source summary"},
         )
-        analysis = _validate_claim_grounding(
+        evidence_text = {
+            "source title": item.title,
+            "source summary": item.summary,
+        }
+        analysis = _validate_claim_grounding(analysis, evidence_text)
+        analysis = _validate_event_metadata_grounding(
             analysis,
-            {
-                "source title": item.title,
-                "source summary": item.summary,
-            },
+            f"{item.title}\n{item.summary}",
         )
         return _validate_event_type(analysis, f"{item.title}\n{item.summary}")
     except ValueError as exc:
@@ -142,6 +179,7 @@ def analyze_cluster(
             evidence_text[f"source-{index} summary"] = item.summary
         analysis = _validate_claim_grounding(analysis, evidence_text)
         source_text = "\n".join(f"{item.title}\n{item.summary}" for item in cluster.members)
+        analysis = _validate_event_metadata_grounding(analysis, source_text)
         return _validate_event_type(analysis, source_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc
