@@ -297,3 +297,25 @@ def test_parse_analysis_rejects_empty_claims():
             source_url="https://example.test",
         )
 
+
+
+def test_acquisition_event_type_fails_closed_for_speculative_or_proposed_source_language():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"acquisition","event_summary":"A possible acquisition was discussed.","significance":"Potentially relevant.","entities":["Example"],"claims":[{"text":"The source discusses a possible acquisition.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="acquisition event type is unsupported"):
+        analyze_item(
+            NewsItem(
+                title="Example explores possible acquisition",
+                url="https://example.test/article",
+                source="Example",
+                published_at=datetime.now(timezone.utc),
+                summary="The company is exploring a possible acquisition and no ownership transfer has occurred.",
+                source_id="example",
+            ),
+            FakeProvider(),
+        )
