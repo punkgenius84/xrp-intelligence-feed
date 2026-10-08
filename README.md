@@ -1,6 +1,54 @@
-# XRP Intelligence Feed — Intelligence Discovery Feed
+# XRP Intelligence Feed
 
-A free, modular XRP/XRPL source intelligence feed. No paid APIs, API keys, or AI services are required.
+A free, primary-source-first XRP/XRPL intelligence feed. It collects official government, regulator, XRPL, Ripple, and institutional sources, scores relevance deterministically, and can deliver qualifying items to Discord.
+
+**Current status:** deterministic intelligence processing is live in GitHub Actions, while **intelligence-event Discord publishing remains OFF**. The system is deliberately observing real shadow output before enabling that final delivery step.
+
+## What it does
+
+1. Collects bounded feeds and official discovery sources.
+2. Normalizes and deduplicates candidates.
+3. Detects XRP/XRPL/Ripple and related entities.
+4. Assigns an auditable relevance score.
+5. Posts qualifying news to Discord through a durable outbox.
+6. Optionally enriches qualifying items with local Ollama inference.
+7. Validates intelligence claims against explicit source evidence before an intelligence event can be delivered.
+
+The relevance score measures **topical relevance only**. It is not a price prediction, trading signal, or claim that XRP is actually involved in every institutional, regulatory, tokenization, or stablecoin story.
+
+## What a Discord news post looks like
+
+A normal post identifies the source, publication date, headline, deterministic `Why this fired` reasons, matched entities, relevance score, and source link.
+
+Institutional or government coverage is **not automatically XRP news**. The feed intentionally distinguishes:
+- **XRP** — the asset.
+- **XRPL** — the ledger/network.
+- **Ripple** — the company.
+- **RLUSD** — Ripple's stablecoin.
+- **Stablecoin/tokenization/payment activity** — broader institutional activity that may be relevant without proving XRP or XRPL usage.
+
+## Intelligence layer
+
+The intelligence layer runs downstream of deterministic relevance. The LLM cannot promote an item into relevance, invent facts or sources, or bypass evidence validation.
+
+GitHub Actions currently runs `qwen2.5:3b` through Ollama in shadow mode. Intelligence events require grounded claims with controlled evidence references. **`INTELLIGENCE_PUBLISH=false` remains intentional until real scheduled output has been reviewed for semantic accuracy as well as evidence quality.**
+
+## Quick start
+
+    python -m pip install -r requirements.txt
+    python -m pytest -q
+    python main.py
+
+For local intelligence previews, set `INTELLIGENCE_ENABLED=true`. Intelligence publication requires the separate `INTELLIGENCE_PUBLISH=true` flag and a configured Discord webhook.
+
+## Current production posture
+
+- Normal relevant-news Discord delivery: **enabled when the webhook is configured**.
+- Intelligence processing: **enabled in GitHub Actions shadow mode**.
+- Intelligence-event Discord delivery: **disabled pending shadow-output validation**.
+- Evidence validation: **fail closed**.
+- Persistent state: restored/saved through GitHub Actions cache; intelligence, correlation, discovery, and delivery state are kept separate.
+- No paid APIs are required.
 
 ## Pipeline
 
@@ -53,7 +101,7 @@ Relevant new items (score at or above `publish_score`) are posted to a Discord c
 
 Each post leads with the source and publication date, followed by the headline and a plain-English `Why this fired` line from the deterministic scoring reasons. Matched entities follow, with the numeric relevance score at the bottom. The source link is always included. Posts cannot ping `@everyone` or roles. Live Discord delivery uses a bounded `state/outbox.json` queue. Relevant items are queued before `seen.json` is saved; successful posts are removed, while failed or over-cap items remain queued for later scheduled runs. This is deliberately at-least-once delivery: if an outbox cleanup write fails after Discord accepted a post, a duplicate is possible on a later run. The outbox is bounded at 250 items and cached with the other persistent state. Successfully posted items are also retained in bounded `state/delivery_history.json` for 35 days, capped at 2,000 records. A Discord rate limit is retried once if Discord asks for a short wait. Error messages never include the webhook URL.
 
-The optional local Ollama intelligence layer is disabled by default and is explicitly disabled in GitHub Actions. Set `INTELLIGENCE_ENABLED=true` locally to print evidence-backed intelligence previews. A second independent flag, `INTELLIGENCE_PUBLISH=true`, is required before intelligence events can post to the existing Discord channel. Publication fails closed if an event has no evidence URL. GitHub Actions explicitly sets both flags to false.
+The optional local Ollama intelligence layer is disabled by default. GitHub Actions currently enables intelligence processing in shadow mode with `INTELLIGENCE_ENABLED=true` and keeps `INTELLIGENCE_PUBLISH=false`. A second independent `INTELLIGENCE_PUBLISH=true` flag is required before intelligence events can post to the existing Discord channel. Publication fails closed if an event has no evidence URL.
 
 On GitHub Actions, add the webhook as the repository secret `DISCORD_INTELLIGENCE_DISCORD_WEBHOOK`; the workflow passes it to the program as `DISCORD_WEBHOOK_URL`. Manual runs have a `dry_run` checkbox that defaults to on; untick it to post for real. Dry runs do not save the state cache.
 
@@ -110,4 +158,4 @@ The JSON state is saved only after entity detection, source-quality classificati
     python -m pytest -q
     python main.py
 
-The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs every 15 minutes and posts live results using the configured Discord webhook. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
+The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs four times per hour at minutes 7, 22, 37, and 52. It runs the full test suite, restores persistent state, runs the intelligence layer in shadow mode, and then executes the feed. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
