@@ -193,3 +193,28 @@ def test_json_ld_fallback_handles_js_heavy_institutional_index():
     assert len(rows) == 1
     assert rows[0]["title"] == "Citi Token Services Expands Global Footprint"
     assert rows[0]["date"] == datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
+
+
+
+def test_mastercard_registry_matches_current_global_press_index():
+    mastercard = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "mastercard-press-releases"
+    )
+    assert mastercard["source_url"] == "https://www.mastercard.com/global/en/news-and-trends/press.html"
+    assert mastercard["allowed_hosts"] == ["www.mastercard.com", "mastercard.com"]
+    assert mastercard["article_path_regex"] == r"/global/en/news-and-trends/press/\\d{4}/[^/?#]+/[^/?#]+"
+
+
+def test_mastercard_current_article_path_is_allowed():
+    mastercard = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "mastercard-press-releases"
+    )
+    rows, complete = _parse_page(
+        mastercard,
+        b'''<html><body><a href="https://www.mastercard.com/global/en/news-and-trends/press/2026/october/mastercard-at-money-2020-2026.html">Mastercard at Money 20/20: Fueling momentum. Unlocking potential.</a><span>October 6, 2026</span></body></html>''',
+    )
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["date"] == datetime(2026, 10, 6, tzinfo=timezone.utc)
