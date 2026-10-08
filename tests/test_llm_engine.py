@@ -91,6 +91,50 @@ def test_prompt_defines_acquisition_as_ownership_or_control_change():
     assert 'Do not infer an acquisition from words such as "deal", "agreement", "investment", "integration", or "relationship".' in SYSTEM_PROMPT
 
 
+def test_acquisition_event_type_fails_closed_when_source_describes_partnership():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"acquisition","event_summary":"A partnership was announced.","significance":"Potentially relevant.","entities":["Ripple"],"claims":[{"text":"The source reports a partnership.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="acquisition event type is unsupported"):
+        analyze_item(
+            NewsItem(
+                title="Ripple announces payments integration with Circle",
+                url="https://example.test/article",
+                source="Example",
+                published_at=datetime.now(timezone.utc),
+                summary="The companies announced an integration and commercial partnership.",
+                source_id="example",
+            ),
+            FakeProvider(),
+        )
+
+
+def test_acquisition_event_type_is_accepted_when_source_explicitly_reports_acquisition():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"acquisition","event_summary":"An acquisition was announced.","significance":"Potentially relevant.","entities":["Example"],"claims":[{"text":"The source reports an acquisition.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_item(
+        NewsItem(
+            title="Example acquires payments company",
+            url="https://example.test/article",
+            source="Example",
+            published_at=datetime.now(timezone.utc),
+            summary="The company acquired the payments company.",
+            source_id="example",
+        ),
+        FakeProvider(),
+    )
+    assert result.event_type == "acquisition"
+
+
 def test_llm_analysis_uses_provider_response_and_preserves_source_url():
     class FakeProvider:
         def generate(self, **kwargs):
@@ -252,3 +296,4 @@ def test_parse_analysis_rejects_empty_claims():
             '{"event_type":"announcement","event_summary":"x","significance":"y","claims":[]}',
             source_url="https://example.test",
         )
+
