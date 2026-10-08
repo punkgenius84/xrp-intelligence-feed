@@ -11,6 +11,7 @@ Use event_type from:
 announcement, partnership, regulatory_action, enforcement, filing, legislation,
 policy_change, product_launch, institutional_adoption, funding, acquisition,
 litigation, executive_action, other.
+Choose the narrowest event type directly supported by the supplied text. Use "acquisition" ONLY when the source explicitly reports a purchase, acquisition, takeover, merger, or equivalent transfer of ownership or control. A partnership, integration, collaboration, commercial relationship, rollout, or product/payment launch is NOT an acquisition. Do not infer an acquisition from words such as "deal", "agreement", "investment", "integration", or "relationship". If the text does not establish an ownership/control change, use the supported event type that matches what is actually reported, such as partnership, product_launch, institutional_adoption, announcement, or other.
 
 Claims must distinguish what the source states from uncertainty. The "claims" array MUST contain at least one object whenever the supplied material contains factual assertions. Each claim must contain "text" and a non-empty "evidence" array. Never return an empty claims array merely to shorten the response.
 If two supplied sources make materially incompatible factual/status/date claims, list the disagreement in "conflicts". Do not resolve it or choose which source is correct. Evidence entries must use only the exact labels provided for the supplied material. For a single source, valid labels are "source title" and "source summary".
