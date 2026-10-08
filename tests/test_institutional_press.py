@@ -203,7 +203,7 @@ def test_mastercard_registry_matches_current_global_press_index():
     )
     assert mastercard["source_url"] == "https://www.mastercard.com/global/en/news-and-trends/press.html"
     assert mastercard["allowed_hosts"] == ["www.mastercard.com", "mastercard.com"]
-    assert mastercard["article_path_regex"] == r"/global/en/news-and-trends/press/\\d{4}/[^/?#]+/[^/?#]+"
+    assert mastercard["article_path_regex"] == r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+"
 
 
 def test_mastercard_current_article_path_is_allowed():
