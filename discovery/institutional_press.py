@@ -304,7 +304,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             title in structured_title or structured_title in title
             for title in normalized_titles
         )
-        if same_route and structured["date"] in dates and compatible_title:
+        if same_route and structured["date"].date() in {date.date() for date in dates} and compatible_title:
             rows.append(structured)
         else:
             complete = False
