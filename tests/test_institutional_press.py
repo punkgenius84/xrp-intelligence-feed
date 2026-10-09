@@ -6,6 +6,7 @@ from discovery.http import HttpResponse
 from discovery.institutional_press import (
     METHOD,
     InstitutionalPressDiscovery,
+    _official_article,
     _parse_page,
     validate_institutional_source,
 )
@@ -337,3 +338,23 @@ def test_institutional_detail_fallback_limit_is_bounded():
             assert "detail_fallback_limit" in str(exc)
         else:
             raise AssertionError(f"expected invalid detail fallback limit {value!r} to be rejected")
+
+
+
+def test_official_article_canonical_url_is_idempotently_allowlisted():
+    citi = source(
+        source_id="citi-press-releases",
+        name="Citi",
+        source_url="https://www.citigroup.com/global/news/press-release",
+        allowed_hosts=["www.citigroup.com", "citigroup.com"],
+        article_path_regex=r"/global/news/press-release/(?:\d{4}/)?[^/?#]+",
+    )
+    first = _official_article(
+        citi,
+        "/global/news/press-release/2026/citi-commerce-media-deliver-more-personalized-customer-brand-experiences",
+    )
+    assert first is not None
+    second = _official_article(citi, first[0])
+    assert second is not None
+    assert second[1] == first[1]
+    assert second[0] == first[0]
