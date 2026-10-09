@@ -293,7 +293,7 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://www.swift.com/news-events/press-releases?page=0",
+      "source_url": "https://www.swift.com/about-us/media-centre/press-releases",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
