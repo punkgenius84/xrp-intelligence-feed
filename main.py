@@ -498,7 +498,7 @@ def score_feed(result: PipelineResult) -> list:
         if health:
             print(
                 f"  Health: failures={health.get('consecutive_failures', 0)} "
-                f"empty={health.get('consecutive_empty', 0)}"
+                f"incomplete/empty={health.get('consecutive_empty', 0)}"
             )
     print_source_health_warnings(result)
     return relevant

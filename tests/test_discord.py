@@ -304,7 +304,7 @@ def test_main_prints_discovery_health_and_still_publishes(monkeypatch, capsys):
     main.main()
     out = capsys.readouterr().out
     assert "Discovery source sec-edgar: ok" in out
-    assert "Health: failures=2 empty=1" in out
+    assert "Health: failures=2 incomplete/empty=1" in out
     assert captured["items"] == [relevant]
 
 

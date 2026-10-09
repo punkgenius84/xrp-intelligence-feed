@@ -190,7 +190,9 @@ class JsonDiscoveryState:
         previous_failures = previous.get("consecutive_failures", 0) if isinstance(previous, dict) else 0
         previous_empty = previous.get("consecutive_empty", 0) if isinstance(previous, dict) else 0
         failure = status == "failed"
-        empty = status in {"empty", "partial"} and candidate_count == 0
+        # Schema-compatible coverage streak: partial means the index was incomplete,
+        # even when the collector recovered some candidates.
+        empty = status in {"empty", "partial"}
         previous_status = previous.get("last_status") if isinstance(previous, dict) else None
         previous_started = previous.get("status_started_at") if isinstance(previous, dict) else None
         if status in {"failed", "empty", "partial"} and status == previous_status and previous_started:
