@@ -229,9 +229,9 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         safe = _official_article(source, match.group("href"))
         if safe is None:
             continue
-        # Dates are expected immediately before press-release links on the supported
-        # institutional indexes. Stop at this anchor so the next card's date cannot
-        # be borrowed to make an undated article look valid.
+        # Prefer a date immediately before the current article link. A date after
+        # a link is used only when the next anchor is not a different allowlisted
+        # article, so the next card's date cannot be borrowed by an undated item.
         previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
         raw_window = text[previous:match.start()]
         date_matches = list(_DATE_RE.finditer(raw_window))
@@ -239,7 +239,19 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             nearest = date_matches[-1]
             published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
         else:
-            published = None
+            next_is_different_article = False
+            if index + 1 < len(matches):
+                next_safe = _official_article(source, matches[index + 1].group("href"))
+                next_is_different_article = next_safe is not None and next_safe[1] != safe[1]
+            if not next_is_different_article:
+                following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+                trailing_dates = list(_DATE_RE.finditer(text[match.end():following]))
+                published = (
+                    _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
+                    if trailing_dates else None
+                )
+            else:
+                published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles or published is None:
