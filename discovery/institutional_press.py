@@ -118,7 +118,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
     }
     allowed = required | {"native_id_query_param", "numeric_date_order"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
-        raise ValueError(f"Institutional source must contain {sorted(required)} and only optional native_id_query_param")
+        raise ValueError(f"Institutional source must contain {sorted(required)} and only optional native_id_query_param or numeric_date_order")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
         if not isinstance(source[key], str) or not source[key].strip():
             raise ValueError(f"{key} must be a non-empty string")
@@ -140,7 +140,10 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         not isinstance(source["native_id_query_param"], str) or not source["native_id_query_param"].strip()
     ):
         raise ValueError("native_id_query_param must be a non-empty string when provided")
-    if "numeric_date_order" in source and source["numeric_date_order"] not in {"mdy", "dmy"}:
+    if "numeric_date_order" in source and (
+        not isinstance(source["numeric_date_order"], str)
+        or source["numeric_date_order"] not in {"mdy", "dmy"}
+    ):
         raise ValueError("numeric_date_order must be mdy or dmy")
     return source
 
