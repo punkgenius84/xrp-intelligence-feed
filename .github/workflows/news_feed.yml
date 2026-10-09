@@ -8,6 +8,7 @@ on:
       - ".github/workflows/news_feed.yml"
       - "config/discovery_sources.json"
       - "discovery/**"
+      - "storage/**"
       - "intelligence/**"
       - "main.py"
   schedule:
