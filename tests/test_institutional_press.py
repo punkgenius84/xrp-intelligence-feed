@@ -578,7 +578,7 @@ def test_swift_current_index_and_article_route_are_official_and_parseable():
     assert swift["source_url"] == "https://www.swift.com/about-us/media-centre"
     html = b"""<html><body>
     <span>28 September 2026</span>
-    <a href="https://www.swift.com/about-us/media-centre/swift-and-its-community-innovate-bring-ease-of-domestic-consumer-payments-cross-border-transaction-experience">Swift and its community innovate to bring ease of domestic consumer payments to cross-border transaction experience</a>
+    <a href="https://www.swift.com/about-us/media-centre/press-releases/swift-and-its-community-innovate-bring-ease-of-domestic-consumer-payments-cross-border-transaction-experience">Swift and its community innovate to bring ease of domestic consumer payments to cross-border transaction experience</a>
     </body></html>"""
 
     rows, complete = _parse_page(swift, html)
