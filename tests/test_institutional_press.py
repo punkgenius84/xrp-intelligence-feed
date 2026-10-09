@@ -78,7 +78,7 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["detail_fallback_limit"] == 1
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
-    assert swift_registry["source_url"] == "https://www.swift.com/news-events/press-releases?page=0"
+    assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     assert swift_registry["article_path_regex"] == r"(?:/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
     visa = next(item for item in sources if item["source_id"] == "visa-press-releases")
     assert visa["source_url"] == "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html"
@@ -575,7 +575,7 @@ def test_swift_current_index_and_article_route_are_official_and_parseable():
         item for item in load_discovery_sources()
         if item["source_id"] == "swift-press-releases"
     )
-    assert swift["source_url"] == "https://www.swift.com/news-events/press-releases?page=0"
+    assert swift["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     html = b"""<html><body>
     <span>28 September 2026</span>
     <a href="https://www.swift.com/news-events/press-releases/swift-and-its-community-innovate-bring-ease-of-domestic-consumer-payments-cross-border-transaction-experience">Swift and its community innovate to bring ease of domestic consumer payments to cross-border transaction experience</a>
