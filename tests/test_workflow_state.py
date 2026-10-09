@@ -76,6 +76,9 @@ def test_workflow_prepares_ollama_before_feed_execution():
     contents = WORKFLOW.read_text(encoding="utf-8")
     ollama = contents.index("name: Ensure intelligence model is available")
     app = contents.index("run: python main.py")
+    install = _step_block(contents, "name: Install Ollama")
+    assert "timeout 180s bash -o pipefail -c" in install
+    assert "curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh" in install
     assert "name: Install Ollama" in contents
     assert "name: Start Ollama" in contents
     assert "sudo systemctl stop ollama || true" in contents
