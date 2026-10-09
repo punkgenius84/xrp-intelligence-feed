@@ -66,6 +66,7 @@ def test_registered_institutional_sources_are_bounded():
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
+    assert "detail_fallback_limit" not in coinbase_blog
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
     assert coinbase_ir["detail_fallback_limit"] == 1
@@ -684,3 +685,24 @@ def test_partial_index_recovers_one_missing_official_card_without_claiming_full_
     assert len(http.calls) == 2
     assert http.calls[1][0] == missing_url + "/"
     assert any("bounded detail fallback recovered 1 additional official article" in error for error in result.errors)
+
+
+
+def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
+    index_url = "https://www.circle.com/pressroom"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'<html><body><a href="/about">About</a><a href="/company">Company</a></body></html>',
+        index_url,
+    )
+    http = SequenceHttp([index])
+
+    result = InstitutionalPressDiscovery(
+        source(detail_fallback_limit=1), http=http, now=lambda: STAMP
+    ).collect()
+
+    assert result.status == "failed"
+    assert result.candidates == []
+    assert len(http.calls) == 1
+    assert any("bounded detail fallback found no allowlisted official article links" in error
+               for error in result.errors)
