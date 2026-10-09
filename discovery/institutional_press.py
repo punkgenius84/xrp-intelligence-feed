@@ -217,8 +217,14 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     if not matches and not structured_rows:
         raise ValueError("institutional response is missing links and structured article metadata")
 
-    rows: list[dict[str, Any]] = []
+    grouped_rows: dict[str, list[dict[str, Any]]] = {}
+    incomplete_ids: set[str] = set()
     complete = True
+    generic_titles = {
+        "read more", "read more about", "learn more", "learn more about",
+        "view more", "view article", "view release", "read full story",
+        "continue reading", "more",
+    }
     for index, match in enumerate(matches):
         safe = _official_article(source, match.group("href"))
         if safe is None:
@@ -234,15 +240,44 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         else:
             published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
-        if not title or published is None:
-            complete = False
+        normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+        if not title or normalized_title in generic_titles or published is None:
+            incomplete_ids.add(safe[1])
             continue
-        rows.append({
+        grouped_rows.setdefault(safe[1], []).append({
             "url": safe[0],
             "native_id": safe[1],
             "title": title,
             "date": published,
         })
+
+    rows: list[dict[str, Any]] = []
+    for native_id, variants in grouped_rows.items():
+        if len(variants) == 1:
+            rows.append(variants[0])
+            continue
+        dates = {row["date"] for row in variants}
+        normalized_titles = [
+            re.sub(r"[^a-z0-9]+", " ", row["title"].casefold()).strip()
+            for row in variants
+        ]
+        longest_title = max(normalized_titles, key=len)
+        if len(dates) == 1 and all(
+            title in longest_title or longest_title in title
+            for title in normalized_titles
+        ):
+            # Same official URL and date with abbreviated/expanded anchor labels:
+            # keep the most descriptive title rather than reporting a false conflict.
+            rows.append(max(variants, key=lambda row: len(row["title"])))
+        else:
+            complete = False
+            # Preserve substantive conflicts for the collector's existing fail-closed
+            # duplicate identity handling; do not silently choose between them.
+            rows.extend(variants)
+
+    valid_ids = set(grouped_rows)
+    if incomplete_ids - valid_ids:
+        complete = False
     if not rows:
         if structured_rows:
             return structured_rows, True
