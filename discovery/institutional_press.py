@@ -267,6 +267,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             "date": published,
         })
 
+    structured_by_id = {row["native_id"]: row for row in structured_rows}
     rows: list[dict[str, Any]] = []
     for native_id, variants in grouped_rows.items():
         if len(variants) == 1:
@@ -285,14 +286,35 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             # Same official URL and date with abbreviated/expanded anchor labels:
             # keep the most descriptive title rather than reporting a false conflict.
             rows.append(max(variants, key=lambda row: len(row["title"])))
+            continue
+
+        # When duplicate anchor cards conflict, prefer structured metadata only if it
+        # refers to the same validated official route, has a date represented by an
+        # HTML variant, and its title is compatible with every variant. Otherwise keep
+        # the conflict visible and fail closed as before.
+        structured = structured_by_id.get(native_id)
+        structured_title = (
+            re.sub(r"[^a-z0-9]+", " ", structured["title"].casefold()).strip()
+            if structured is not None else ""
+        )
+        same_route = structured is not None and all(
+            row["url"] == structured["url"] for row in variants
+        )
+        compatible_title = bool(structured_title) and all(
+            title in structured_title or structured_title in title
+            for title in normalized_titles
+        )
+        if same_route and structured["date"] in dates and compatible_title:
+            rows.append(structured)
         else:
             complete = False
-            # Preserve substantive conflicts for the collector's existing fail-closed
-            # duplicate identity handling; do not silently choose between them.
+            # Preserve unresolved conflicts for the collector's fail-closed
+            # duplicate identity handling; never choose arbitrarily.
             rows.extend(variants)
 
     valid_ids = set(grouped_rows)
-    if incomplete_ids - valid_ids:
+    structured_ids = set(structured_by_id)
+    if incomplete_ids - valid_ids - structured_ids:
         complete = False
     if not rows:
         if structured_rows:
