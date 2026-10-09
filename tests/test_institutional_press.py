@@ -60,6 +60,10 @@ def test_registered_institutional_sources_are_bounded():
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
+    coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
+    jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
+    assert coinbase_ir["detail_fallback_limit"] == 1
+    assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["detail_fallback_limit"] == 1
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
@@ -490,3 +494,65 @@ def test_coinbase_blog_accepts_current_localized_article_route():
     assert rows[0]["title"] == "Coinbase and Samsung Bring USDC to Samsung Wallet"
     assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
     assert rows[0]["url"] == "https://www.coinbase.com/en-sg/blog/coinbase-and-samsung-bring-usdc-to-samsung-wallet/"
+
+
+
+def test_coinbase_investor_news_recovers_dated_article_with_bounded_fallback():
+    article_url = (
+        "https://investor.coinbase.com/news/news-details/2026/"
+        "Coinbase-to-Participate-in-Citis-2026-Global-TMT-Conference/default.aspx"
+    )
+    index_url = "https://investor.coinbase.com/news/"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        f'<html><body><a href="{article_url}">Read More</a><p>Loading</p></body></html>'.encode(),
+        index_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>Coinbase to Participate in Citi's 2026 Global TMT Conference</h1><p>September 3, 2026</p></body></html>",
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+    investor = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-investor-news"
+    )
+
+    result = InstitutionalPressDiscovery(investor, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == "Coinbase to Participate in Citi's 2026 Global TMT Conference"
+    assert result.candidates[0].published_at == datetime(2026, 9, 3, tzinfo=timezone.utc)
+    assert http.calls[1][0] == article_url
+    assert "bounded detail fallback" in " ".join(result.errors)
+
+
+def test_jpmorgan_newsroom_recovers_dated_article_with_bounded_fallback():
+    article_url = "https://www.jpmorgan.com/payments/newsroom/cross-border-payments-thunes-expansion"
+    index_url = "https://www.jpmorgan.com/payments/newsroom"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        f'<html><body><a href="{article_url}">Read More</a><p>Loading</p></body></html>'.encode(),
+        index_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>J.P. Morgan Payments brings faster cross-border payments to more markets</h1><p>September 22, 2026</p></body></html>",
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+    jpmorgan = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "jpmorgan-payments-newsroom"
+    )
+
+    result = InstitutionalPressDiscovery(jpmorgan, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == "J.P. Morgan Payments brings faster cross-border payments to more markets"
+    assert result.candidates[0].published_at == datetime(2026, 9, 22, tzinfo=timezone.utc)
+    assert http.calls[1][0] == article_url + "/"
+    assert "bounded detail fallback" in " ".join(result.errors)
