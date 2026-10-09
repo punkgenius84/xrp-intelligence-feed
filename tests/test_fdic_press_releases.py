@@ -136,6 +136,7 @@ def test_missing_boundary_recovers_on_deep_page_and_emits_newer_pages():
     result = adapter(http).collect(state(hint=1))
     assert [item.source_native_id for item in result.candidates] == ["2026/new1", "2026/new2"]
     assert [call[0] for call in http.calls] == [FDIC_URL, FDIC_URL+"?pg=1", FDIC_URL+"?pg=2"]
+    assert result.pagination["fdic_pages_probed"] == [0, 1, 2]
     assert result.pagination["fdic_press_releases"]["boundary_id"] == "2026/new2"
 
 
@@ -146,6 +147,7 @@ def test_missing_boundary_does_not_claim_page_zero_rows_as_new():
     result = adapter(http).collect(state(hint=1))
     assert result.candidates == []
     assert result.status == "empty"
+    assert result.pagination["fdic_pages_probed"] == [0, 1, 2]
     assert result.pagination["fdic_press_releases"]["boundary_id"] == state()["sources"][FDIC_SOURCE_ID]["pagination"]["fdic_press_releases"]["boundary_id"]
 
 
@@ -153,6 +155,7 @@ def test_empty_deep_page_is_not_boundary_expiration():
     http = FakeHttp([response(listing(("/news/press-releases/2026/new", "New"))),
                      response(b"<html><body>No results found.</body></html>")])
     result = adapter(http).collect(state(hint=1))
+    assert result.pagination["fdic_pages_probed"] == [0, 1]
     assert result.pagination["fdic_press_releases"]["frontier_status"] == "active"
     assert result.pagination["fdic_press_releases"]["boundary_id"] == "2026/fdic-publishes-july-enforcement-actions"
 

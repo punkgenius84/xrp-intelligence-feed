@@ -194,6 +194,7 @@ class FDICPressReleasesDiscovery:
         errors: list[str] = []
         rows_by_page: dict[int, list[dict[str, str]]] = {}
         page_fetches = 0
+        pages_probed: list[int] = []
         request_updates: dict[str, dict[str, str]] = {}
         budget = HttpAttemptBudget(_MAX_HTTP_ATTEMPTS)
 
@@ -202,6 +203,7 @@ class FDICPressReleasesDiscovery:
             if page_fetches >= _MAX_PAGE_FETCHES:
                 return False, False
             page_fetches += 1
+            pages_probed.append(page)
             url = self._page_url(page)
             try:
                 validators = {}
@@ -234,9 +236,9 @@ class FDICPressReleasesDiscovery:
             return DiscoveryResult(self.source_id, self.discovery_method,
                                    "partial" if candidates else "failed", list(candidates.values()),
                                    fetched_at, errors, state_updates={},
-                                   pagination={"page_fetches": page_fetches})
+                                   pagination={"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed)})
         if unchanged:
-            pagination = {"page_fetches": page_fetches}
+            pagination = {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed)}
             if has_state:
                 pagination["fdic_press_releases"] = previous
             return DiscoveryResult(self.source_id, self.discovery_method, "not_modified",
@@ -251,7 +253,7 @@ class FDICPressReleasesDiscovery:
             return DiscoveryResult(self.source_id, self.discovery_method,
                                    "success" if candidates else "empty", list(candidates.values()),
                                    fetched_at, errors, request_updates,
-                                   {"page_fetches": page_fetches, "fdic_press_releases": progress})
+                                   {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed), "fdic_press_releases": progress})
 
         boundary = previous["boundary_id"]
         hint = previous["deep_page_hint"]
@@ -260,7 +262,7 @@ class FDICPressReleasesDiscovery:
             progress = {**previous, "boundary_id": boundary}
             return DiscoveryResult(self.source_id, self.discovery_method,
                                    "empty", [], fetched_at, errors, request_updates,
-                                   {"page_fetches": page_fetches, "fdic_press_releases": progress})
+                                   {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed), "fdic_press_releases": progress})
 
         def index_of(rows: list[dict[str, str]], native_id: str) -> int | None:
             for index, row in enumerate(rows):
@@ -285,7 +287,7 @@ class FDICPressReleasesDiscovery:
         if errors:
             return DiscoveryResult(self.source_id, self.discovery_method,
                                    "partial" if candidates else "failed", list(candidates.values()),
-                                   fetched_at, errors, {}, {"page_fetches": page_fetches})
+                                   fetched_at, errors, {}, {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed)})
 
         progress = dict(previous)
         if boundary_page is None:
@@ -299,7 +301,7 @@ class FDICPressReleasesDiscovery:
             # could not be located; candidates are withheld from this result.
             return DiscoveryResult(self.source_id, self.discovery_method, "empty",
                                    [], fetched_at, [], request_updates,
-                                   {"page_fetches": page_fetches, "fdic_press_releases": progress})
+                                   {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed), "fdic_press_releases": progress})
 
         # Emit only rows newer than the saved boundary. Recovery pages are emitted
         # only after the boundary has been positively located.
@@ -325,4 +327,4 @@ class FDICPressReleasesDiscovery:
         status = "success" if candidates else "empty"
         return DiscoveryResult(self.source_id, self.discovery_method, status,
                                list(candidates.values()), fetched_at, [], request_updates,
-                               {"page_fetches": page_fetches, "fdic_press_releases": progress})
+                               {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed), "fdic_press_releases": progress})

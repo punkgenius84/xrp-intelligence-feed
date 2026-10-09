@@ -494,6 +494,16 @@ def score_feed(result: PipelineResult) -> list:
             f"Discovery source {discovery_result.source_id}: "
             f"{discovery_result.status} ({len(discovery_result.candidates)} candidates)"
         )
+        if discovery_result.source_id == "fdic-press-releases":
+            pagination = discovery_result.pagination
+            frontier = pagination.get("fdic_press_releases", {})
+            print(
+                "  FDIC frontier: "
+                f"pages={pagination.get('fdic_pages_probed', [])} "
+                f"boundary={frontier.get('boundary_id', 'unavailable')} "
+                f"hint={frontier.get('deep_page_hint', 'unavailable')} "
+                f"state={frontier.get('frontier_status', 'unavailable')}"
+            )
         health = result.health.get(discovery_result.source_id, {})
         if health:
             print(
