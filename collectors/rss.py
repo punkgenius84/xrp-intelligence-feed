@@ -1,9 +1,48 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import re
 import feedparser
 import requests
 
 from models import NewsItem
+
+
+
+def _parse_response_feed(content: bytes, response_headers: dict[str, str]):
+    """Parse RSS while repairing an ASCII XML declaration only when bytes prove valid UTF-8."""
+    head = content[:512].lower()
+    stale_ascii = (
+        b'encoding="us-ascii"' in head
+        or b"encoding='us-ascii'" in head
+    )
+    if stale_ascii:
+        try:
+            decoded = content.decode("utf-8")
+        except UnicodeDecodeError:
+            pass
+        else:
+            decoded = re.sub(
+                r"encoding\s*=\s*([\"'])us-ascii\1",
+                'encoding="utf-8"',
+                decoded,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            normalized_headers = dict(response_headers)
+            content_type = str(normalized_headers.get("content-type", ""))
+            if re.search(r";\s*charset\s*=", content_type, re.IGNORECASE):
+                content_type = re.sub(
+                    r"(;\s*charset\s*=\s*)[\"']?[^;\"'\s]+[\"']?",
+                    r"\1utf-8",
+                    content_type,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                content_type = (content_type + "; charset=utf-8").strip("; ")
+            normalized_headers["content-type"] = content_type
+            return feedparser.parse(decoded, response_headers=normalized_headers)
+    return feedparser.parse(content, response_headers=response_headers)
 
 
 @dataclass(slots=True)
@@ -79,7 +118,7 @@ class RSSCollector:
         headers = {str(key).lower(): value for key, value in response.headers.items()}
         headers["content-location"] = response.url
         try:
-            feed = feedparser.parse(response.content, response_headers=headers)
+            feed = _parse_response_feed(response.content, headers)
         except Exception as exc:
             self._fail(f"{self.name}: malformed RSS response: {exc}", status="malformed_feed")
 

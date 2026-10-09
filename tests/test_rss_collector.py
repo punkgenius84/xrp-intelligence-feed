@@ -123,3 +123,58 @@ def test_unexpected_feedparser_exception_remains_a_reported_collection_error(mon
 
     assert error.value.status == "malformed_feed"
     assert collector.last_report.status == "malformed_feed"
+
+
+def test_utf8_rss_with_stale_ascii_xml_and_http_charset_declarations_is_parsed(monkeypatch):
+    class Response:
+        status_code = 200
+        headers = {"Content-Type": "application/rss+xml; charset=us-ascii"}
+        url = SOURCE["url"]
+        content = (
+            '<?xml version="1.0" encoding="us-ascii"?>'
+            '<rss version="2.0"><channel><title>Federal Reserve</title><item>'
+            '<title>Federal Reserve Board requests comment on Café banking data</title>'
+            '<link>https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm</link>'
+            '<pubDate>Thu, 24 Sep 2026 16:00:00 +0000</pubDate>'
+            '<guid>fed-utf8</guid></item></channel></rss>'
+        ).encode("utf-8")
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("collectors.rss.requests.get", lambda *args, **kwargs: Response())
+    collector = RSSCollector({
+        **SOURCE,
+        "url": "https://www.federalreserve.gov/feeds/press_all.xml",
+        "name": "Federal Reserve Board",
+    })
+
+    items = collector.collect()
+
+    assert len(items) == 1
+    assert items[0].title.endswith("Café banking data")
+    assert collector.last_report.status == "success"
+    assert collector.last_report.error is None
+
+
+def test_stale_ascii_declaration_with_invalid_utf8_stays_malformed(monkeypatch):
+    class Response:
+        status_code = 200
+        headers = {"Content-Type": "application/rss+xml; charset=us-ascii"}
+        url = SOURCE["url"]
+        content = (
+            b'<?xml version="1.0" encoding="us-ascii"?>'
+            b'<rss version="2.0"><channel><title>Fed</title><item><title>Broken \xff'
+        )
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("collectors.rss.requests.get", lambda *args, **kwargs: Response())
+    collector = RSSCollector(SOURCE)
+
+    with pytest.raises(FeedCollectionError) as error:
+        collector.collect()
+
+    assert error.value.status == "malformed_feed"
+    assert collector.last_report.status == "malformed_feed"
