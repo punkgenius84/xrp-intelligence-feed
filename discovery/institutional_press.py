@@ -116,9 +116,9 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    allowed = required | {"native_id_query_param", "numeric_date_order"}
+    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
-        raise ValueError(f"Institutional source must contain {sorted(required)} and only optional native_id_query_param or numeric_date_order")
+        raise ValueError(f"Institutional source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
         if not isinstance(source[key], str) or not source[key].strip():
             raise ValueError(f"{key} must be a non-empty string")
@@ -145,6 +145,11 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         or source["numeric_date_order"] not in {"mdy", "dmy"}
     ):
         raise ValueError("numeric_date_order must be mdy or dmy")
+    if "detail_fallback_limit" in source and (
+        type(source["detail_fallback_limit"]) is not int
+        or not 1 <= source["detail_fallback_limit"] <= 3
+    ):
+        raise ValueError("detail_fallback_limit must be an integer from 1 to 3")
     return source
 
 
@@ -248,6 +253,37 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     return rows, complete
 
 
+def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> dict[str, Any] | None:
+    """Extract one dated item from an official article page reached through an allowlisted index link."""
+    safe = _official_article(source, href)
+    if safe is None:
+        return None
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None
+
+    structured_rows = _json_ld_articles(source, text)
+    for row in structured_rows:
+        if row["native_id"] == safe[1]:
+            return row
+
+    heading = re.search(r"<h1\b[^>]*>(.*?)</h1>", text, re.IGNORECASE | re.DOTALL)
+    if heading is None:
+        return None
+    title = _clean(re.sub(r"<[^>]+>", " ", heading.group(1)))
+    if not title:
+        return None
+    dates = list(_DATE_RE.finditer(text))
+    if not dates:
+        return None
+    nearest = min(dates, key=lambda item: abs(item.start() - heading.start()))
+    published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
+    if published is None:
+        return None
+    return {"url": safe[0], "native_id": safe[1], "title": title, "date": published}
+
+
 class InstitutionalPressDiscovery:
     discovery_method = METHOD
 
@@ -286,6 +322,51 @@ class InstitutionalPressDiscovery:
             last_seen_at=fetched_at,
         )
 
+
+    def _detail_fallback(self, content: bytes, errors: list[str]) -> list[dict[str, Any]]:
+        """Fetch a tightly bounded number of dated official article details from a sparse index."""
+        limit = self.source.get("detail_fallback_limit", 0)
+        if not limit:
+            return []
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            errors.append(f"{self.source['name']}: index is not valid UTF-8 for detail fallback")
+            return []
+
+        matches = re.finditer(
+            r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+            text, re.IGNORECASE | re.DOTALL,
+        )
+        links: dict[str, str] = {}
+        for match in matches:
+            safe = _official_article(self.source, match.group("href"))
+            if safe is not None:
+                links.setdefault(safe[1], safe[0])
+        rows: list[dict[str, Any]] = []
+        for native_id, url in list(links.items())[:limit]:
+            try:
+                response = self.http.get(
+                    url, expected_content_types=("text/html", "application/xhtml+xml")
+                )
+            except DiscoveryHttpError as exc:
+                errors.append(
+                    f"{self.source['name']}: bounded article-detail fallback failed"
+                    + (f" (HTTP {exc.status_code})" if exc.status_code else f" ({exc.kind})")
+                )
+                continue
+            if response.status_code != 200:
+                errors.append(
+                    f"{self.source['name']}: article-detail fallback returned HTTP {response.status_code}"
+                )
+                continue
+            row = _parse_article_detail(self.source, url, response.content)
+            if row is None or row["native_id"] != native_id:
+                errors.append(f"{self.source['name']}: official detail page lacked grounded title/date metadata")
+                continue
+            rows.append(row)
+        return rows
+
     def collect(self, source_state: dict[str, Any] | None = None) -> DiscoveryResult:
         fetched_at = self.now()
         if fetched_at.tzinfo is None:
@@ -300,6 +381,7 @@ class InstitutionalPressDiscovery:
         errors: list[str] = []
         updates: dict[str, dict[str, str]] = {}
         candidates: dict[str, DiscoveryCandidate] = {}
+        used_detail_fallback = False
 
         try:
             response = self.http.get(
@@ -333,9 +415,23 @@ class InstitutionalPressDiscovery:
         try:
             rows, complete = _parse_page(self.source, response.content)
         except ValueError as exc:
-            errors.append(f"{self.source['name']}: malformed HTML ({exc})")
-            return DiscoveryResult(self.source["source_id"], METHOD, "failed",
-                                   fetched_at=fetched_at, errors=errors)
+            if str(exc) == "institutional response has no dated official articles" and self.source.get("detail_fallback_limit"):
+                rows = self._detail_fallback(response.content, errors)
+                if rows:
+                    complete = False
+                    used_detail_fallback = True
+                    errors.append(
+                        f"{self.source['name']}: index omits dated article metadata; "
+                        "bounded detail fallback used, so source remains partial"
+                    )
+                else:
+                    errors.append(f"{self.source['name']}: malformed HTML ({exc})")
+                    return DiscoveryResult(self.source["source_id"], METHOD, "failed",
+                                           fetched_at=fetched_at, errors=errors)
+            else:
+                errors.append(f"{self.source['name']}: malformed HTML ({exc})")
+                return DiscoveryResult(self.source["source_id"], METHOD, "failed",
+                                       fetched_at=fetched_at, errors=errors)
 
         if not complete:
             errors.append(f"{self.source['name']}: malformed article on official index")
@@ -362,7 +458,7 @@ class InstitutionalPressDiscovery:
             key=lambda item: (item.published_at or fetched_at, item.source_native_id),
             reverse=True,
         )[:self.source["max_items"]]
-        status = "partial" if errors and ordered else "failed" if errors else (
+        status = "partial" if errors and (ordered or used_detail_fallback) else "failed" if errors else (
             "empty" if not ordered else "success"
         )
         return DiscoveryResult(
