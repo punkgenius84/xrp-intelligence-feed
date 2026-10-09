@@ -102,7 +102,10 @@ def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] |
         or not re.fullmatch(source["article_path_regex"], article_path, re.IGNORECASE)
     ):
         return None
-    canonical = f"https://{parts.hostname}{article_path.rstrip('/')}/"
+    last_segment = article_path.rsplit("/", 1)[-1]
+    is_file_route = re.search(r"\.(?:html?|aspx|pdf)$", last_segment, re.IGNORECASE) is not None
+    canonical_path = article_path if is_file_route else f"{article_path.rstrip('/')}/"
+    canonical = f"https://{parts.hostname}{canonical_path}"
     query_param = source.get("native_id_query_param")
     if isinstance(query_param, str) and query_param:
         values = parse_qs(parts.query).get(query_param, [])

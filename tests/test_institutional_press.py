@@ -436,3 +436,34 @@ def test_unique_official_article_without_date_still_marks_index_incomplete():
     assert complete is False
     assert len(rows) == 1
     assert rows[0]["title"] == "Another Official Release"
+
+
+
+def test_official_article_preserves_file_extension_routes_and_is_idempotent():
+    cases = [
+        (
+            source(
+                source_id="coinbase-investor-news",
+                name="Coinbase Investor Relations",
+                source_url="https://investor.coinbase.com/news/",
+                allowed_hosts=["investor.coinbase.com"],
+                article_path_regex=r"/news/news-details/\d{4}/[^/?#]+/default\.aspx",
+            ),
+            "https://investor.coinbase.com/news/news-details/2026/Coinbase-Q2-Earnings/default.aspx",
+        ),
+        (
+            source(
+                source_id="mastercard-press-releases",
+                name="Mastercard",
+                source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+                allowed_hosts=["www.mastercard.com", "mastercard.com"],
+                article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+            ),
+            "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/mastercard-example.html",
+        ),
+    ]
+    for source_config, article_url in cases:
+        first = _official_article(source_config, article_url)
+        assert first is not None
+        assert first[0] == article_url
+        assert _official_article(source_config, first[0]) == first
