@@ -128,7 +128,7 @@ class FDICPressReleasesDiscovery:
         self.now = now
 
     def _page_url(self, page: int) -> str:
-        return FDIC_URL if page == 0 else FDIC_URL + "?" + urlencode({"page": page})
+        return FDIC_URL if page == 0 else FDIC_URL + "?" + urlencode({"pg": page})
 
     @staticmethod
     def _saved_progress(state: dict[str, Any] | None) -> tuple[dict[str, Any], bool]:

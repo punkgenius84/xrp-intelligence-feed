@@ -135,7 +135,7 @@ def test_missing_boundary_recovers_on_deep_page_and_emits_newer_pages():
     http = FakeHttp([response(page0), response(page1), response(page2)])
     result = adapter(http).collect(state(hint=1))
     assert [item.source_native_id for item in result.candidates] == ["2026/new1", "2026/new2"]
-    assert [call[0] for call in http.calls] == [FDIC_URL, FDIC_URL+"?page=1", FDIC_URL+"?page=2"]
+    assert [call[0] for call in http.calls] == [FDIC_URL, FDIC_URL+"?pg=1", FDIC_URL+"?pg=2"]
     assert result.pagination["fdic_press_releases"]["boundary_id"] == "2026/new2"
 
 
@@ -156,6 +156,13 @@ def test_empty_deep_page_is_not_boundary_expiration():
     assert result.pagination["fdic_press_releases"]["frontier_status"] == "active"
     assert result.pagination["fdic_press_releases"]["boundary_id"] == "2026/fdic-publishes-july-enforcement-actions"
 
+
+    
+def test_pagination_uses_official_fdic_pg_parameter():
+    strategy = adapter(FakeHttp([]))
+    assert strategy._page_url(0) == FDIC_URL
+    assert strategy._page_url(1) == FDIC_URL + "?pg=1"
+    assert strategy._page_url(22) == FDIC_URL + "?pg=22"
 
 def test_http_attempt_budget_is_shared_across_page_requests():
     from discovery.http import DiscoveryHttpError
