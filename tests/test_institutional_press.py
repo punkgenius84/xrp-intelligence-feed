@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+import pytest
 
 from discovery.http import HttpResponse
 from discovery.institutional_press import (
@@ -59,6 +60,7 @@ def test_registered_institutional_sources_are_bounded():
     assert visa["source_url"] == "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html"
     assert visa["allowed_hosts"] == ["usa.visa.com"]
     assert visa["article_path_regex"] == r"/about-visa/newsroom/press-releases\.releaseId\.[^/?#]+"
+    assert visa["numeric_date_order"] == "dmy"
 
 
 def test_parser_keeps_only_dated_official_articles():
@@ -135,6 +137,7 @@ def test_swift_and_visa_article_allowlists_and_dates():
         source_url="https://usa.visa.com/about-visa/newsroom/press-releases-listing.html",
         allowed_hosts=["usa.visa.com"],
         article_path_regex=r"/about-visa/newsroom/press-releases\.releaseId\.[^/?#]+",
+        numeric_date_order="dmy",
     )
     swift_rows, swift_complete = _parse_page(swift, fixture.read_bytes())
     visa_rows, visa_complete = _parse_page(visa, fixture.read_bytes())
@@ -218,3 +221,31 @@ def test_mastercard_current_article_path_is_allowed():
     assert complete is True
     assert len(rows) == 1
     assert rows[0]["date"] == datetime(2026, 10, 6, tzinfo=timezone.utc)
+
+
+def test_visa_day_month_numeric_dates_are_parsed_without_partial_health():
+    visa = source(
+        source_id="visa-press-releases",
+        name="Visa",
+        source_url="https://usa.visa.com/about-visa/newsroom/press-releases-listing.html",
+        allowed_hosts=["usa.visa.com"],
+        article_path_regex=r"/about-visa/newsroom/press-releases\.releaseId\.[^/?#]+",
+        numeric_date_order="dmy",
+    )
+    html = b"""<html><body>
+    <span>01/10/2026</span><a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22806.html">Visa Data Shows Stablecoins Gaining Traction in Business Payments</a>
+    <span>30/09/2026</span><a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22807.html">Visa Foundation Commits $2 Million to Boost Ecosystems Supporting Small Businesses</a>
+    </body></html>"""
+    rows, complete = _parse_page(visa, html)
+    assert complete is True
+    assert {row["title"]: row["date"] for row in rows} == {
+        "Visa Data Shows Stablecoins Gaining Traction in Business Payments":
+            datetime(2026, 10, 1, tzinfo=timezone.utc),
+        "Visa Foundation Commits $2 Million to Boost Ecosystems Supporting Small Businesses":
+            datetime(2026, 9, 30, tzinfo=timezone.utc),
+    }
+
+@pytest.mark.parametrize("value", ["ymd", [], None])
+def test_institutional_numeric_date_order_rejects_unknown_values(value):
+    with pytest.raises(ValueError, match="numeric_date_order must be"):
+        validate_institutional_source(source(numeric_date_order=value))
