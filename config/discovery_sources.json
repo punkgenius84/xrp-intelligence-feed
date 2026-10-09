@@ -277,7 +277,7 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://investor.coinbase.com/news/",
+      "source_url": "https://investor.coinbase.com/news/default.aspx",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
