@@ -233,8 +233,8 @@ def test_visa_day_month_numeric_dates_are_parsed_without_partial_health():
         numeric_date_order="dmy",
     )
     html = b"""<html><body>
-    <a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22806.html">Visa Data Shows Stablecoins Gaining Traction in Business Payments</a><span>01/10/2026</span>
-    <a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22807.html">Visa Foundation Commits $2 Million to Boost Ecosystems Supporting Small Businesses</a><span>30/09/2026</span>
+    <span>01/10/2026</span><a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22806.html">Visa Data Shows Stablecoins Gaining Traction in Business Payments</a>
+    <span>30/09/2026</span><a href="https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.22807.html">Visa Foundation Commits $2 Million to Boost Ecosystems Supporting Small Businesses</a>
     </body></html>"""
     rows, complete = _parse_page(visa, html)
     assert complete is True
@@ -245,6 +245,7 @@ def test_visa_day_month_numeric_dates_are_parsed_without_partial_health():
             datetime(2026, 9, 30, tzinfo=timezone.utc),
     }
 
-def test_institutional_numeric_date_order_rejects_unknown_values():
+@pytest.mark.parametrize("value", ["ymd", [], None])
+def test_institutional_numeric_date_order_rejects_unknown_values(value):
     with pytest.raises(ValueError, match="numeric_date_order must be"):
-        validate_institutional_source(source(numeric_date_order="ymd"))
+        validate_institutional_source(source(numeric_date_order=value))
