@@ -55,7 +55,7 @@ def _clean(value: object) -> str:
     return " ".join(value.split()) if isinstance(value, str) else ""
 
 
-def _parse_date(value: object) -> datetime | None:
+def _parse_date(value: object, numeric_date_order: str = "mdy") -> datetime | None:
     if not isinstance(value, str):
         return None
     raw_value = value.strip()
@@ -72,7 +72,7 @@ def _parse_date(value: object) -> datetime | None:
         return None
     raw = match.group(0).replace(",", "").replace("Sept ", "Sep ")
     if "/" in raw:
-        formats = ("%m/%d/%Y",)
+        formats = ("%d/%m/%Y",) if numeric_date_order == "dmy" else ("%m/%d/%Y",)
     elif re.match(r"^\d{1,2}\s", raw):
         formats = ("%d %B %Y", "%d %b %Y")
     else:
@@ -116,7 +116,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    allowed = required | {"native_id_query_param"}
+    allowed = required | {"native_id_query_param", "numeric_date_order"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
         raise ValueError(f"Institutional source must contain {sorted(required)} and only optional native_id_query_param")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
@@ -140,6 +140,8 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         not isinstance(source["native_id_query_param"], str) or not source["native_id_query_param"].strip()
     ):
         raise ValueError("native_id_query_param must be a non-empty string when provided")
+    if "numeric_date_order" in source and source["numeric_date_order"] not in {"mdy", "dmy"}:
+        raise ValueError("numeric_date_order must be mdy or dmy")
     return source
 
 
@@ -178,7 +180,10 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
             href = item.get("url") or item.get("mainEntityOfPage")
             if isinstance(href, dict):
                 href = href.get("@id") or href.get("url")
-            published = _parse_date(item.get("datePublished") or item.get("dateCreated"))
+            published = _parse_date(
+                item.get("datePublished") or item.get("dateCreated"),
+                source.get("numeric_date_order", "mdy"),
+            )
             safe = _official_article(source, href)
             if safe is None or not title or published is None:
                 continue
@@ -216,7 +221,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         if date_matches:
             anchor_position = match.start() - previous
             nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
-            published = _parse_date(nearest.group(0))
+            published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
         else:
             published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
