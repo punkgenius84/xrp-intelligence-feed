@@ -384,7 +384,7 @@ def test_coinbase_investor_news_uses_official_dated_article_routes():
         item for item in load_discovery_sources()
         if item["source_id"] == "coinbase-investor-news"
     )
-    assert investor["source_url"] == "https://investor.coinbase.com/news/"
+    assert investor["source_url"] == "https://investor.coinbase.com/news/default.aspx"
     assert investor["allowed_hosts"] == ["investor.coinbase.com"]
     assert investor["article_path_regex"] == r"/news/news-details/\d{4}/[^/?#]+/default\.aspx"
 
