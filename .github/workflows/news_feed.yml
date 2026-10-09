@@ -60,7 +60,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
+        run: timeout 180s bash -o pipefail -c 'curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh'
 
       - name: Start Ollama
         env:
