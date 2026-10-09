@@ -423,6 +423,16 @@ class InstitutionalPressDiscovery:
             (native_id, url) for native_id, url in links.items()
             if native_id not in excluded
         ]
+        if not links:
+            errors.append(
+                f"{self.source['name']}: bounded detail fallback found no allowlisted official article links"
+            )
+            return []
+        if not pending:
+            errors.append(
+                f"{self.source['name']}: bounded detail fallback found no unparsed official article links"
+            )
+            return []
         for native_id, url in pending[:limit]:
             try:
                 response = self.http.get(
