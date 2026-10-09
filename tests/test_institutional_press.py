@@ -54,7 +54,7 @@ def test_registered_institutional_sources_are_bounded():
     ids = {item["source_id"] for item in sources}
     assert {
         "citi-press-releases", "circle-pressroom", "mastercard-press-releases",
-        "coinbase-blog", "jpmorgan-payments-newsroom", "bny-newsroom",
+        "coinbase-blog", "coinbase-investor-news", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
@@ -358,3 +358,29 @@ def test_official_article_canonical_url_is_idempotently_allowlisted():
     assert second is not None
     assert second[1] == first[1]
     assert second[0] == first[0]
+
+
+
+def test_coinbase_investor_news_uses_official_dated_article_routes():
+    investor = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-investor-news"
+    )
+    assert investor["source_url"] == "https://investor.coinbase.com/news/"
+    assert investor["allowed_hosts"] == ["investor.coinbase.com"]
+    assert investor["article_path_regex"] == r"/news/news-details/\d{4}/[^/?#]+/default\.aspx"
+
+    html = b"""<html><body>
+    <span>09/03/2026</span><a href="https://investor.coinbase.com/news/news-details/2026/Coinbase-to-Participate-in-Citis-2026-Global-TMT-Conference/default.aspx">Coinbase to Participate in Citi's 2026 Global TMT Conference</a>
+    <span>08/31/2026</span><a href="https://investor.coinbase.com/news/news-details/2026/Coinbase-Q2-Earnings/default.aspx">Coinbase Q2 Earnings</a>
+    </body></html>"""
+    rows, complete = _parse_page(investor, html)
+
+    assert complete is True
+    assert len(rows) == 2
+    assert rows[0]["date"] == datetime(2026, 9, 3, tzinfo=timezone.utc)
+    assert rows[1]["date"] == datetime(2026, 8, 31, tzinfo=timezone.utc)
+    assert _official_article(
+        investor,
+        "https://evil.example/news/news-details/2026/fake/default.aspx",
+    ) is None
