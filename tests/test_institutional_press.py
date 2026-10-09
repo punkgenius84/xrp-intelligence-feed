@@ -57,6 +57,12 @@ def test_registered_institutional_sources_are_bounded():
         "coinbase-blog", "coinbase-investor-news", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
+    mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
+    dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
+    assert circle["detail_fallback_limit"] == 1
+    assert mastercard["detail_fallback_limit"] == 1
+    assert dbs["detail_fallback_limit"] == 1
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
@@ -645,3 +651,36 @@ def test_json_ld_resolves_duplicate_anchor_date_conflict_only_when_consistent():
     assert rows[0]["url"] == article_url
     assert rows[0]["title"] == "Mastercard Expands Virtual Card Platform"
     assert rows[0]["date"] == datetime(2026, 7, 9, 12, tzinfo=timezone.utc)
+
+
+
+def test_partial_index_recovers_one_missing_official_card_without_claiming_full_health():
+    index_url = "https://www.circle.com/pressroom"
+    known_url = "https://www.circle.com/pressroom/known-good-release"
+    missing_url = "https://www.circle.com/pressroom/missing-date-release"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        f"""<html><body>
+        <span>September 28, 2026</span><a href="{known_url}">Circle Known Good Release</a>
+        <a href="{missing_url}">Read More</a>
+        </body></html>""".encode(),
+        index_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>Circle Missing-Date Release</h1><p>September 27, 2026</p></body></html>",
+        missing_url + "/",
+    )
+    http = SequenceHttp([index, detail])
+    circle = source(detail_fallback_limit=1)
+
+    result = InstitutionalPressDiscovery(circle, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert {item.title for item in result.candidates} == {
+        "Circle Known Good Release",
+        "Circle Missing-Date Release",
+    }
+    assert len(http.calls) == 2
+    assert http.calls[1][0] == missing_url + "/"
+    assert any("bounded detail fallback recovered 1 additional official article" in error for error in result.errors)
