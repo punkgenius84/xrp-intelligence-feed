@@ -113,6 +113,7 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     assert '      - ".github/workflows/news_feed.yml"' in trigger
     assert '      - "config/discovery_sources.json"' in trigger
     assert '      - "discovery/**"' in trigger
+    assert '      - "storage/**"' in trigger
     assert '      - "intelligence/**"' in trigger
     assert '      - "main.py"' in trigger
 
