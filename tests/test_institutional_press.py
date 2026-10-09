@@ -56,6 +56,8 @@ def test_registered_institutional_sources_are_bounded():
         "coinbase-blog", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
+    assert citi["detail_fallback_limit"] == 1
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     assert swift_registry["article_path_regex"] == r"/news-events/migrated-news/press-releases/[^/?#]+"
@@ -252,3 +254,86 @@ def test_visa_day_month_numeric_dates_are_parsed_without_partial_health():
 def test_institutional_numeric_date_order_rejects_unknown_values(value):
     with pytest.raises(ValueError, match="numeric_date_order must be"):
         validate_institutional_source(source(numeric_date_order=value))
+
+class SequenceHttp:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return self.responses.pop(0)
+
+
+def test_citi_recovers_featured_release_but_keeps_source_partial():
+    source_url = "https://www.citigroup.com/global/news/press-release"
+    article_url = (
+        "https://www.citigroup.com/global/news/press-release/2026/"
+        "citi-commerce-media-deliver-more-personalized-customer-brand-experiences"
+    )
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"""<html><body><h2>Citi Unveils Citi Commerce Media to Deliver More Personalized Experiences for Customers and Brands</h2>
+        <a href="/global/news/press-release/2026/citi-commerce-media-deliver-more-personalized-customer-brand-experiences">Read More</a>
+        <p>Loading</p></body></html>""",
+        source_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"""<html><body><h1>Citi Unveils Citi Commerce Media to Deliver More Personalized Experiences for Customers and Brands</h1>
+        <p>September 23, 2026</p><p>For Immediate Release</p></body></html>""",
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+    citi = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "citi-press-releases"
+    )
+    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == (
+        "Citi Unveils Citi Commerce Media to Deliver More Personalized Experiences for Customers and Brands"
+    )
+    assert result.candidates[0].published_at == datetime(2026, 9, 23, tzinfo=timezone.utc)
+    assert len(http.calls) == 2
+    assert "bounded detail fallback" in " ".join(result.errors)
+
+
+def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
+    source_url = "https://www.citigroup.com/global/news/press-release"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"""<html><body><a href="https://evil.example/global/news/press-release/2026/fake">Fake</a>
+        <a href="/global/news/press-release/2026/citi-example">Read More</a></body></html>""",
+        source_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>Citi Example Press Release</h1><p>Date omitted</p></body></html>",
+        "https://www.citigroup.com/global/news/press-release/2026/citi-example",
+    )
+    http = SequenceHttp([index, detail])
+    citi = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "citi-press-releases"
+    )
+    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "failed"
+    assert result.candidates == []
+    assert len(http.calls) == 2
+    assert http.calls[1][0] == "https://www.citigroup.com/global/news/press-release/2026/citi-example/"
+    assert any("lacked grounded title/date metadata" in error for error in result.errors)
+
+
+def test_institutional_detail_fallback_limit_is_bounded():
+    base = source()
+    for value in (0, 4, True, "1", None):
+        try:
+            validate_institutional_source({**base, "detail_fallback_limit": value})
+        except ValueError as exc:
+            assert "detail_fallback_limit" in str(exc)
+        else:
+            raise AssertionError(f"expected invalid detail fallback limit {value!r} to be rejected")
