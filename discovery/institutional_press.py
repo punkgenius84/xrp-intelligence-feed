@@ -217,32 +217,80 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     if not matches and not structured_rows:
         raise ValueError("institutional response is missing links and structured article metadata")
 
-    rows: list[dict[str, Any]] = []
+    grouped_rows: dict[str, list[dict[str, Any]]] = {}
+    incomplete_ids: set[str] = set()
     complete = True
+    generic_titles = {
+        "read more", "read more about", "learn more", "learn more about",
+        "view more", "view article", "view release", "read full story",
+        "continue reading", "more",
+    }
     for index, match in enumerate(matches):
         safe = _official_article(source, match.group("href"))
         if safe is None:
             continue
-        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
-        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
-        raw_window = text[previous:following]
+        # Prefer a date immediately before the current article link. A date after
+        # a link is used only when the next anchor is not a different allowlisted
+        # article, so the next card's date cannot be borrowed by an undated item.
+        previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
+        raw_window = text[previous:match.start()]
         date_matches = list(_DATE_RE.finditer(raw_window))
         if date_matches:
-            anchor_position = match.start() - previous
-            nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+            nearest = date_matches[-1]
             published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
         else:
-            published = None
+            next_is_different_article = False
+            if index + 1 < len(matches):
+                next_safe = _official_article(source, matches[index + 1].group("href"))
+                next_is_different_article = next_safe is not None and next_safe[1] != safe[1]
+            if not next_is_different_article:
+                following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
+                trailing_dates = list(_DATE_RE.finditer(text[match.end():following]))
+                published = (
+                    _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
+                    if trailing_dates else None
+                )
+            else:
+                published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
-        if not title or published is None:
-            complete = False
+        normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+        if not title or normalized_title in generic_titles or published is None:
+            incomplete_ids.add(safe[1])
             continue
-        rows.append({
+        grouped_rows.setdefault(safe[1], []).append({
             "url": safe[0],
             "native_id": safe[1],
             "title": title,
             "date": published,
         })
+
+    rows: list[dict[str, Any]] = []
+    for native_id, variants in grouped_rows.items():
+        if len(variants) == 1:
+            rows.append(variants[0])
+            continue
+        dates = {row["date"] for row in variants}
+        normalized_titles = [
+            re.sub(r"[^a-z0-9]+", " ", row["title"].casefold()).strip()
+            for row in variants
+        ]
+        longest_title = max(normalized_titles, key=len)
+        if len(dates) == 1 and all(
+            title in longest_title or longest_title in title
+            for title in normalized_titles
+        ):
+            # Same official URL and date with abbreviated/expanded anchor labels:
+            # keep the most descriptive title rather than reporting a false conflict.
+            rows.append(max(variants, key=lambda row: len(row["title"])))
+        else:
+            complete = False
+            # Preserve substantive conflicts for the collector's existing fail-closed
+            # duplicate identity handling; do not silently choose between them.
+            rows.extend(variants)
+
+    valid_ids = set(grouped_rows)
+    if incomplete_ids - valid_ids:
+        complete = False
     if not rows:
         if structured_rows:
             return structured_rows, True
