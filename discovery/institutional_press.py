@@ -91,6 +91,7 @@ def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] |
     raw = urljoin(source["source_url"], href.strip())
     parts = urlsplit(raw)
     hosts = {host.casefold() for host in source["allowed_hosts"]}
+    article_path = parts.path.rstrip("/") or "/"
     if (
         parts.scheme.lower() != "https"
         or parts.hostname is None
@@ -98,16 +99,16 @@ def _official_article(source: dict[str, Any], href: object) -> tuple[str, str] |
         or parts.port not in (None, 443)
         or parts.username is not None
         or parts.password is not None
-        or not re.fullmatch(source["article_path_regex"], parts.path, re.IGNORECASE)
+        or not re.fullmatch(source["article_path_regex"], article_path, re.IGNORECASE)
     ):
         return None
-    canonical = f"https://{parts.hostname}{parts.path.rstrip('/')}/"
+    canonical = f"https://{parts.hostname}{article_path.rstrip('/')}/"
     query_param = source.get("native_id_query_param")
     if isinstance(query_param, str) and query_param:
         values = parse_qs(parts.query).get(query_param, [])
         if values:
-            return raw, f"{parts.path.casefold()}?{query_param}={values[0]}"
-    return canonical, parts.path.casefold()
+            return raw, f"{article_path.casefold()}?{query_param}={values[0]}"
+    return canonical, article_path.casefold()
 
 
 def validate_institutional_source(source: object) -> dict[str, Any]:
