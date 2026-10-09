@@ -428,9 +428,11 @@ def test_unique_official_article_without_date_still_marks_index_incomplete():
     )
     html = b"""<html><body>
     <a href="https://www.mastercard.com/global/en/news-and-trends/press/2026/july/mastercard-example.html">Mastercard Example Release</a>
+    <span>July 8, 2026</span><a href="https://www.mastercard.com/global/en/news-and-trends/press/2026/july/another-official-release.html">Another Official Release</a>
     </body></html>"""
 
     rows, complete = _parse_page(mastercard, html)
 
     assert complete is False
-    assert len(rows) == 0 if False else len(rows) == 1
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Another Official Release"
