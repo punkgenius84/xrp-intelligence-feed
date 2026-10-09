@@ -56,6 +56,9 @@ def test_registered_institutional_sources_are_bounded():
         "coinbase-blog", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
+    assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
+    assert swift_registry["article_path_regex"] == r"/news-events/migrated-news/press-releases/[^/?#]+"
     visa = next(item for item in sources if item["source_id"] == "visa-press-releases")
     assert visa["source_url"] == "https://usa.visa.com/about-visa/newsroom/press-releases-listing.html"
     assert visa["allowed_hosts"] == ["usa.visa.com"]
@@ -127,9 +130,9 @@ def test_swift_and_visa_article_allowlists_and_dates():
     swift = source(
         source_id="swift-press-releases",
         name="Swift",
-        source_url="https://www.swift.com/news-events/press-releases?page=0",
+        source_url="https://www.swift.com/about-us/media-centre/press-releases",
         allowed_hosts=["www.swift.com", "swift.com"],
-        article_path_regex=r"/news-events/press-releases/[^/?#]+",
+        article_path_regex=r"/news-events/migrated-news/press-releases/[^/?#]+",
     )
     visa = source(
         source_id="visa-press-releases",
