@@ -397,7 +397,7 @@ class InstitutionalPressDiscovery:
         )
 
 
-    def _detail_fallback(self, content: bytes, errors: list[str]) -> list[dict[str, Any]]:
+    def _detail_fallback(self, content: bytes, errors: list[str], *, exclude_ids: set[str] | None = None) -> list[dict[str, Any]]:
         """Fetch a tightly bounded number of dated official article details from a sparse index."""
         limit = self.source.get("detail_fallback_limit", 0)
         if not limit:
@@ -418,7 +418,12 @@ class InstitutionalPressDiscovery:
             if safe is not None:
                 links.setdefault(safe[1], safe[0])
         rows: list[dict[str, Any]] = []
-        for native_id, url in list(links.items())[:limit]:
+        excluded = exclude_ids or set()
+        pending = [
+            (native_id, url) for native_id, url in links.items()
+            if native_id not in excluded
+        ]
+        for native_id, url in pending[:limit]:
             try:
                 response = self.http.get(
                     url, expected_content_types=("text/html", "application/xhtml+xml")
@@ -509,6 +514,18 @@ class InstitutionalPressDiscovery:
 
         if not complete:
             errors.append(f"{self.source['name']}: malformed article on official index")
+            if not used_detail_fallback and self.source.get("detail_fallback_limit"):
+                known_ids = {row["native_id"] for row in rows}
+                recovered = self._detail_fallback(
+                    response.content, errors, exclude_ids=known_ids
+                )
+                if recovered:
+                    rows.extend(recovered)
+                    used_detail_fallback = True
+                    errors.append(
+                        f"{self.source['name']}: bounded detail fallback recovered "
+                        f"{len(recovered)} additional official article(s); source remains partial"
+                    )
         else:
             updates["index"] = {
                 key: response.headers[key]
