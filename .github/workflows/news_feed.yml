@@ -1,6 +1,15 @@
 name: XRP Intelligence Feed
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/news_feed.yml"
+      - "config/discovery_sources.json"
+      - "discovery/**"
+      - "intelligence/**"
+      - "main.py"
   schedule:
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
@@ -129,7 +138,7 @@ jobs:
           INTELLIGENCE_MIN_SCORE: "35"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
-          DISCORD_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
       - name: Save intelligence model cache
         if: success() && steps.ollama_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -138,7 +147,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Save persistent state
-        if: success() && (github.event_name == 'schedule' || !inputs.dry_run)
+        if: success() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
         uses: actions/cache/save@v5
         with:
           path: |

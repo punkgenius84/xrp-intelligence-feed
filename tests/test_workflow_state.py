@@ -101,3 +101,24 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
 def test_workflow_sets_intelligence_min_score_to_relevance_threshold():
     contents = WORKFLOW.read_text(encoding="utf-8")
     assert 'INTELLIGENCE_MIN_SCORE: "35"' in contents
+
+
+
+def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    trigger = contents.split("  schedule:", 1)[0]
+
+    assert "  push:" in trigger
+    assert "      - main" in trigger
+    assert '      - ".github/workflows/news_feed.yml"' in trigger
+    assert '      - "config/discovery_sources.json"' in trigger
+    assert '      - "discovery/**"' in trigger
+    assert '      - "intelligence/**"' in trigger
+    assert '      - "main.py"' in trigger
+
+    run = _step_block(contents, "run: python main.py")
+    assert "DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}" in run
+    assert 'INTELLIGENCE_PUBLISH: "false"' in run
+
+    save = _step_block(contents, "name: Save persistent state")
+    assert "if: success() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
