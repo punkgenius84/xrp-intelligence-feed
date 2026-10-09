@@ -68,7 +68,7 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["source_url"] == "https://www.citigroup.com/global/news"
+    assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
     assert citi["detail_fallback_limit"] == 1
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
