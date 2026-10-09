@@ -79,6 +79,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "circle-pressroom",
         "mastercard-press-releases",
         "coinbase-blog",
+        "coinbase-investor-news",
         "swift-press-releases",
         "visa-press-releases",
         "dbs-newsroom",
