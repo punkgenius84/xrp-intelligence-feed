@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 
 import pytest
@@ -111,3 +111,38 @@ def test_legacy_health_derives_status_started_at(tmp_path):
     }), encoding="utf-8")
     loaded = JsonDiscoveryState(path).load()
     assert loaded["sources"]["swift"]["health"]["status_started_at"] == "2026-09-23T12:00:00+00:00"
+
+
+
+def test_partial_with_candidates_resets_empty_streak_but_remains_partial(tmp_path):
+    state = JsonDiscoveryState(tmp_path / "discovery.json").load()
+    empty_at = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    partial_at = empty_at + timedelta(hours=1)
+    retry_at = partial_at + timedelta(hours=1)
+
+    JsonDiscoveryState.record_health(state, "visa", empty_at, "empty", 0, "no dated articles")
+    assert state["sources"]["visa"]["health"]["consecutive_empty"] == 1
+
+    JsonDiscoveryState.record_health(state, "visa", partial_at, "partial", 18, "one malformed article")
+    health = state["sources"]["visa"]["health"]
+    assert health["last_status"] == "partial"
+    assert health["last_candidate_count"] == 18
+    assert health["consecutive_empty"] == 0
+    assert health["consecutive_failures"] == 0
+    assert health["status_started_at"] == partial_at.isoformat()
+
+    JsonDiscoveryState.record_health(state, "visa", retry_at, "partial", 15, "one malformed article")
+    health = state["sources"]["visa"]["health"]
+    assert health["last_status"] == "partial"
+    assert health["consecutive_empty"] == 0
+    assert health["status_started_at"] == partial_at.isoformat()
+
+
+def test_partial_without_candidates_counts_as_empty(tmp_path):
+    state = JsonDiscoveryState(tmp_path / "discovery.json").load()
+    JsonDiscoveryState.record_health(
+        state, "mastercard", STAMP, "partial", 0, "article dates unavailable"
+    )
+    health = state["sources"]["mastercard"]["health"]
+    assert health["last_status"] == "partial"
+    assert health["consecutive_empty"] == 1
