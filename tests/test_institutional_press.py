@@ -580,3 +580,68 @@ def test_swift_current_index_and_article_route_are_official_and_parseable():
         "https://www.swift.com/news-events/press-releases/"
         "swift-and-its-community-innovate-bring-ease-of-domestic-consumer-payments-cross-border-transaction-experience/"
     )
+
+
+
+def test_json_ld_repairs_incomplete_card_when_other_html_cards_parse():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    complete_url = (
+        "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/"
+        "mastercard-good-release.html"
+    )
+    structured_url = (
+        "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/"
+        "mastercard-jsonld-backed-release.html"
+    )
+    html = f"""<html><head>
+    <script type="application/ld+json">{{"@context":"https://schema.org","@type":"NewsArticle","headline":"Mastercard JSON-LD Backed Release","url":"{structured_url}","datePublished":"2026-07-08T12:00:00Z"}}</script>
+    </head><body>
+    <span>July 9, 2026</span><a href="{complete_url}">Mastercard Good Release</a>
+    <a href="{structured_url}">Read More</a>
+    </body></html>""".encode()
+
+    rows, complete = _parse_page(mastercard, html)
+
+    assert complete is True
+    assert len(rows) == 2
+    assert {row["title"] for row in rows} == {
+        "Mastercard Good Release",
+        "Mastercard JSON-LD Backed Release",
+    }
+    assert next(row for row in rows if row["url"] == structured_url)["date"] == datetime(
+        2026, 7, 8, 12, tzinfo=timezone.utc
+    )
+
+
+def test_json_ld_resolves_duplicate_anchor_date_conflict_only_when_consistent():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    article_url = (
+        "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/"
+        "mastercard-expands-virtual-card-platform.html"
+    )
+    html = f"""<html><head>
+    <script type="application/ld+json">{{"@context":"https://schema.org","@type":"NewsArticle","headline":"Mastercard Expands Virtual Card Platform","url":"{article_url}","datePublished":"2026-07-09T12:00:00Z"}}</script>
+    </head><body>
+    <span>July 9, 2026</span><a href="{article_url}">Mastercard Expands Virtual Card Platform</a>
+    <span>July 10, 2026</span><a href="{article_url}">Mastercard Expands Virtual Card Platform</a>
+    </body></html>""".encode()
+
+    rows, complete = _parse_page(mastercard, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["url"] == article_url
+    assert rows[0]["title"] == "Mastercard Expands Virtual Card Platform"
+    assert rows[0]["date"] == datetime(2026, 7, 9, 12, tzinfo=timezone.utc)
