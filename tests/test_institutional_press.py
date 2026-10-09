@@ -384,3 +384,53 @@ def test_coinbase_investor_news_uses_official_dated_article_routes():
         investor,
         "https://evil.example/news/news-details/2026/fake/default.aspx",
     ) is None
+
+
+
+def test_duplicate_official_article_cards_ignore_generic_links_and_merge_title_variants():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    article_url = (
+        "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/"
+        "mastercard-expands-virtual-card-platform.html"
+    )
+    html = (
+        '<html><body><article>'
+        '<span>July 9, 2026</span>'
+        f'<a href="{article_url}">Mastercard Expands Virtual Card Platform</a>'
+        '<span>July 9, 2026</span>'
+        f'<a href="{article_url}">Mastercard Expands Virtual Card Platform Across Asia Pacific</a>'
+        '<span>July 9, 2026</span>'
+        f'<a href="{article_url}">Read More</a>'
+        '</article></body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(mastercard, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Mastercard Expands Virtual Card Platform Across Asia Pacific"
+    assert rows[0]["date"] == datetime(2026, 7, 9, tzinfo=timezone.utc)
+
+
+def test_unique_official_article_without_date_still_marks_index_incomplete():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    html = b"""<html><body>
+    <a href="https://www.mastercard.com/global/en/news-and-trends/press/2026/july/mastercard-example.html">Mastercard Example Release</a>
+    </body></html>"""
+
+    rows, complete = _parse_page(mastercard, html)
+
+    assert complete is False
+    assert len(rows) == 0 if False else len(rows) == 1
