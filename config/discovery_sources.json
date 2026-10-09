@@ -301,7 +301,7 @@
         "www.swift.com",
         "swift.com"
       ],
-      "article_path_regex": "(?:/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
+      "article_path_regex": "(?:/about-us/media-centre/press-releases|/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
     },
     {
       "source_id": "visa-press-releases",
