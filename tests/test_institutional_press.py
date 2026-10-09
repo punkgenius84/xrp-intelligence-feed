@@ -588,7 +588,7 @@ def test_swift_current_index_and_article_route_are_official_and_parseable():
     assert rows[0]["title"] == "Swift and its community innovate to bring ease of domestic consumer payments to cross-border transaction experience"
     assert rows[0]["date"] == datetime(2026, 9, 28, tzinfo=timezone.utc)
     assert rows[0]["url"] == (
-        "https://www.swift.com/about-us/media-centre/"
+        "https://www.swift.com/about-us/media-centre/press-releases/"
         "swift-and-its-community-innovate-bring-ease-of-domestic-consumer-payments-cross-border-transaction-experience/"
     )
 
