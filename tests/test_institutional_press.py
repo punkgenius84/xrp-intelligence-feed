@@ -57,6 +57,9 @@ def test_registered_institutional_sources_are_bounded():
         "coinbase-blog", "coinbase-investor-news", "jpmorgan-payments-newsroom", "bny-newsroom",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
+    assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["detail_fallback_limit"] == 1
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
@@ -467,3 +470,23 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
         assert first is not None
         assert first[0] == article_url
         assert _official_article(source_config, first[0]) == first
+
+
+
+def test_coinbase_blog_accepts_current_localized_article_route():
+    coinbase_blog = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-blog"
+    )
+    html = b"""<html><body>
+    <span>Oct 8, 2026</span>
+    <a href="https://www.coinbase.com/en-sg/blog/coinbase-and-samsung-bring-usdc-to-samsung-wallet">Coinbase and Samsung Bring USDC to Samsung Wallet</a>
+    </body></html>"""
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Coinbase and Samsung Bring USDC to Samsung Wallet"
+    assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+    assert rows[0]["url"] == "https://www.coinbase.com/en-sg/blog/coinbase-and-samsung-bring-usdc-to-samsung-wallet/"
