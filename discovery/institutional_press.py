@@ -229,13 +229,14 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         safe = _official_article(source, match.group("href"))
         if safe is None:
             continue
-        previous = matches[index - 1].start() if index else max(0, match.start() - 1800)
-        following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
-        raw_window = text[previous:following]
+        # Dates are expected immediately before press-release links on the supported
+        # institutional indexes. Stop at this anchor so the next card's date cannot
+        # be borrowed to make an undated article look valid.
+        previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
+        raw_window = text[previous:match.start()]
         date_matches = list(_DATE_RE.finditer(raw_window))
         if date_matches:
-            anchor_position = match.start() - previous
-            nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
+            nearest = date_matches[-1]
             published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
         else:
             published = None
