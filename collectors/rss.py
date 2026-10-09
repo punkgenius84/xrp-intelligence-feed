@@ -32,7 +32,7 @@ def _parse_response_feed(content: bytes, response_headers: dict[str, str]):
             content_type = str(normalized_headers.get("content-type", ""))
             if re.search(r";\s*charset\s*=", content_type, re.IGNORECASE):
                 content_type = re.sub(
-                    r"(;\s*charset\s*=\s*)[\"']?[^;\"'\\s]+[\"']?",
+                    r"(;\s*charset\s*=\s*)[\"']?[^;\"'\s]+[\"']?",
                     r"\1utf-8",
                     content_type,
                     count=1,
