@@ -70,7 +70,7 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert "detail_fallback_limit" not in citi
+    assert citi["detail_fallback_limit"] == 1
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
     assert coinbase_ir["detail_fallback_limit"] == 1
