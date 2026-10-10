@@ -6,7 +6,9 @@ from sources.registry import SourceRegistryError, enabled_sources, load_registry
 def test_registry_has_valid_metadata_and_enabled_sources():
     sources = load_registry()
     assert len(sources) == 4
-    assert len(enabled_sources()) == 4
+    assert len(enabled_sources()) == 3
+    fed = next(source for source in sources if source["source_id"] == "federal-reserve-press-releases")
+    assert fed["enabled"] is False
     assert all(set(source) == {
         "source_id", "name", "authority_tier", "category", "url",
         "entity_coverage", "enabled", "collection_type",
