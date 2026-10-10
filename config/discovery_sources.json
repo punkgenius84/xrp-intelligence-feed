@@ -372,7 +372,7 @@
       "category": "institutional",
       "discovery_method": "institutional_press_html",
       "source_url": "https://www.imf.org/en/blogs",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
@@ -388,7 +388,7 @@
       "category": "institutional",
       "discovery_method": "institutional_press_html",
       "source_url": "https://www.imf.org/en/Publications/GFSR",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 365,
       "max_items": 50,
       "allowed_hosts": [
