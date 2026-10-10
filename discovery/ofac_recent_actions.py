@@ -204,6 +204,11 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         })
     unique: dict[str, dict[str, Any]] = {}
     for row in rows:
+        # OFAC action IDs encode the action date. Reject a recovered row when
+        # its bounded date does not match that identity; this prevents a
+        # neighboring card's date from making a malformed row look complete.
+        if row["date"].strftime("%Y%m%d") != row["native_id"]:
+            continue
         unique.setdefault(row["native_id"], row)
     return list(unique.values())
 
