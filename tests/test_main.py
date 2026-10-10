@@ -258,3 +258,33 @@ def test_score_feed_reports_shadow_intelligence_eligibility(monkeypatch, capsys)
     output = capsys.readouterr().out
     assert "Intelligence eligibility: 0 fresh candidates; 0 meet minimum relevance score 35; 0 selected (limit 5)" in output
     assert "no fresh candidates were available for enrichment" in output
+
+def test_score_feed_shows_fresh_candidates_below_intelligence_minimum(monkeypatch, capsys):
+    item = SimpleNamespace(
+        relevance_score=20,
+        title="Fresh low-score candidate",
+        source="Example source",
+        score_reasons=["no high-value entity match", "context keyword only"],
+    )
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(
+            enabled=True,
+            min_relevance_score=35,
+            max_items_per_run=5,
+        ),
+    )
+    result = main.PipelineResult(
+        collected=[item],
+        fresh=[item],
+        publishable=[],
+    )
+
+    main.score_feed(result)
+    output = capsys.readouterr().out
+    assert "Intelligence below-minimum candidates (showing 1 of 1; capped at 5):" in output
+    assert "[20] Fresh low-score candidate — Example source" in output
+    assert "no high-value entity match" in output
+    assert "context keyword only" in output
+
