@@ -210,14 +210,15 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
             return [NewsItem(
                 title="Ripple announces institutional payments partnership",
                 url="https://example.test/ripple-partnership",
-                source="Example",
+                source="Official Example",
                 source_id="example",
-                summary="Ripple announced a partnership with an institutional payments provider.",
+                summary="Ripple announced a partnership with an institutional payments provider and digital asset payments are expanding.",
                 published_at=datetime.now(timezone.utc),
+                source_quality="primary",
             )]
 
     monkeypatch.setenv("INTELLIGENCE_ENABLED", "true")
-    monkeypatch.setenv("INTELLIGENCE_MIN_SCORE", "0")
+    monkeypatch.setenv("INTELLIGENCE_MIN_SCORE", "35")
     monkeypatch.setenv("INTELLIGENCE_MAX_ITEMS", "1")
     monkeypatch.setattr(main, "OllamaProvider", FakeProvider)
     monkeypatch.setattr(main, "RSSCollector", FakeCollector)
@@ -232,6 +233,9 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
     )
     assert len(result.intelligence_events) == 1
     assert result.intelligence_events[0].summary == "Source-backed event"
+    assert result.intelligence_events[0].evidence[0].url == "https://example.test/ripple-partnership"
+    assert result.fresh[0].relevance_score >= 35
+    assert result.intelligence_events[0].model == "test-model"
     persisted = intelligence_store.load()
     assert len(persisted["events"]) == 1
 
