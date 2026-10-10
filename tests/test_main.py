@@ -259,6 +259,7 @@ def test_score_feed_reports_shadow_intelligence_eligibility(monkeypatch, capsys)
     assert "Intelligence eligibility: 0 fresh candidates; 0 meet minimum relevance score 35; 0 selected (limit 5)" in output
     assert "no fresh candidates were available for enrichment" in output
 
+
 def test_score_feed_shows_fresh_candidates_below_intelligence_minimum(monkeypatch, capsys):
     item = SimpleNamespace(
         relevance_score=20,
