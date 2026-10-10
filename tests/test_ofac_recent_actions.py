@@ -224,6 +224,19 @@ def test_fallback_recovers_fields_that_precede_action_title_link():
     assert rows[0]["category_slug"] == "sanctions-list-updates"
 
 
+def test_fallback_recovery_clears_structural_date_field_failure():
+    html = html_page([
+        ("20261002", "Current action", "October 02, 2026",
+         "sanctions-list-updates", "Sanctions List Updates"),
+    ]).replace(
+        b"font-sans-2xs line-height-sans-3",
+        b"changed-date-wrapper",
+    )
+    rows, complete = _parse_page(html)
+    assert complete
+    assert [row["native_id"] for row in rows] == ["20261002"]
+
+
 def test_fallback_can_supplement_structural_rows_when_one_card_wrapper_changes():
     html = b"""<div class="view view-recent-actions-search view-id-recent_actions_search">
       <div class="view-content">
