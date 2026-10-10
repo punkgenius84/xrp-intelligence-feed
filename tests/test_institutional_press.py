@@ -58,6 +58,9 @@ def test_registered_institutional_sources_are_bounded():
         "imf-blogs", "imf-global-financial-stability-report",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
+    imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
+    assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report"}
+    assert all(item["enabled"] is False for item in imf_sources.values())
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
     mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
