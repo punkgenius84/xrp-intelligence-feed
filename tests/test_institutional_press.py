@@ -55,6 +55,7 @@ def test_registered_institutional_sources_are_bounded():
     assert {
         "citi-press-releases", "circle-pressroom", "mastercard-press-releases",
         "coinbase-blog", "coinbase-investor-news", "jpmorgan-payments-newsroom", "bny-newsroom",
+        "imf-blogs", "imf-global-financial-stability-report",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")

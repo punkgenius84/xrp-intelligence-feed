@@ -364,6 +364,38 @@
       "article_path_regex": "(?:/newsroom/[^/?#]+|/NewsPrinter\\.page)",
       "native_id_query_param": "newsId",
       "detail_fallback_limit": 1
+    },
+    {
+      "source_id": "imf-blogs",
+      "name": "International Monetary Fund — Blogs",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.imf.org/en/blogs",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.imf.org",
+        "imf.org"
+      ],
+      "article_path_regex": "/en/blogs/articles/\\d{4}/\\d{2}/\\d{2}/[^/?#]+"
+    },
+    {
+      "source_id": "imf-global-financial-stability-report",
+      "name": "International Monetary Fund — Global Financial Stability Report",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.imf.org/en/Publications/GFSR",
+      "enabled": true,
+      "lookback_days": 365,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.imf.org",
+        "imf.org"
+      ],
+      "article_path_regex": "/en/Publications/GFSR/Issues/\\d{4}/\\d{2}/\\d{2}/[^/?#]+"
     }
   ]
 }
