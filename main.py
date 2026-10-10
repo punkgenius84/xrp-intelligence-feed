@@ -18,7 +18,7 @@ from intelligence.deduplication import deduplicate
 from intelligence.correlation import build_correlation_card, correlate
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
-from intelligence.pipeline import enrich_clusters
+from intelligence.pipeline import enrich_clusters, select_items
 from intelligence.events import event_to_dict
 
 from intelligence.buried_signals import detect_buried_signals
@@ -458,6 +458,23 @@ def score_feed(result: PipelineResult) -> list:
         f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} "
         f"| Buried signals: {len(buried_signals)} | Intelligence events: {len(result.intelligence_events)}"
     )
+    intelligence_config = load_intelligence_config()
+    if intelligence_config.enabled:
+        eligible_count = sum(
+            item.relevance_score >= intelligence_config.min_relevance_score
+            for item in fresh
+        )
+        selected_count = len(select_items(fresh, intelligence_config))
+        print(
+            "Intelligence eligibility: "
+            f"{len(fresh)} fresh candidates; {eligible_count} meet minimum relevance "
+            f"score {intelligence_config.min_relevance_score}; "
+            f"{selected_count} selected (limit {intelligence_config.max_items_per_run})"
+        )
+        if not fresh:
+            print("Intelligence note: no fresh candidates were available for enrichment this run.")
+        elif not eligible_count:
+            print("Intelligence note: fresh candidates existed, but none met the configured minimum relevance score.")
     for item in relevant:
         print(
             f"[{item.relevance_score}] {item.title} — {item.source} "
