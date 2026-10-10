@@ -475,6 +475,24 @@ def score_feed(result: PipelineResult) -> list:
             print("Intelligence note: no fresh candidates were available for enrichment this run.")
         elif not eligible_count:
             print("Intelligence note: fresh candidates existed, but none met the configured minimum relevance score.")
+
+        below_minimum = sorted(
+            (
+                item for item in fresh
+                if item.relevance_score < intelligence_config.min_relevance_score
+            ),
+            key=lambda item: (-item.relevance_score, item.title.casefold()),
+        )
+        if below_minimum:
+            shown = below_minimum[:5]
+            print(
+                "Intelligence below-minimum candidates "
+                f"(showing {len(shown)} of {len(below_minimum)}; capped at 5):"
+            )
+            for item in shown:
+                print(f"  [{item.relevance_score}] {item.title} — {item.source}")
+                for reason in item.score_reasons[:3]:
+                    print(f"    - {reason}")
     for item in relevant:
         print(
             f"[{item.relevance_score}] {item.title} — {item.source} "
