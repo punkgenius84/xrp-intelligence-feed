@@ -241,3 +241,20 @@ def test_unexpected_rss_source_exception_isolated_from_other_pipeline_work(monke
 
     assert result.collected == []
     assert result.failures == ["rss-boom: unexpected collection error: feedparser internals exploded"]
+
+
+def test_score_feed_reports_shadow_intelligence_eligibility(monkeypatch, capsys):
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(
+            enabled=True,
+            min_relevance_score=35,
+            max_items_per_run=5,
+        ),
+    )
+    result = main.PipelineResult()
+    main.score_feed(result)
+    output = capsys.readouterr().out
+    assert "Intelligence eligibility: 0 fresh candidates; 0 meet minimum relevance score 35; 0 selected (limit 5)" in output
+    assert "no fresh candidates were available for enrichment" in output
