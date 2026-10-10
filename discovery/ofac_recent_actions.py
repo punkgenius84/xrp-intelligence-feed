@@ -204,6 +204,11 @@ def _regex_fallback_rows(text: str) -> list[dict[str, Any]]:
         })
     unique: dict[str, dict[str, Any]] = {}
     for row in rows:
+        # OFAC action IDs encode the action date. Reject a recovered row when
+        # its bounded date does not match that identity; this prevents a
+        # neighboring card's date from making a malformed row look complete.
+        if row["date"].strftime("%Y%m%d") != row["native_id"]:
+            continue
         unique.setdefault(row["native_id"], row)
     return list(unique.values())
 
@@ -290,9 +295,10 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         # page, the page is complete even if the structural parser could not
         # recognize one or more wrappers. Keep fail-closed behavior when any
         # official action ID remains unrecovered.
-        complete = complete and (
-            official_ids <= {row["native_id"] for row in parsed}
-        )
+        # A malformed structural row is recoverable when the bounded fallback
+        # independently validates every official action ID on the page. Do not
+        # retain the earlier structural-parser failure after complete recovery.
+        complete = official_ids <= {row["native_id"] for row in parsed}
     return parsed, complete
 
 
