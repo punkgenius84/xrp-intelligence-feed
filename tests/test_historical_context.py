@@ -58,3 +58,33 @@ def test_context_pack_validates_unique_ids_and_source_urls(tmp_path):
     }), encoding="utf-8")
     with pytest.raises(HistoricalContextError, match="HTTPS"):
         load_historical_context(path)
+
+
+def test_historical_context_captures_xrp_specific_sbi_odl_deployment():
+    records = select_historical_context(
+        "SBI Remit expands Japan remittances with Coins.ph",
+        "The service connects with SBI VC Trade.",
+    )
+    sbi = [record for record in records if record["id"] == "sbi-remit-coinsph-odl-japan-2021"]
+    assert sbi
+    assert "XRP" in sbi[0]["relationship"]
+    assert "current corridor" in sbi[0]["status"]
+
+
+def test_stablecoin_and_tokenization_context_does_not_conflate_rlusd_with_xrp():
+    records = select_historical_context(
+        "DBS and Franklin Templeton announce sgBENJI and RLUSD plans",
+        "The initiative involves the XRP Ledger.",
+    )
+    dbs = [record for record in records if record["id"] == "dbs-franklin-tokenized-fund-rlusd-xrpl-2025"]
+    assert dbs
+    assert "not evidence that XRP itself" in dbs[0]["classification"]
+    assert "exploratory" in dbs[0]["status"]
+
+
+def test_context_pack_includes_source_linked_institutional_history():
+    records = load_historical_context()
+    ids = {record["id"] for record in records}
+    assert "bny-rlusd-reserve-custody-2025" in ids
+    assert "securitize-buidl-vbill-rlusd-xrpl-2025" in ids
+    assert all(record["source_url"].startswith("https://") for record in records)
