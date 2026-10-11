@@ -623,8 +623,23 @@ def publish_feed(
         return
 
     pending = outbox_store.load() if outbox_store is not None else relevant
-    if outbox_store is not None and not pending:
-        pending = relevant
+    if outbox_store is not None:
+        # A prior run may have successfully posted an item but failed to persist
+        # the normal seen/outbox state afterward. Delivery history is the durable
+        # evidence that prevents that recovery path from posting the same item again.
+        delivery_history = JsonDeliveryHistory()
+        posted_keys = {item.key for item in delivery_history.load()}
+        if posted_keys:
+            already_delivered = {item.key for item in pending if item.key in posted_keys}
+            if already_delivered:
+                outbox_store.remove(already_delivered)
+                pending = [item for item in pending if item.key not in already_delivered]
+                print(
+                    f"Discord: removed {len(already_delivered)} already-delivered "
+                    "item(s) from the recovery outbox"
+                )
+        if not pending:
+            pending = relevant
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:
