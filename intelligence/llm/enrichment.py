@@ -7,6 +7,7 @@ from models import NewsItem
 from ..evidence import build_evidence_bundle
 from ..event_clustering import EventCluster
 from ..events import IntelligenceEvent
+from ..historical_context import format_historical_context, select_historical_context
 from .base import LLMError, LLMProvider
 from .prompts import SYSTEM_PROMPT, build_cluster_user_prompt, build_user_prompt
 from .schemas import IntelligenceAnalysis, parse_analysis
@@ -84,9 +85,10 @@ def _validate_claim_grounding(
 def _validate_event_metadata_grounding(
     analysis: IntelligenceAnalysis,
     source_text: str,
+    historical_context: str = "",
 ) -> IntelligenceAnalysis:
-    """Reject unsupported XRP-family assertions outside the claim array."""
-    normalized_source = source_text.lower()
+    """Reject XRP-family metadata assertions unsupported by source or matched background."""
+    normalized_source = f"{source_text}\n{historical_context}".lower()
     metadata = " ".join(
         [
             analysis.event_summary,
@@ -127,15 +129,18 @@ def _validate_event_type(analysis: IntelligenceAnalysis, source_text: str) -> In
 
 
 def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
-    response = provider.generate(
-        system=SYSTEM_PROMPT,
-        user=build_user_prompt(
-            title=item.title,
-            summary=item.summary,
-            source=item.source,
-        ),
-    )
     try:
+        context_records = select_historical_context(item.title, item.summary)
+        historical_context = format_historical_context(context_records)
+        response = provider.generate(
+            system=SYSTEM_PROMPT,
+            user=build_user_prompt(
+                title=item.title,
+                summary=item.summary,
+                source=item.source,
+                historical_context=historical_context,
+            ),
+        )
         analysis = parse_analysis(
             response.content,
             source_url=item.url,
@@ -150,6 +155,7 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
         analysis = _validate_event_metadata_grounding(
             analysis,
             f"{item.title}\n{item.summary}",
+            historical_context,
         )
         return _validate_event_type(analysis, f"{item.title}\n{item.summary}")
     except ValueError as exc:
@@ -161,11 +167,16 @@ def analyze_cluster(
     provider: LLMProvider,
 ) -> IntelligenceAnalysis:
     primary = cluster.primary
-    response = provider.generate(
-        system=SYSTEM_PROMPT,
-        user=build_cluster_user_prompt(cluster.members),
-    )
     try:
+        combined_text = "\n".join(f"{item.title}\n{item.summary}" for item in cluster.members)
+        context_records = select_historical_context(
+            "\n".join(item.title for item in cluster.members), combined_text
+        )
+        historical_context = format_historical_context(context_records)
+        response = provider.generate(
+            system=SYSTEM_PROMPT,
+            user=build_cluster_user_prompt(cluster.members, historical_context),
+        )
         analysis = parse_analysis(
             response.content,
             source_url=primary.url,
@@ -177,8 +188,8 @@ def analyze_cluster(
             evidence_text[f"source-{index} title"] = item.title
             evidence_text[f"source-{index} summary"] = item.summary
         analysis = _validate_claim_grounding(analysis, evidence_text)
-        source_text = "\n".join(f"{item.title}\n{item.summary}" for item in cluster.members)
-        analysis = _validate_event_metadata_grounding(analysis, source_text)
+        source_text = combined_text
+        analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
         return _validate_event_type(analysis, source_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc
