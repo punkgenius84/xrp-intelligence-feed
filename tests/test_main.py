@@ -182,10 +182,14 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     JsonDeliveryHistory(history_path).record([item], {item.key}, posted_at=published_at)
 
     monkeypatch.setattr(main, "JsonDeliveryHistory", lambda: JsonDeliveryHistory(history_path))
+    published = []
     monkeypatch.setattr(
         main,
         "publish",
-        lambda items, settings: pytest.fail("already-delivered recovery item must not be posted"),
+        lambda items, settings: (
+            published.extend(items),
+            SimpleNamespace(posted_keys=[]),
+        )[1],
     )
     monkeypatch.setattr(
         main,
@@ -200,6 +204,7 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     main.publish_feed([], [], settings, outbox)
 
     assert outbox.load() == []
+    assert published == []
 
 def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch):
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
