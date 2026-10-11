@@ -76,6 +76,7 @@ def test_registered_institutional_sources_are_bounded():
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
     assert citi["detail_fallback_limit"] == 1
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
+    assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
@@ -512,36 +513,19 @@ def test_coinbase_blog_accepts_current_localized_article_route():
 
 
 
-def test_coinbase_investor_news_recovers_dated_article_with_bounded_fallback():
-    article_url = (
-        "https://investor.coinbase.com/news/news-details/2026/"
-        "Coinbase-to-Participate-in-Citis-2026-Global-TMT-Conference/default.aspx"
-    )
-    index_url = "https://investor.coinbase.com/news/"
-    index = HttpResponse(
-        200, {"content-type": "text/html"},
-        f'<html><body><a href="{article_url}">Read More</a><p>Loading</p></body></html>'.encode(),
-        index_url,
-    )
-    detail = HttpResponse(
-        200, {"content-type": "text/html"},
-        b"<html><body><h1>Coinbase to Participate in Citi's 2026 Global TMT Conference</h1><p>September 3, 2026</p></body></html>",
-        article_url,
-    )
-    http = SequenceHttp([index, detail])
+def test_coinbase_investor_news_is_parked_until_static_article_data_is_accessible():
     investor = next(
         item for item in load_discovery_sources()
         if item["source_id"] == "coinbase-investor-news"
     )
+    assert investor["enabled"] is False
 
+    http = SequenceHttp([])
     result = InstitutionalPressDiscovery(investor, http=http, now=lambda: STAMP).collect()
 
-    assert result.status == "partial"
-    assert len(result.candidates) == 1
-    assert result.candidates[0].title == "Coinbase to Participate in Citi's 2026 Global TMT Conference"
-    assert result.candidates[0].published_at == datetime(2026, 9, 3, tzinfo=timezone.utc)
-    assert http.calls[1][0] == article_url
-    assert "bounded detail fallback" in " ".join(result.errors)
+    assert result.status == "not_configured"
+    assert result.candidates == []
+    assert http.calls == []
 
 
 def test_jpmorgan_newsroom_recovers_dated_article_with_bounded_fallback():
