@@ -28,7 +28,7 @@ from intelligence.source_quality import classify_source_quality
 from sources.registry import SourceRegistryError, enabled_sources
 from storage.correlation_state import CorrelationStateError, JsonCorrelationState
 from storage.database import JsonState, StateFileError
-from storage.outbox import JsonOutboxState, OutboxError
+from storage.outbox import JsonOutboxState, OutboxError, publication_key
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
 from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
@@ -643,7 +643,7 @@ def publish_feed(
         if not pending:
             # Do not reintroduce a just-reconciled item from this run's fresh
             # candidate list when the seen-state cache was the part that failed.
-            pending = [item for item in relevant if item.key not in delivered_keys]
+            pending = [item for item in relevant if publication_key(item) not in delivered_keys]
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:
