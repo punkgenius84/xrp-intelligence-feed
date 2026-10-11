@@ -20,7 +20,7 @@ For a single source, a valid claim looks like: {"text":"The source reports X.","
 """
 
 
-def build_user_prompt(*, title: str, summary: str, source: str) -> str:
+def build_user_prompt(*, title: str, summary: str, source: str, historical_context: str = "") -> str:
     # Explicit delimiters make the trust boundary visible to the model.
     return (
         "ARTICLE METADATA (trusted by the application):\n"
@@ -29,12 +29,13 @@ def build_user_prompt(*, title: str, summary: str, source: str) -> str:
         f"TITLE: {title[:1000]}\n"
         f"SUMMARY: {summary[:12000]}\n"
         "--- END UNTRUSTED ARTICLE ---\n"
-        "Analyze only this supplied material."
+        + (f"\\n\\n{historical_context}" if historical_context else "")
+        + "\\nAnalyze the current article using only its text for claims. Historical background may help interpret significance but must not be presented as current activity unless the article confirms it."
     )
 
 
 
-def build_cluster_user_prompt(items) -> str:
+def build_cluster_user_prompt(items, historical_context: str = "") -> str:
     """Build a bounded prompt containing multiple independent untrusted sources."""
     parts = [
         "ARTICLE METADATA (trusted by the application):",
