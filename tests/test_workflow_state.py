@@ -44,7 +44,8 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
-    assert "if: success()" in save
+    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
+    assert "id: feed" in contents
 
 
 def test_state_restore_follows_tests_and_precedes_execution_without_dependency_cache():
