@@ -28,7 +28,7 @@ from intelligence.source_quality import classify_source_quality
 from sources.registry import SourceRegistryError, enabled_sources
 from storage.correlation_state import CorrelationStateError, JsonCorrelationState
 from storage.database import JsonState, StateFileError
-from storage.outbox import JsonOutboxState, OutboxError
+from storage.outbox import JsonOutboxState, OutboxError, publication_key
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
 from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
@@ -623,12 +623,14 @@ def publish_feed(
         return
 
     pending = outbox_store.load() if outbox_store is not None else relevant
+    delivered_keys: set[str] = set()
     if outbox_store is not None:
         # A prior run may have successfully posted an item but failed to persist
         # the normal seen/outbox state afterward. Delivery history is the durable
         # evidence that prevents that recovery path from posting the same item again.
         delivery_history = JsonDeliveryHistory()
-        posted_keys = {item.key for item in delivery_history.load()}
+        delivered_keys = {item.key for item in delivery_history.load()}
+        posted_keys = delivered_keys
         if posted_keys:
             already_delivered = {item.key for item in pending if item.key in posted_keys}
             if already_delivered:
@@ -639,7 +641,9 @@ def publish_feed(
                     "item(s) from the recovery outbox"
                 )
         if not pending:
-            pending = relevant
+            # Do not reintroduce a just-reconciled item from this run's fresh
+            # candidate list when the seen-state cache was the part that failed.
+            pending = [item for item in relevant if publication_key(item) not in delivered_keys]
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:

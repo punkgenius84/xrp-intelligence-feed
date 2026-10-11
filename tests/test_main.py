@@ -201,7 +201,16 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
         dry_run=False,
         webhook_url="https://discord.com/api/webhooks/test/token",
     )
-    main.publish_feed([], [], settings, outbox)
+    # Simulate stale seen-state: a fresh NewsItem with the same stable
+    # publication identity appears in the current run's results.
+    fresh_item = SimpleNamespace(
+        candidate_id=item.candidate_id,
+        content_hash=item.content_hash,
+        title=item.title,
+        url=item.url,
+        source=item.source,
+    )
+    main.publish_feed([fresh_item], [], settings, outbox)
 
     assert outbox.load() == []
     assert published == []
