@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "description": "Curated, source-linked historical context. These records are not evidence that a relationship or product remains active today.",
+  "records": [
+    {
+      "id": "r3-xrp-bank-trial-2016",
+      "date": "2016-10-20",
+      "entities": ["R3", "Barclays", "BMO Financial Group", "CIBC", "Intesa Sanpaolo", "Macquarie Group", "National Australia Bank", "Natixis", "Nordea", "Royal Bank of Canada", "Santander", "Scotiabank", "Westpac"],
+      "aliases": ["R3", "Barclays", "BMO", "CIBC", "Intesa Sanpaolo", "Macquarie", "National Australia Bank", "NAB", "Natixis", "Nordea", "RBC", "Royal Bank of Canada", "Santander", "Scotiabank", "Westpac"],
+      "relationship": "Ripple reported that a 12-bank R3 consortium was trialing XRP for cross-border payments and liquidity.",
+      "classification": "XRP-specific trial",
+      "status": "historical; trial does not establish current production use",
+      "source_url": "https://ripple.com/insights/ripple-and-r3-team-up-with-12-banks-to-trial-xrp-for-cross-border-payments/"
+    },
+    {
+      "id": "ripple-institutional-network-2016",
+      "date": "2016-06-22",
+      "entities": ["Santander", "UniCredit", "UBS", "ReiseBank", "CIBC", "National Bank of Abu Dhabi", "ATB Financial"],
+      "aliases": ["Santander", "UniCredit", "UBS", "ReiseBank", "CIBC", "National Bank of Abu Dhabi", "NBAD", "ATB Financial"],
+      "relationship": "Ripple announced these financial institutions had joined its payment network and described successful real-money pilots. This announcement concerned Ripple's network, not proof that every institution used XRP.",
+      "classification": "Ripple network relationship; XRP use not established by this source",
+      "status": "historical; current product and relationship status requires fresh confirmation",
+      "source_url": "https://ripple.com/ripple-press/financial-institutions-join-ripples-global-network/"
+    },
+    {
+      "id": "amex-santander-ripplenet-2017",
+      "date": "2017-11-16",
+      "entities": ["American Express", "Santander"],
+      "aliases": ["American Express", "AmEx", "AMEX", "Santander"],
+      "relationship": "American Express FX International Payments worked with Ripple and Santander UK on a blockchain-enabled US-to-UK business payment channel through Ripple's network.",
+      "classification": "Ripple network/payment-channel relationship; XRP use not established by this source",
+      "status": "historical announcement; do not assume ongoing service",
+      "source_url": "https://ripple.com/insights/american-express-joins-ripplenet-giving-visibility-and-speed-to-global-commercial-payments/"
+    },
+    {
+      "id": "moneygram-xrp-odl-2018-2021",
+      "date": "2018-01-11",
+      "entities": ["MoneyGram", "Bitso"],
+      "aliases": ["MoneyGram", "Bitso"],
+      "relationship": "MoneyGram announced a plan to use XRP in payment flows through xRapid, later associated with On-Demand Liquidity (ODL); Ripple reported Bitso as a key exchange partner for the US-Mexico corridor. Ripple and MoneyGram announced that their partnership agreement ended on 2021-03-09.",
+      "classification": "XRP/ODL commercial use with explicit end-of-partnership record",
+      "status": "ended partnership as of 2021-03-09; any later relationship must be independently verified",
+      "source_url": "https://ripple.com/ripple-press/our-statement-on-partnering-with-moneygram/"
+    },
+    {
+      "id": "odl-customer-expansion-2019",
+      "date": "2019-11-07",
+      "entities": ["goLance", "Viamericas", "FlashFX", "Interbank Peru", "MoneyGram"],
+      "aliases": ["goLance", "Viamericas", "FlashFX", "Interbank Peru", "Interbank", "MoneyGram"],
+      "relationship": "Ripple reported more than two dozen ODL customers and named goLance, Viamericas, FlashFX, and Interbank Peru among customers committed to using ODL. ODL was described as using XRP as a bridge asset; this is a historical snapshot.",
+      "classification": "historical ODL/XRP customer evidence",
+      "status": "historical; current customer status and live corridors require fresh confirmation",
+      "source_url": "https://ripple.com/ripple-press/ripple-announces-more-than-300-customers-ripplenet-growth/"
+    },
+    {
+      "id": "ripple-tranglo-odl-2021",
+      "date": "2021-03-30",
+      "entities": ["Tranglo"],
+      "aliases": ["Tranglo"],
+      "relationship": "Ripple announced an agreement to acquire a 40% stake in Tranglo, describing the relationship as supporting cross-border payments and expanding ODL corridors using XRP.",
+      "classification": "corporate investment and ODL/XRP-related payments",
+      "status": "historical announcement; do not infer current ownership percentage, operations, or corridor activity without newer evidence",
+      "source_url": "https://ripple.com/insights/ripple-acquires-40-stake-in-asias-leading-cross-border-payments-specialist-tranglo/"
+    },
+    {
+      "id": "palau-ripple-xrpl-exploration-2021",
+      "date": "2021-11-23",
+      "entities": ["Republic of Palau"],
+      "aliases": ["Palau", "Republic of Palau"],
+      "relationship": "Ripple and the Republic of Palau announced a partnership to explore a digital-currency strategy, cross-border payments, and a possible USD-backed digital currency with use cases on the XRP Ledger.",
+      "classification": "government partnership/exploration; not proof of a launched national stablecoin",
+      "status": "historical exploration announcement; implementation and current status require fresh confirmation",
+      "source_url": "https://ripple.com/ripple-press/republic-of-palau-partners-with-ripple-to-develop-digital-currency-strategy-2/"
+    },
+    {
+      "id": "xrpl-ripple-distinction",
+      "date": "2018-02-22",
+      "entities": ["Ripple", "XRP", "XRP Ledger"],
+      "aliases": ["Ripple", "XRP", "XRPL", "XRP Ledger"],
+      "relationship": "Ripple's own explanation states that the XRP Ledger is decentralized and would continue to exist if Ripple ceased to exist. Ripple is a company; XRP is the digital asset; XRPL is the ledger/network. They are related but not interchangeable.",
+      "classification": "foundational architecture distinction",
+      "status": "foundational context; use to avoid conflating company, asset, and network",
+      "source_url": "https://ripple.com/insights/continued-decentralization-xrp-ledger-consensus-protocol/"
+    }
+  ]
+}
