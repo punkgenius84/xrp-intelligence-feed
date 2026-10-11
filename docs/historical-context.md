@@ -26,3 +26,17 @@ The historical pack is `config/historical_context.json`. It is not a 180-day fee
 - Review context selection and prompt output before allowing any intelligence publication.
 
 This is a curated foundation, not an exhaustive history. Expansion should be research-driven, prioritized by relationships likely to help connect new bank, payments, regulatory, stablecoin, custody, tokenization, and XRPL developments.
+
+
+## Current coverage added in the institutional-history expansion
+
+The pack also records source-linked snapshots for:
+
+- SBI Remit, Coins.ph, and SBI VC Trade's 2021 Japan-to-Philippines ODL launch, where Ripple explicitly named XRP.
+- RLUSD's December 2024 launch, kept distinct from XRP.
+- Ripple Payments' 2025 RLUSD integration and the select customers named in that announcement.
+- BNY's announced primary custody role for RLUSD reserves.
+- The DBS / Franklin Templeton / Ripple MoU involving tokenized sgBENJI and RLUSD on/around XRPL.
+- The Securitize integration announcement involving RLUSD as an exchange option for tokenized BUIDL and VBILL fund shares.
+
+These records deliberately separate XRP bridge-asset use from RLUSD stablecoin use, XRPL tokenization, and custody relationships. An announcement or MoU is not automatically evidence that every planned feature launched or remains active.
