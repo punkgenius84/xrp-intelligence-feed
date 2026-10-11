@@ -31,6 +31,36 @@ Institutional or government coverage is **not automatically XRP news**. The feed
 
 The intelligence layer runs downstream of deterministic relevance. The LLM cannot promote an item into relevance, invent facts or sources, or bypass evidence validation.
 
+GitHub Actions currently runs qwen2.5:3b through Ollama in shadow mode. Intelligence events require grounded claims with controlled evidence references. **INTELLIGENCE_PUBLISH=false remains intentional until real scheduled output has been reviewed for semantic accuracy as well as evidence quality.**
+
+### Permanent historical context
+
+The intelligence model has access to a separate, curated historical context pack at config/historical_context.json. This is **institutional memory**, not a replacement for the bounded news lookback.
+
+The distinction matters:
+
+- The normal news/discovery lookback answers **what happened recently**.
+- Historical context records source-linked relationships and developments that may be years old but are still useful for recognizing the significance of a new event.
+- Historical records do **not** expire on a 180-day rolling window.
+- At most four relevant historical records are selected for an article based on explicit entity aliases.
+- Historical records are background only; current claims must still be grounded in the current article/source evidence.
+
+The context pack deliberately tracks relationships such as historical XRP/ODL deployments, Ripple network relationships, bank/payment relationships, government exploration, RLUSD, custody, and tokenization. Each record carries a date, entities, classification, status caveat, and HTTPS source URL.
+
+The model is explicitly instructed not to turn historical relationships into claims of current activity. In particular, it must distinguish:
+
+- **Ripple** — the company.
+- **XRP** — the digital asset.
+- **XRPL/XRP Ledger** — the ledger/network.
+- **RLUSD** — Ripple's stablecoin.
+- **RippleNet/payment-network relationships** — not automatically evidence of XRP use.
+- **Historical pilots, announced partnerships, or MoUs** — not automatically proof of current production activity.
+
+See docs/historical-context.md for maintenance rules and the current coverage philosophy. Expansion should be research-driven and source-linked rather than becoming an unverified list of every historical Ripple mention.
+
+
+The intelligence layer runs downstream of deterministic relevance. The LLM cannot promote an item into relevance, invent facts or sources, or bypass evidence validation.
+
 GitHub Actions currently runs `qwen2.5:3b` through Ollama in shadow mode. Intelligence events require grounded claims with controlled evidence references. **`INTELLIGENCE_PUBLISH=false` remains intentional until real scheduled output has been reviewed for semantic accuracy as well as evidence quality.**
 
 ## Quick start
@@ -42,6 +72,17 @@ GitHub Actions currently runs `qwen2.5:3b` through Ollama in shadow mode. Intell
 For local intelligence previews, set `INTELLIGENCE_ENABLED=true`. Intelligence publication requires the separate `INTELLIGENCE_PUBLISH=true` flag and a configured Discord webhook.
 
 ## Current production posture
+
+The project has two separate delivery paths. Normal deterministic news posts can be delivered when configured; intelligence-event delivery is deliberately kept separate and remains disabled while shadow output is being validated.
+
+- Normal relevant-news Discord delivery: **enabled when the webhook is configured**.
+- Intelligence processing: **enabled in GitHub Actions shadow mode**.
+- Intelligence-event Discord delivery: **disabled pending shadow-output validation**.
+- Historical institutional context: **enabled as background context for intelligence analysis**.
+- Evidence validation: **fail closed**.
+- Persistent state: restored/saved through GitHub Actions cache; intelligence, correlation, discovery, and delivery state are kept separate.
+- No paid APIs are required.
+
 
 - Normal relevant-news Discord delivery: **enabled when the webhook is configured**.
 - Intelligence processing: **enabled in GitHub Actions shadow mode**.
