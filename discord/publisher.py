@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import html
 import os
 import re
 import time
@@ -13,6 +14,10 @@ from discord.webhook import DiscordError, DiscordWebhook, is_valid_webhook_url
 
 DEFAULT_MAX_POSTS = 5
 MAX_POSTS_LIMIT = 25
+# Anything published longer ago than this is never posted. It is the safety net that stops a
+# lost cache or fresh install from flooding the channel with old releases (0 disables it).
+DEFAULT_MAX_AGE_DAYS = 14
+MAX_AGE_DAYS_LIMIT = 365
 _TRUTHY = {"1", "true", "yes", "on"}
 _MARKDOWN = re.compile(r"([\\*_~`|>])")
 
@@ -22,6 +27,7 @@ class DiscordSettings:
     webhook_url: str = ""
     max_posts: int = DEFAULT_MAX_POSTS
     dry_run: bool = False
+    max_age_days: int = DEFAULT_MAX_AGE_DAYS
 
 
 @dataclass
@@ -53,11 +59,23 @@ def settings_from_env(env: Mapping[str, str] | None = None) -> DiscordSettings:
         if not 1 <= max_posts <= MAX_POSTS_LIMIT:
             raise ValueError(f"DISCORD_MAX_POSTS must be from 1 to {MAX_POSTS_LIMIT}")
     dry_run = (env.get("DISCORD_DRY_RUN") or "").strip().lower() in _TRUTHY
-    return DiscordSettings(webhook_url=url, max_posts=max_posts, dry_run=dry_run)
+    raw_age = (env.get("DISCORD_MAX_AGE_DAYS") or "").strip()
+    max_age_days = DEFAULT_MAX_AGE_DAYS
+    if raw_age:
+        try:
+            max_age_days = int(raw_age)
+        except ValueError:
+            raise ValueError("DISCORD_MAX_AGE_DAYS must be a whole number") from None
+        if not 0 <= max_age_days <= MAX_AGE_DAYS_LIMIT:
+            raise ValueError(f"DISCORD_MAX_AGE_DAYS must be from 0 to {MAX_AGE_DAYS_LIMIT}")
+    return DiscordSettings(webhook_url=url, max_posts=max_posts, dry_run=dry_run,
+                           max_age_days=max_age_days)
 
 
 def _clean(value: str, limit: int) -> str:
-    text = _MARKDOWN.sub(r"\\\1", " ".join(str(value).split()))
+    # Display only: titles can arrive with HTML entities (e.g. &#x27;). Unescape before the
+    # markdown escaping. Stored titles and fingerprints are deliberately left untouched.
+    text = _MARKDOWN.sub(r"\\\1", " ".join(html.unescape(str(value)).split()))
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
@@ -83,6 +101,25 @@ def format_message(item: Any) -> str:
 def _when(item: Any) -> datetime:
     value = item.published_at or item.collected_at
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def split_stale(items: list[Any], max_age_days: int,
+                now: datetime | None = None) -> tuple[list[Any], list[Any]]:
+    """Split items into (postable, stale) by publication age. max_age_days=0 disables the check."""
+    if max_age_days <= 0:
+        return list(items), []
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=max_age_days)
+    postable: list[Any] = []
+    stale: list[Any] = []
+    for item in items:
+        value = getattr(item, "published_at", None) or getattr(item, "collected_at", None)
+        if value is None:  # no timestamp to judge by: never drop silently
+            postable.append(item)
+            continue
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        (stale if value < cutoff else postable).append(item)
+    return postable, stale
 
 
 def publish(items: list[Any], settings: DiscordSettings, *, webhook: DiscordWebhook | None = None,

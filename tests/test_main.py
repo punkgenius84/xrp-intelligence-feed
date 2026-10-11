@@ -214,6 +214,7 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     settings = SimpleNamespace(
         dry_run=False,
         webhook_url="https://discord.com/api/webhooks/test/token",
+        max_age_days=0,  # fixed 2026 dates in this test must not age out of the window
     )
     # Simulate stale seen-state: a fresh NewsItem with the same stable
     # publication identity appears in the current run's results.

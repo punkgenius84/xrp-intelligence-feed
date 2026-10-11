@@ -128,3 +128,24 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
 
     save = _step_block(contents, "name: Save persistent state")
     assert "if: success() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
+
+
+def test_weekly_digest_restores_with_the_same_paths_and_key_pattern_as_the_feed():
+    """GitHub cache versions are derived from the path list: a different list never hits."""
+    import re
+    from pathlib import Path
+
+    def block(name, marker):
+        text = Path(f".github/workflows/{name}").read_text(encoding="utf-8")
+        start = text.index(marker)
+        return text[start:start + 1500]
+
+    def paths(section):
+        return re.search(r"path: \|\n((?:\s+state/\S+\n)+)", section).group(1).split()
+
+    feed = block("news_feed.yml", "- name: Restore persistent state")
+    digest = block("weekly_digest.yml", "- name: Restore persistent state")
+    assert paths(digest) == paths(feed)
+    assert "-bootstrap" not in digest
+    assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in digest
+    assert "xrp-state-${{ github.ref_name }}-v1-\n" in digest

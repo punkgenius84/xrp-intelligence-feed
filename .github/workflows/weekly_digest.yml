@@ -21,8 +21,18 @@ jobs:
       - name: Restore persistent state
         uses: actions/cache/restore@v5
         with:
-          path: state/delivery_history.json
-          key: xrp-state-${{ github.ref_name }}-v1-bootstrap
+          # The cache "version" is derived from this exact path list, so it must match the
+          # list the main feed workflow saves with. A different list never hits those caches.
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          # Deliberately never an exact hit: the prefix picks the newest immutable state cache.
+          key: xrp-state-${{ github.ref_name }}-v1-restore
           restore-keys: |
             xrp-state-${{ github.ref_name }}-v1-
       - uses: actions/setup-python@v6

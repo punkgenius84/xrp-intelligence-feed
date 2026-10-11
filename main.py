@@ -11,7 +11,7 @@ from discovery.dispatch import (DiscoveryDispatchError, DiscoveryRegistryError,
                                 collect_source, load_discovery_sources)
 from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
-from discord.publisher import publish, settings_from_env
+from discord.publisher import DEFAULT_MAX_AGE_DAYS, publish, settings_from_env, split_stale
 from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
@@ -110,6 +110,7 @@ def run_pipeline(
     outbox_state=None,
     intelligence_state=None,
     intelligence_outbox=None,
+    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
 ) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -245,7 +246,11 @@ def run_pipeline(
     )
     publishable = [item for item in fresh if item.relevance_score >= thresholds["publish_score"]]
     if outbox_state is not None:
-        outbox_state.enqueue(publishable)
+        queueable, too_old = split_stale(publishable, max_age_days)
+        if too_old:
+            print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
+                  "were not queued for delivery")
+        outbox_state.enqueue(queueable)
 
     intelligence_events = []
     intelligence_failures: list[str] = []
@@ -393,6 +398,7 @@ def collect_feed(discord_settings):
         result = run_pipeline(
             outbox_state=outbox_store,
             intelligence_outbox=intelligence_outbox_store,
+            max_age_days=getattr(discord_settings, "max_age_days", DEFAULT_MAX_AGE_DAYS),
         ) if outbox_store is not None else run_pipeline()
         return result, outbox_store, intelligence_outbox_store
     except (
@@ -618,11 +624,25 @@ def publish_feed(
     intelligence_outbox_store=None,
 ) -> None:
     """Publish normal and intelligence items through durable delivery paths."""
+    max_age_days = getattr(discord_settings, "max_age_days", DEFAULT_MAX_AGE_DAYS)
     if discord_settings.dry_run:
+        relevant, too_old = split_stale(relevant, max_age_days)
+        if too_old:
+            print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
+                  "would be skipped")
         publish(relevant, discord_settings)
         return
 
     pending = outbox_store.load() if outbox_store is not None else relevant
+    pending, stale_pending = split_stale(pending, max_age_days)
+    if stale_pending:
+        # Too old to be news. Drop them from the queue permanently instead of letting them
+        # block or crowd out fresh items.
+        if outbox_store is not None:
+            outbox_store.remove({item.key if hasattr(item, "key") else publication_key(item)
+                                 for item in stale_pending})
+        print(f"Discord: dropped {len(stale_pending)} queued item(s) older than "
+              f"{max_age_days} days")
     delivered_keys: set[str] = set()
     if outbox_store is not None:
         # A prior run may have successfully posted an item but failed to persist
@@ -653,11 +673,11 @@ def publish_feed(
         if not pending:
             # Do not reintroduce a just-reconciled item from this run's fresh
             # candidate list when the seen-state cache was the part that failed.
-            pending = [
+            pending, _ = split_stale([
                 item for item in relevant
                 if publication_key(item) not in delivered_keys
                 and getattr(item, "url", "").strip().rstrip("/") not in delivered_urls
-            ]
+            ], max_age_days)
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:

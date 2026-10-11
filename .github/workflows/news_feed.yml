@@ -169,6 +169,8 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_INTELLIGENCE_DISCORD_WEBHOOK }}
           DISCORD_MAX_POSTS: "5"
+          # Never post anything published more than this many days ago (0 disables).
+          DISCORD_MAX_AGE_DAYS: "14"
           INTELLIGENCE_ENABLED: "true"
           INTELLIGENCE_PUBLISH: "false"
           INTELLIGENCE_MIN_SCORE: "35"
