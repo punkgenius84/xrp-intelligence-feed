@@ -629,10 +629,20 @@ def publish_feed(
         # the normal seen/outbox state afterward. Delivery history is the durable
         # evidence that prevents that recovery path from posting the same item again.
         delivery_history = JsonDeliveryHistory()
-        delivered_keys = {item.key for item in delivery_history.load()}
+        delivered_items = delivery_history.load()
+        delivered_keys = {item.key for item in delivered_items}
+        delivered_urls = {
+            item.url.strip().rstrip("/")
+            for item in delivered_items
+            if item.url.strip()
+        }
         posted_keys = delivered_keys
-        if posted_keys:
-            already_delivered = {item.key for item in pending if item.key in posted_keys}
+        if posted_keys or delivered_urls:
+            already_delivered = {
+                item.key for item in pending
+                if item.key in posted_keys
+                or (getattr(item, "url", "").strip().rstrip("/") in delivered_urls)
+            }
             if already_delivered:
                 outbox_store.remove(already_delivered)
                 pending = [item for item in pending if item.key not in already_delivered]
@@ -643,7 +653,11 @@ def publish_feed(
         if not pending:
             # Do not reintroduce a just-reconciled item from this run's fresh
             # candidate list when the seen-state cache was the part that failed.
-            pending = [item for item in relevant if publication_key(item) not in delivered_keys]
+            pending = [
+                item for item in relevant
+                if publication_key(item) not in delivered_keys
+                and getattr(item, "url", "").strip().rstrip("/") not in delivered_urls
+            ]
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:
