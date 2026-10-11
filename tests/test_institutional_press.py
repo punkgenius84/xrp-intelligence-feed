@@ -76,6 +76,7 @@ def test_registered_institutional_sources_are_bounded():
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
     assert citi["detail_fallback_limit"] == 1
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
+    assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
