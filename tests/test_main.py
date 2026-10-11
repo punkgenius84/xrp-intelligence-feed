@@ -179,7 +179,21 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     history_path = tmp_path / "delivery_history.json"
     outbox = JsonOutboxState(outbox_path)
     outbox.save([item])
-    JsonDeliveryHistory(history_path).record([item], {item.key}, posted_at=published_at)
+    # Simulate legacy history whose key differs, while the official URL is
+    # still identical. URL reconciliation must prevent replay across key migrations.
+    from storage.delivery_history import PostedItem
+    JsonDeliveryHistory(history_path).save([
+        PostedItem(
+            key="legacy-discord-key",
+            source=item.source,
+            title=item.title,
+            url=item.url,
+            published_at=item.published_at,
+            posted_at=published_at,
+            relevance_score=item.relevance_score,
+            score_reason="high-value entity",
+        )
+    ], now=published_at)
 
     monkeypatch.setattr(main, "JsonDeliveryHistory", lambda: JsonDeliveryHistory(history_path))
     published = []
