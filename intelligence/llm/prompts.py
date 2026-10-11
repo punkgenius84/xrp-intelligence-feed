@@ -32,9 +32,9 @@ def build_user_prompt(*, title: str, summary: str, source: str, historical_conte
         f"SUMMARY: {summary[:12000]}",
         "--- END UNTRUSTED ARTICLE ---",
     ]
+    parts.append("Analyze only this supplied material.")
     if historical_context:
-        parts.extend(["", historical_context])
-    parts.append("Analyze the current article using its text for claims. Historical background may inform significance, but must not be cited as evidence for current-article claims.")
+        parts.extend(["", historical_context, "Historical background may inform significance, but must not be cited as evidence for current-article claims."])
     return "\n".join(parts)
 
 
@@ -56,7 +56,7 @@ def build_cluster_user_prompt(items, historical_context: str = "") -> str:
             f"--- END UNTRUSTED SOURCE {index} ---",
             "",
         ])
-    parts.append("Evidence labels are exact and case-sensitive. For source 1, use only \"source-1 title\" or \"source-1 summary\"; for source 2, use only \"source-2 title\" or \"source-2 summary\"; continue that exact pattern for each supplied source. Do not use source names, URLs, or any other evidence labels. Claims must be grounded only in the supplied current sources. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
+    parts.append("Evidence labels are exact and case-sensitive. For source 1, use only \"source-1 title\" or \"source-1 summary\"; for source 2, use only \"source-2 title\" or \"source-2 summary\"; continue that exact pattern for each supplied source. Do not use "source title", "source summary", source names, URLs, or any other evidence labels. Claims must be grounded only in the supplied current sources. If sources disagree, preserve the disagreement as uncertainty; do not choose a winner.")
     if historical_context:
         parts.extend(["", historical_context])
     parts.append("Use historical background only to interpret significance. Do not treat it as evidence for claims about the current articles, and do not assume past relationships remain active.")
