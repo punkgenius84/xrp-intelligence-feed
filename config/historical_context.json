@@ -5,8 +5,38 @@
     {
       "id": "r3-xrp-bank-trial-2016",
       "date": "2016-10-20",
-      "entities": ["R3", "Barclays", "BMO Financial Group", "CIBC", "Intesa Sanpaolo", "Macquarie Group", "National Australia Bank", "Natixis", "Nordea", "Royal Bank of Canada", "Santander", "Scotiabank", "Westpac"],
-      "aliases": ["R3", "Barclays", "BMO", "CIBC", "Intesa Sanpaolo", "Macquarie", "National Australia Bank", "NAB", "Natixis", "Nordea", "RBC", "Royal Bank of Canada", "Santander", "Scotiabank", "Westpac"],
+      "entities": [
+        "R3",
+        "Barclays",
+        "BMO Financial Group",
+        "CIBC",
+        "Intesa Sanpaolo",
+        "Macquarie Group",
+        "National Australia Bank",
+        "Natixis",
+        "Nordea",
+        "Royal Bank of Canada",
+        "Santander",
+        "Scotiabank",
+        "Westpac"
+      ],
+      "aliases": [
+        "R3",
+        "Barclays",
+        "BMO",
+        "CIBC",
+        "Intesa Sanpaolo",
+        "Macquarie",
+        "National Australia Bank",
+        "NAB",
+        "Natixis",
+        "Nordea",
+        "RBC",
+        "Royal Bank of Canada",
+        "Santander",
+        "Scotiabank",
+        "Westpac"
+      ],
       "relationship": "Ripple reported that a 12-bank R3 consortium was trialing XRP for cross-border payments and liquidity.",
       "classification": "XRP-specific trial",
       "status": "historical; trial does not establish current production use",
@@ -15,8 +45,25 @@
     {
       "id": "ripple-institutional-network-2016",
       "date": "2016-06-22",
-      "entities": ["Santander", "UniCredit", "UBS", "ReiseBank", "CIBC", "National Bank of Abu Dhabi", "ATB Financial"],
-      "aliases": ["Santander", "UniCredit", "UBS", "ReiseBank", "CIBC", "National Bank of Abu Dhabi", "NBAD", "ATB Financial"],
+      "entities": [
+        "Santander",
+        "UniCredit",
+        "UBS",
+        "ReiseBank",
+        "CIBC",
+        "National Bank of Abu Dhabi",
+        "ATB Financial"
+      ],
+      "aliases": [
+        "Santander",
+        "UniCredit",
+        "UBS",
+        "ReiseBank",
+        "CIBC",
+        "National Bank of Abu Dhabi",
+        "NBAD",
+        "ATB Financial"
+      ],
       "relationship": "Ripple announced these financial institutions had joined its payment network and described successful real-money pilots. This announcement concerned Ripple's network, not proof that every institution used XRP.",
       "classification": "Ripple network relationship; XRP use not established by this source",
       "status": "historical; current product and relationship status requires fresh confirmation",
@@ -25,8 +72,16 @@
     {
       "id": "amex-santander-ripplenet-2017",
       "date": "2017-11-16",
-      "entities": ["American Express", "Santander"],
-      "aliases": ["American Express", "AmEx", "AMEX", "Santander"],
+      "entities": [
+        "American Express",
+        "Santander"
+      ],
+      "aliases": [
+        "American Express",
+        "AmEx",
+        "AMEX",
+        "Santander"
+      ],
       "relationship": "American Express FX International Payments worked with Ripple and Santander UK on a blockchain-enabled US-to-UK business payment channel through Ripple's network.",
       "classification": "Ripple network/payment-channel relationship; XRP use not established by this source",
       "status": "historical announcement; do not assume ongoing service",
@@ -35,8 +90,14 @@
     {
       "id": "moneygram-xrp-odl-2018-2021",
       "date": "2018-01-11",
-      "entities": ["MoneyGram", "Bitso"],
-      "aliases": ["MoneyGram", "Bitso"],
+      "entities": [
+        "MoneyGram",
+        "Bitso"
+      ],
+      "aliases": [
+        "MoneyGram",
+        "Bitso"
+      ],
       "relationship": "MoneyGram announced a plan to use XRP in payment flows through xRapid, later associated with On-Demand Liquidity (ODL); Ripple reported Bitso as a key exchange partner for the US-Mexico corridor. Ripple and MoneyGram announced that their partnership agreement ended on 2021-03-09.",
       "classification": "XRP/ODL commercial use with explicit end-of-partnership record",
       "status": "ended partnership as of 2021-03-09; any later relationship must be independently verified",
@@ -45,8 +106,21 @@
     {
       "id": "odl-customer-expansion-2019",
       "date": "2019-11-07",
-      "entities": ["goLance", "Viamericas", "FlashFX", "Interbank Peru", "MoneyGram"],
-      "aliases": ["goLance", "Viamericas", "FlashFX", "Interbank Peru", "Interbank", "MoneyGram"],
+      "entities": [
+        "goLance",
+        "Viamericas",
+        "FlashFX",
+        "Interbank Peru",
+        "MoneyGram"
+      ],
+      "aliases": [
+        "goLance",
+        "Viamericas",
+        "FlashFX",
+        "Interbank Peru",
+        "Interbank",
+        "MoneyGram"
+      ],
       "relationship": "Ripple reported more than two dozen ODL customers and named goLance, Viamericas, FlashFX, and Interbank Peru among customers committed to using ODL. ODL was described as using XRP as a bridge asset; this is a historical snapshot.",
       "classification": "historical ODL/XRP customer evidence",
       "status": "historical; current customer status and live corridors require fresh confirmation",
@@ -55,8 +129,12 @@
     {
       "id": "ripple-tranglo-odl-2021",
       "date": "2021-03-30",
-      "entities": ["Tranglo"],
-      "aliases": ["Tranglo"],
+      "entities": [
+        "Tranglo"
+      ],
+      "aliases": [
+        "Tranglo"
+      ],
       "relationship": "Ripple announced an agreement to acquire a 40% stake in Tranglo, describing the relationship as supporting cross-border payments and expanding ODL corridors using XRP.",
       "classification": "corporate investment and ODL/XRP-related payments",
       "status": "historical announcement; do not infer current ownership percentage, operations, or corridor activity without newer evidence",
@@ -65,8 +143,13 @@
     {
       "id": "palau-ripple-xrpl-exploration-2021",
       "date": "2021-11-23",
-      "entities": ["Republic of Palau"],
-      "aliases": ["Palau", "Republic of Palau"],
+      "entities": [
+        "Republic of Palau"
+      ],
+      "aliases": [
+        "Palau",
+        "Republic of Palau"
+      ],
       "relationship": "Ripple and the Republic of Palau announced a partnership to explore a digital-currency strategy, cross-border payments, and a possible USD-backed digital currency with use cases on the XRP Ledger.",
       "classification": "government partnership/exploration; not proof of a launched national stablecoin",
       "status": "historical exploration announcement; implementation and current status require fresh confirmation",
@@ -75,12 +158,145 @@
     {
       "id": "xrpl-ripple-distinction",
       "date": "2018-02-22",
-      "entities": ["Ripple", "XRP", "XRP Ledger"],
-      "aliases": ["Ripple", "XRP", "XRPL", "XRP Ledger"],
+      "entities": [
+        "Ripple",
+        "XRP",
+        "XRP Ledger"
+      ],
+      "aliases": [
+        "Ripple",
+        "XRP",
+        "XRPL",
+        "XRP Ledger"
+      ],
       "relationship": "Ripple's own explanation states that the XRP Ledger is decentralized and would continue to exist if Ripple ceased to exist. Ripple is a company; XRP is the digital asset; XRPL is the ledger/network. They are related but not interchangeable.",
       "classification": "foundational architecture distinction",
       "status": "foundational context; use to avoid conflating company, asset, and network",
       "source_url": "https://ripple.com/insights/continued-decentralization-xrp-ledger-consensus-protocol/"
+    },
+    {
+      "id": "sbi-remit-coinsph-odl-japan-2021",
+      "date": "2021-07-28",
+      "entities": [
+        "SBI Remit",
+        "Coins.ph",
+        "SBI VC Trade",
+        "Ripple"
+      ],
+      "aliases": [
+        "SBI Remit",
+        "Coins.ph",
+        "SBI VC Trade"
+      ],
+      "relationship": "Ripple announced a live On-Demand Liquidity implementation connecting SBI Remit with Coins.ph and SBI VC Trade for Japan-to-Philippines remittances; Ripple explicitly described XRP as the digital asset used to avoid pre-funding.",
+      "classification": "XRP-specific live ODL deployment announced by Ripple",
+      "status": "historical launch evidence; current corridor, volumes, counterparties, and ongoing XRP usage require newer confirmation",
+      "source_url": "https://ripple.com/ripple-press/ripple-launches-on-demand-liquidity-with-sbi-remit-to-accelerate-and-grow-cross-border-payments-from-japan/"
+    },
+    {
+      "id": "rlusd-global-launch-2024",
+      "date": "2024-12-16",
+      "entities": [
+        "Ripple USD",
+        "RLUSD",
+        "Ripple"
+      ],
+      "aliases": [
+        "RLUSD",
+        "Ripple USD",
+        "Ripple USD stablecoin"
+      ],
+      "relationship": "Ripple announced RLUSD would become available on global exchanges from December 17, 2024, describing it as a USD-denominated stablecoin backed by dollar deposits, U.S. government bonds, and cash equivalents.",
+      "classification": "Ripple-issued USD stablecoin launch",
+      "status": "launch announcement; current supply, reserve composition, distribution, and use must be verified from newer disclosures; RLUSD is not XRP",
+      "source_url": "https://ripple.com/ripple-press/raising-the-standard-for-stablecoins-ripple-usd-launches-globally/"
+    },
+    {
+      "id": "rlusd-ripple-payments-integration-2025",
+      "date": "2025-04-02",
+      "entities": [
+        "RLUSD",
+        "Ripple Payments",
+        "BKK Forex",
+        "iSend"
+      ],
+      "aliases": [
+        "RLUSD",
+        "Ripple Payments",
+        "BKK Forex",
+        "iSend"
+      ],
+      "relationship": "Ripple announced RLUSD integration into Ripple Payments and named BKK Forex and iSend as select customers using it in payment flows for cross-border treasury operations.",
+      "classification": "stablecoin integration into enterprise payments; not evidence that XRP was the settlement asset in these flows",
+      "status": "historical launch/use snapshot; current customers and flow composition require fresh confirmation",
+      "source_url": "https://ripple.com/ripple-press/ripple-integrates-rlusd-into-ripple-payments-driving-enterprise-demand-and-utility/"
+    },
+    {
+      "id": "bny-rlusd-reserve-custody-2025",
+      "date": "2025-07-09",
+      "entities": [
+        "BNY",
+        "The Bank of New York Mellon",
+        "RLUSD",
+        "Ripple"
+      ],
+      "aliases": [
+        "BNY",
+        "The Bank of New York Mellon",
+        "Bank of New York Mellon",
+        "RLUSD"
+      ],
+      "relationship": "Ripple announced that BNY was selected for primary custody of RLUSD reserves.",
+      "classification": "institutional stablecoin-reserve custody relationship; not evidence of BNY using XRP for settlement",
+      "status": "announced July 2025; verify current custody arrangements and scope from newer evidence",
+      "source_url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/"
+    },
+    {
+      "id": "dbs-franklin-tokenized-fund-rlusd-xrpl-2025",
+      "date": "2025-09-18",
+      "entities": [
+        "DBS",
+        "Franklin Templeton",
+        "sgBENJI",
+        "RLUSD",
+        "XRP Ledger"
+      ],
+      "aliases": [
+        "DBS",
+        "Franklin Templeton",
+        "sgBENJI",
+        "BENJI",
+        "RLUSD"
+      ],
+      "relationship": "DBS, Franklin Templeton, and Ripple announced an MoU for trading and lending solutions involving Franklin Templeton's tokenized money-market fund on the XRP Ledger and stablecoins including RLUSD; the announcement described sgBENJI trading on DBS Digital Exchange and exploring token use as collateral.",
+      "classification": "tokenized fund and stablecoin institutional initiative on XRPL; not evidence that XRP itself is the fund settlement or collateral asset",
+      "status": "announced MoU and planned/exploratory solutions; do not treat all proposed functionality as launched without newer confirmation",
+      "source_url": "https://ripple.com/ripple-press/dbs-franklin-templeton-to-launch-trading-and-lending-solutions-tokenised-mmf-ripple-stablecoin-rlusd/"
+    },
+    {
+      "id": "securitize-buidl-vbill-rlusd-xrpl-2025",
+      "date": "2025-09-23",
+      "entities": [
+        "Securitize",
+        "BlackRock",
+        "BUIDL",
+        "VanEck",
+        "VBILL",
+        "RLUSD",
+        "XRP Ledger"
+      ],
+      "aliases": [
+        "Securitize",
+        "BlackRock",
+        "BUIDL",
+        "VanEck",
+        "VBILL",
+        "RLUSD"
+      ],
+      "relationship": "Ripple and Securitize announced smart-contract functionality allowing holders of BlackRock's BUIDL and VanEck's VBILL tokenized funds to exchange shares for RLUSD; Ripple also said Securitize was integrating with XRPL to expand access.",
+      "classification": "tokenized fund liquidity/off-ramp integration using RLUSD; not proof of XRP use as settlement asset",
+      "status": "announcement said BUIDL support was available and VBILL support would follow; verify present implementation and supported chains before claiming current scope",
+      "source_url": "https://ripple.com/ripple-press/ripple-and-securitize-enable-rlusd-smart-sontract-functionality-for-blackrock-buidl-and-vaneck-vbill-tokenized-funds/"
     }
   ]
 }
