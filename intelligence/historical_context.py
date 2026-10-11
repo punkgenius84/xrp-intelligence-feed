@@ -60,7 +60,7 @@ def select_historical_context(
         matched = {
             alias.casefold()
             for alias in record["aliases"]
-            if re.search(r"(?<!\\w)" + re.escape(alias) + r"(?!\\w)", text, flags=re.IGNORECASE)
+            if re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", text, flags=re.IGNORECASE)
         }
         if matched:
             matches.append((-len(matched), record["date"], record))
