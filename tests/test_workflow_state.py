@@ -44,7 +44,8 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
-    assert "if: success()" in save
+    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
+    assert "id: feed" in contents
 
 
 def test_state_restore_follows_tests_and_precedes_execution_without_dependency_cache():
@@ -127,7 +128,8 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     assert 'INTELLIGENCE_PUBLISH: "false"' in run
 
     save = _step_block(contents, "name: Save persistent state")
-    assert "if: success() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
+    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))" in save
+    assert "id: feed" in run
 
 
 def test_weekly_digest_restores_with_the_same_paths_and_key_pattern_as_the_feed():
