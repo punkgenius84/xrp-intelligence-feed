@@ -155,6 +155,52 @@ def test_discovery_failed_does_not_count_as_successful_progress():
     assert main._should_persist_discovery_progress(result) is False
 
 
+
+def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    from storage.delivery_history import JsonDeliveryHistory
+    from storage.outbox import JsonOutboxState, QueuedPublication
+
+    published_at = datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
+    item = QueuedPublication(
+        key="discord|candidate-1|hash-1",
+        candidate_id="candidate-1",
+        content_hash="hash-1",
+        title="Previously delivered item",
+        url="https://example.test/item",
+        source="Example",
+        published_at=published_at,
+        collected_at=published_at,
+        relevance_score=55,
+        detected_entities=["Ripple"],
+        score_reasons=["high-value entity"],
+    )
+    outbox_path = tmp_path / "outbox.json"
+    history_path = tmp_path / "delivery_history.json"
+    outbox = JsonOutboxState(outbox_path)
+    outbox.save([item])
+    JsonDeliveryHistory(history_path).record([item], {item.key}, posted_at=published_at)
+
+    monkeypatch.setattr(main, "JsonDeliveryHistory", lambda: JsonDeliveryHistory(history_path))
+    monkeypatch.setattr(
+        main,
+        "publish",
+        lambda items, settings: pytest.fail("already-delivered recovery item must not be posted"),
+    )
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False, publish_enabled=False),
+    )
+
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+    )
+    main.publish_feed([], [], settings, outbox)
+
+    assert outbox.load() == []
+
 def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch):
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
     sentinel_outbox = object()
