@@ -34,7 +34,9 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     save = _step_block(contents, "name: Save persistent state")
 
     assert "actions/cache/restore@v5" in restore
-    assert "key: xrp-state-${{ github.ref_name }}-v1-bootstrap" in restore
+    assert "id: state_cache" in restore
+    assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in restore
+    assert "Never use a permanent bootstrap key" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert "actions/cache/save@v5" in save
     assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
