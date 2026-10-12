@@ -30,3 +30,20 @@ def test_production_workflow_verifies_pinned_ollama_archive_before_extracting():
     assert "sha256sum --check" in workflow
     assert "curl --connect-timeout 15 --max-time 300 -fsSL" in workflow
     assert "curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh" not in workflow
+
+
+
+def test_headline_evaluation_workflow_is_manual_and_nonpublishing():
+    workflow = (WORKFLOW_DIR / "intelligence_evaluation.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "\n  schedule:" not in workflow
+    assert "scripts/evaluate_intelligence.py" in workflow
+    assert "DISCORD_WEBHOOK_URL" not in workflow
+    assert "python main.py" not in workflow
+
+
+def test_headline_evaluation_workflow_verifies_ollama_before_extraction():
+    workflow = (WORKFLOW_DIR / "intelligence_evaluation.yml").read_text(encoding="utf-8")
+    assert "releases/download/v0.40.3/ollama-linux-amd64.tar.zst" in workflow
+    assert "sha256sum --check" in workflow
+    assert "curl --connect-timeout 15 --max-time 300 -fsSL" in workflow
