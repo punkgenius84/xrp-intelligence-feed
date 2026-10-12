@@ -92,3 +92,31 @@ def test_context_pack_includes_source_linked_institutional_history():
     assert "bny-rlusd-reserve-custody-2025" in ids
     assert "securitize-buidl-vbill-rlusd-xrpl-2025" in ids
     assert all(record["source_url"].startswith("https://") for record in records)
+
+
+def test_context_captures_recent_regulatory_prime_brokerage_and_treasury_history():
+    sec = select_historical_context(
+        "SEC and Ripple dismiss appeals in XRP case",
+        "The civil enforcement action was resolved.",
+    )
+    sec_record = [record for record in sec if record["id"] == "ripple-sec-appeals-dismissed-2025"]
+    assert sec_record
+    assert "final judgment" in sec_record[0]["relationship"]
+    assert "not summarize the outcome as an unconditional ruling" in sec_record[0]["status"]
+
+    prime = select_historical_context(
+        "Ripple Prime completes Hidden Road acquisition",
+        "RLUSD is used as collateral for some prime-brokerage products.",
+    )
+    prime_record = [record for record in prime if record["id"] == "hidden-road-ripple-prime-acquisition-2025"]
+    assert prime_record
+    assert "RLUSD collateral" in prime_record[0]["classification"]
+    assert "XRP is used as collateral" in prime_record[0]["relationship"]
+
+    treasury = select_historical_context(
+        "Ripple Treasury launches digital asset accounts and Unified Treasury",
+        "The platform supports XRP and RLUSD balances.",
+    )
+    treasury_record = [record for record in treasury if record["id"] == "ripple-treasury-native-digital-assets-2026"]
+    assert treasury_record
+    assert "not evidence that all customers use XRP or RLUSD" in treasury_record[0]["classification"]
