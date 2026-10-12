@@ -94,8 +94,19 @@ jobs:
           path: .ollama/models
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
-      - name: Install Ollama
-        run: timeout 180s bash -o pipefail -c 'curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh'
+      - name: Install pinned Ollama release (SHA-256 verified)
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
+          curl --connect-timeout 15 --max-time 300 -fsSL \
+            "https://github.com/ollama/ollama/releases/download/v0.40.3/ollama-linux-amd64.tar.zst" \
+            -o "$archive"
+          printf '%s  %s\n' \
+            'ce6f8b671a699bf1ebafb28d60dbbabf4f37b30b499145fa308a8ba72de021d6' \
+            "$archive" | sha256sum --check -
+          sudo rm -rf /usr/local/lib/ollama
+          sudo tar --zstd -xf "$archive" -C /usr/local
+          ollama --version
 
       - name: Start Ollama
         env:
