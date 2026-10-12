@@ -319,3 +319,36 @@ def test_acquisition_event_type_fails_closed_for_speculative_or_proposed_source_
             ),
             FakeProvider(),
         )
+
+
+
+def test_claim_grounding_diagnostic_identifies_unsupported_anchor_and_evidence():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"A partnership was announced.",'
+                '"significance":"Potentially relevant.","entities":["Ripple"],'
+                '"claims":[{"text":"Ripple announced a partnership.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported evidence anchor 'ripple'.*source summary"):
+        analyze_item(
+            NewsItem(
+                title="Ripple announces payments partnership",
+                url="https://example.test/article",
+                source="Example",
+                published_at=datetime.now(timezone.utc),
+                summary="The companies announced a partnership.",
+                source_id="example",
+            ),
+            FakeProvider(),
+        )
+
+
+def test_single_source_prompt_guides_evidence_label_selection():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert 'Prefer "source summary" for factual details' in SYSTEM_PROMPT
+    assert "Keep claims short and literal" in SYSTEM_PROMPT
+    assert "Do not cite the title for details found only in the summary" in SYSTEM_PROMPT
