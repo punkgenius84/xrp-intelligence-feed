@@ -32,16 +32,16 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ollama/models
-          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
+          key: ollama-\${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Install pinned Ollama release
         run: |
           set -euo pipefail
-          archive="${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
+          archive="\${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
           curl --connect-timeout 15 --max-time 300 -fsSL \
             "https://github.com/ollama/ollama/releases/download/v0.40.3/ollama-linux-amd64.tar.zst" \
             -o "$archive"
-          printf '%s  %s\\n' \
+          printf '%s  %s\n' \
             'ce6f8b671a699bf1ebafb28d60dbbabf4f37b30b499145fa308a8ba72de021d6' \
             "$archive" | sha256sum --check -
           sudo rm -rf /usr/local/lib/ollama
@@ -50,7 +50,7 @@ jobs:
 
       - name: Start Ollama
         env:
-          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+          OLLAMA_MODELS: \${{ github.workspace }}/.ollama/models
         run: |
           sudo systemctl stop ollama || true
           nohup env OLLAMA_MODELS="$OLLAMA_MODELS" ollama serve >/tmp/ollama.log 2>&1 &
@@ -65,7 +65,7 @@ jobs:
 
       - name: Ensure evaluation model is available
         env:
-          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+          OLLAMA_MODELS: \${{ github.workspace }}/.ollama/models
         run: |
           if ollama list | awk 'NR > 1 {print $1}' | grep -Fxq 'qwen2.5:3b'; then
             echo "qwen2.5:3b available from cache"
@@ -77,7 +77,7 @@ jobs:
         env:
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
-          EVALUATION_CASE: ${{ inputs.case }}
+          EVALUATION_CASE: \${{ inputs.case }}
         run: |
           if [ -n "$EVALUATION_CASE" ]; then
             python scripts/evaluate_intelligence.py --case "$EVALUATION_CASE" --timeout 75
@@ -91,4 +91,4 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ollama/models
-          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
+          key: ollama-\${{ runner.os }}-qwen2.5-3b-v1
