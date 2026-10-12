@@ -94,7 +94,8 @@ jobs:
           path: .ollama/models
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
-      - name: Install pinned Ollama release (SHA-256 verified)
+      - name: Install Ollama
+        # Pinned v0.40.3 release archive; verify the published SHA-256 before extraction.
         run: |
           set -euo pipefail
           archive="${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
