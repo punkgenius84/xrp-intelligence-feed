@@ -47,3 +47,12 @@ def test_headline_evaluation_workflow_verifies_ollama_before_extraction():
     assert "releases/download/v0.40.3/ollama-linux-amd64.tar.zst" in workflow
     assert "sha256sum --check" in workflow
     assert "curl --connect-timeout 15 --max-time 300 -fsSL" in workflow
+
+
+def test_headline_evaluation_workflow_does_not_escape_shell_or_github_expressions():
+    workflow = (WORKFLOW_DIR / "intelligence_evaluation.yml").read_text(encoding="utf-8")
+    assert "\\${RUNNER_TEMP}" not in workflow
+    assert "\\${{" not in workflow
+    assert "${RUNNER_TEMP}" in workflow
+    assert "${{ github.workspace }}" in workflow
+    assert "${{ runner.os }}" in workflow
