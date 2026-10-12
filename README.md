@@ -123,6 +123,10 @@ Recent correlation memory is stored separately in state/correlation.json; it is 
 
 The discovery registry includes official institutional sources for Citi, Circle, Mastercard, Coinbase, Swift, Visa, DBS, J.P. Morgan/Kinexys, and BNY. Institutional candidates use the same normalization, entity detection, source-quality, relevance, deduplication, and Discord publishing path as government and XRPL sources. The feed favors primary-source evidence and does not treat an institution's involvement as proof that XRP is being used.
 
+## Workflow supply-chain security
+
+External GitHub Actions are pinned to full commit SHAs, with weekly Dependabot checks configured to propose deliberate updates. The production workflow installs a fixed Ollama release archive and verifies its published SHA-256 before extraction. The expected archive version and digest must be updated together from the official release when intentionally upgrading Ollama. CI tests enforce SHA pinning and the Ollama checksum gate.
+
 ## CI
 
 Every push and pull request to `main` runs the full pytest suite on Python 3.12 before changes are merged. Production scheduled runs also execute the test suite before collection and publishing.

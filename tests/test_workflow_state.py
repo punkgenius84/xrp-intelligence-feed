@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -18,7 +19,7 @@ def test_workflow_uses_staggered_quarter_hour_schedule():
 
 def test_workflow_restores_and_saves_both_persistent_state_files():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    restore = _step_block(contents, "uses: actions/cache/restore@v5")
+    restore = _step_block(contents, "uses: actions/cache/restore@")
     save = _step_block(contents, "name: Save persistent state")
 
     for block in (restore, save):
@@ -30,15 +31,15 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
 
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    restore = _step_block(contents, "uses: actions/cache/restore@v5")
+    restore = _step_block(contents, "uses: actions/cache/restore@")
     save = _step_block(contents, "name: Save persistent state")
 
-    assert "actions/cache/restore@v5" in restore
+    assert re.search(r"actions/cache/restore@[0-9a-f]{40}", restore)
     assert "id: state_cache" in restore
     assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in restore
     assert "Never use a permanent bootstrap key" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
-    assert "actions/cache/save@v5" in save
+    assert re.search(r"actions/cache/save@[0-9a-f]{40}", save)
     assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
     assert "github.run_id" not in contents
     assert "github.run_attempt" not in contents
@@ -50,8 +51,8 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
 
 def test_state_restore_follows_tests_and_precedes_execution_without_dependency_cache():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    restore_at = contents.index("uses: actions/cache/restore@v5")
-    setup_at = contents.index("uses: actions/setup-python@v6")
+    restore_at = contents.index("uses: actions/cache/restore@")
+    setup_at = contents.index("uses: actions/setup-python@")
     install_at = contents.index("python -m pip install -r requirements-dev.txt")
     test_at = contents.index("python -m pytest -q")
 
@@ -59,11 +60,11 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     install_lines = [line.strip() for line in contents.splitlines() if "python -m pip install -r requirements-dev.txt" in line]
     assert install_lines == ["- run: python -m pip install -r requirements-dev.txt"]
     app_at = contents.index("python main.py")
-    save_at = contents.index("uses: actions/cache/save@v5")
+    save_at = contents.index("uses: actions/cache/save@")
 
     assert setup_at < install_at < test_at < restore_at < app_at < save_at
     assert "cache: pip" not in contents
-    assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@v5")
+    assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@")
 
 
 def test_workflow_enables_intelligence_in_shadow_mode_with_local_model():
@@ -80,8 +81,10 @@ def test_workflow_prepares_ollama_before_feed_execution():
     ollama = contents.index("name: Ensure intelligence model is available")
     app = contents.index("run: python main.py")
     install = _step_block(contents, "name: Install Ollama")
-    assert "timeout 180s bash -o pipefail -c" in install
-    assert "curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh" in install
+    assert "max-time 300" in install
+    assert "releases/download/v0.40.3/ollama-linux-amd64.tar.zst" in install
+    assert "sha256sum --check" in install
+    assert "curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh" not in install
     assert "name: Install Ollama" in contents
     assert "name: Start Ollama" in contents
     assert "sudo systemctl stop ollama || true" in contents
