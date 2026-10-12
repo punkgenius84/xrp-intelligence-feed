@@ -45,3 +45,16 @@ The pack records source-linked snapshots for:
 - The Securitize integration announcement involving RLUSD as an exchange option for tokenized BUIDL and VBILL fund shares.
 
 These records deliberately separate XRP bridge-asset use from RLUSD stablecoin use, XRPL tokenization, and custody relationships. An announcement or MoU is not automatically evidence that every planned feature launched or remains active.
+
+
+## Fixed intelligence headline evaluation
+
+The fixed regression/evaluation set is `config/intelligence_evaluation.json` and contains ten sourced examples spanning an ended relationship, historical XRP/ODL use, RLUSD, custody, tokenization, acquisitions, the SEC case, treasury capabilities, and institutional prime brokerage.
+
+Run the full set against the configured local Ollama model from the repository root:
+
+```powershell
+python scripts/evaluate_intelligence.py
+```
+
+Select one case with `--case <id>`, or override the installed model with `--model <ollama-model>`. The runner checks expected event types and required/forbidden text patterns against the model's validated analysis. It is a repeatable quality screen, not a proof of correctness: inspect the full model output and source material, update expectations only when primary-source evidence supports the change, and keep `INTELLIGENCE_PUBLISH=false` until scheduled shadow output has been reviewed.

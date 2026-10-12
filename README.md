@@ -67,6 +67,18 @@ GitHub Actions currently runs `qwen2.5:3b` through Ollama in shadow mode. Intell
 
 For local intelligence previews, set `INTELLIGENCE_ENABLED=true`. Intelligence publication requires the separate `INTELLIGENCE_PUBLISH=true` flag and a configured Discord webhook.
 
+## Fixed headline evaluation
+
+The repository includes ten source-linked headline cases covering ended relationships, historical XRP/ODL use, RLUSD, custody, tokenization, acquisitions, the SEC case, treasury capabilities, and institutional prime brokerage. This set checks event classification and common overclaiming/conflation errors against validated model output.
+
+With Ollama running locally and the configured model installed, run from the repository root:
+
+```powershell
+python scripts/evaluate_intelligence.py
+```
+
+Use `--case <id>` to run a specific case or `--model <ollama-model>` to select a model. A passing result is a quality screen, not proof of correctness or permission to enable intelligence-event publishing. Review output against the linked source and keep `INTELLIGENCE_PUBLISH=false` until scheduled shadow output has been accepted.
+
 ## Current production posture
 
 The project has two separate delivery paths. Normal deterministic news posts can be delivered when configured; intelligence-event delivery is deliberately kept separate and remains disabled while shadow output is being validated.

@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "description": "Fixed evaluation set for checking real headline interpretation and asset/status distinctions. Human review remains required; passing does not authorize enabling intelligence publishing.",
+  "cases": [
+    {
+      "id": "moneygram-partnership-ended",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/our-statement-on-partnering-with-moneygram/",
+      "title": "Our Statement on Partnering with MoneyGram",
+      "summary": "Ripple and MoneyGram announced on March 8, 2021 that they had decided to end their current partnership agreement. Ripple's statement page is dated March 9, 2021. Both companies said they were committed to revisiting the relationship in the future. MoneyGram had suspended use of Ripple's platform in February 2021.",
+      "expected_event_types": [
+        "partnership",
+        "announcement"
+      ],
+      "must_match": [
+        "MoneyGram",
+        "end|ended|ending|terminate|terminated|conclude"
+      ],
+      "must_not_match": [
+        "currently active partnership",
+        "resumed partnership",
+        "continues to use Ripple's platform",
+        "ongoing XRP usage"
+      ]
+    },
+    {
+      "id": "sbi-remit-xrp-odl",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/ripple-launches-on-demand-liquidity-with-sbi-remit-to-accelerate-and-grow-cross-border-payments-from-japan/",
+      "title": "Ripple Launches On-Demand Liquidity with SBI Remit to Accelerate and Grow Cross-Border Payments from Japan",
+      "summary": "Ripple announced a live On-Demand Liquidity implementation connecting SBI Remit with Coins.ph and SBI VC Trade for Japan-to-Philippines remittances. Ripple explicitly described XRP as the digital asset used to avoid pre-funding. This is evidence of the historical launch, not proof of current corridor volumes or ongoing usage.",
+      "expected_event_types": [
+        "institutional_adoption",
+        "product_launch",
+        "partnership"
+      ],
+      "must_match": [
+        "SBI Remit",
+        "XRP"
+      ],
+      "must_not_match": [
+        "RLUSD is used as the bridge asset",
+        "current volumes are confirmed",
+        "all RippleNet members use XRP"
+      ]
+    },
+    {
+      "id": "rlusd-launch",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/raising-the-standard-for-stablecoins-ripple-usd-launches-globally/",
+      "title": "Raising the Standard for Stablecoins: Ripple USD Launches Globally",
+      "summary": "Ripple announced global exchange availability for Ripple USD (RLUSD), a USD-denominated stablecoin backed by dollar deposits, U.S. government bonds, and cash equivalents. RLUSD is a stablecoin and is distinct from XRP, the digital asset.",
+      "expected_event_types": [
+        "product_launch",
+        "announcement"
+      ],
+      "must_match": [
+        "RLUSD|Ripple USD",
+        "stablecoin"
+      ],
+      "must_not_match": [
+        "XRP is the stablecoin",
+        "RLUSD is XRP",
+        "RLUSD is the XRP Ledger"
+      ]
+    },
+    {
+      "id": "bny-rlusd-reserve-custody",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/",
+      "title": "Ripple Selects BNY to Custody Ripple USD Reserves",
+      "summary": "Ripple announced that BNY was selected as primary custodian for RLUSD reserves. This is a stablecoin-reserve custody relationship and does not establish that BNY uses XRP for settlement.",
+      "expected_event_types": [
+        "partnership",
+        "announcement",
+        "institutional_adoption"
+      ],
+      "must_match": [
+        "BNY",
+        "RLUSD|Ripple USD",
+        "custod"
+      ],
+      "must_not_match": [
+        "BNY uses XRP for settlement",
+        "BNY adopted XRP for payments",
+        "XRP reserves are held by BNY"
+      ]
+    },
+    {
+      "id": "dbs-franklin-tokenized-fund",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/dbs-franklin-templeton-to-launch-trading-and-lending-solutions-tokenised-mmf-ripple-stablecoin-rlusd/",
+      "title": "DBS and Franklin Templeton to Launch Trading and Lending Solutions for Tokenised Money Market Fund",
+      "summary": "DBS, Franklin Templeton, and Ripple announced an MoU for trading and lending solutions involving Franklin Templeton's tokenized money-market fund on the XRP Ledger and stablecoins including RLUSD. The announcement described planned and exploratory functionality. It does not establish that XRP itself is the fund's settlement or collateral asset.",
+      "expected_event_types": [
+        "partnership",
+        "announcement",
+        "product_launch"
+      ],
+      "must_match": [
+        "DBS",
+        "Franklin Templeton",
+        "XRP Ledger|XRPL"
+      ],
+      "must_not_match": [
+        "XRP is the collateral asset",
+        "XRP is the settlement asset",
+        "all functionality has launched"
+      ]
+    },
+    {
+      "id": "hidden-road-acquisition-closed",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/insights/ripple-closes-hidden-road-acquisition/",
+      "title": "Ripple Closes Hidden Road Acquisition",
+      "summary": "Ripple announced that its acquisition of Hidden Road had closed and that the business would operate as Ripple Prime, a multi-asset institutional prime brokerage, clearing, and financing platform. RLUSD collateral in some products and planned XRPL migration are separate claims; this does not prove XRP is collateral for every product.",
+      "expected_event_types": [
+        "acquisition"
+      ],
+      "must_match": [
+        "Hidden Road",
+        "Ripple Prime|prime brokerage",
+        "acquisition|acquired|closed"
+      ],
+      "must_not_match": [
+        "XRP is collateral for every product",
+        "RLUSD is XRP",
+        "every post-trade activity has already migrated to XRPL"
+      ]
+    },
+    {
+      "id": "gtreasury-acquisition-announced",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/ripple-breaks-into-corporate-treasury-with-gtreasury-acquisition/",
+      "title": "Ripple Breaks into Corporate Treasury with $1B GTreasury Acquisition",
+      "summary": "Ripple announced a $1 billion acquisition of GTreasury on October 16, 2025. At the time of this announcement, the deal was expected to close in the coming months, subject to regulatory approvals. The announcement itself is not evidence the acquisition had already closed on that date or that GTreasury customers used XRP.",
+      "expected_event_types": [
+        "acquisition"
+      ],
+      "must_match": [
+        "GTreasury",
+        "acquisition|acquire"
+      ],
+      "must_not_match": [
+        "the acquisition had already closed on October 16",
+        "GTreasury customers use XRP",
+        "GTreasury customers settled in XRP"
+      ]
+    },
+    {
+      "id": "sec-appeals-dismissed",
+      "source": "U.S. Securities and Exchange Commission",
+      "source_url": "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-26369",
+      "title": "SEC Announces Joint Stipulation to Dismiss Appeals, Resolving Civil Enforcement Action Against Ripple and Two of Its Executives",
+      "summary": "On August 7, 2025, the SEC said a joint stipulation dismissed the SEC's appeal and Ripple's cross-appeal. The district court's final judgment remained in effect, including a $125,035,150 civil penalty and an injunction prohibiting Ripple from violating Securities Act registration provisions. Do not describe this as an unconditional ruling that all XRP sales have identical legal treatment.",
+      "expected_event_types": [
+        "regulatory_action",
+        "litigation",
+        "enforcement"
+      ],
+      "must_match": [
+        "appeal",
+        "final judgment|injunction|civil penalty"
+      ],
+      "must_not_match": [
+        "all XRP sales were declared legal",
+        "the final judgment was erased",
+        "the injunction was dissolved"
+      ]
+    },
+    {
+      "id": "ripple-treasury-digital-assets",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/ripple-press/ripple-treasury-launches-the-first-treasury-management-system-tms-with-native-digital-asset-capabilities/",
+      "title": "Ripple Treasury Launches the First Treasury Management System with Native Digital Asset Capabilities",
+      "summary": "Ripple announced Digital Asset Accounts and Unified Treasury in Ripple Treasury. The capabilities allow treasury teams to view and manage digital-asset balances including XRP and RLUSD alongside fiat balances. Product capability does not establish that every customer uses XRP or RLUSD, and availability varies by geography.",
+      "expected_event_types": [
+        "product_launch",
+        "announcement"
+      ],
+      "must_match": [
+        "Ripple Treasury",
+        "XRP",
+        "RLUSD"
+      ],
+      "must_not_match": [
+        "all customers use XRP",
+        "RLUSD is XRP",
+        "every customer has activated digital assets"
+      ]
+    },
+    {
+      "id": "brevan-howard-relationship",
+      "source": "Ripple",
+      "source_url": "https://ripple.com/press-releases/",
+      "title": "Blockchain Solutions Provider Ripple and Global Alternative Investment Manager Brevan Howard Deepen Relationship",
+      "summary": "Ripple announced an expanded relationship under which Ripple Prime would provide multi-asset prime brokerage, clearing, and financing services to Brevan Howard funds. The announcement does not establish XRP purchases, XRP settlement, or direct XRP exposure by Brevan Howard.",
+      "expected_event_types": [
+        "partnership",
+        "institutional_adoption",
+        "announcement"
+      ],
+      "must_match": [
+        "Brevan Howard",
+        "Ripple Prime|prime brokerage"
+      ],
+      "must_not_match": [
+        "Brevan Howard purchased XRP",
+        "Brevan Howard uses XRP for settlement",
+        "direct XRP exposure is confirmed"
+      ]
+    }
+  ]
+}
