@@ -297,6 +297,136 @@
       "classification": "tokenized fund liquidity/off-ramp integration using RLUSD; not proof of XRP use as settlement asset",
       "status": "announcement said BUIDL support was available and VBILL support would follow; verify present implementation and supported chains before claiming current scope",
       "source_url": "https://ripple.com/ripple-press/ripple-and-securitize-enable-rlusd-smart-sontract-functionality-for-blackrock-buidl-and-vaneck-vbill-tokenized-funds/"
+    },
+    {
+      "id": "ripple-sec-appeals-dismissed-2025",
+      "date": "2025-08-07",
+      "entities": [
+        "Ripple",
+        "U.S. Securities and Exchange Commission",
+        "SEC",
+        "XRP",
+        "Brad Garlinghouse",
+        "Chris Larsen"
+      ],
+      "aliases": [
+        "Ripple SEC case",
+        "SEC lawsuit",
+        "SEC appeal",
+        "XRP lawsuit",
+        "Garlinghouse",
+        "Chris Larsen"
+      ],
+      "relationship": "The SEC reported that it and Ripple jointly stipulated to dismiss the SEC appeal and Ripple cross-appeal, resolving the civil enforcement action. The district court's final judgment, including a $125,035,150 civil penalty and an injunction against Ripple violating Securities Act registration provisions, remained in effect.",
+      "classification": "regulatory/legal milestone; appeal dismissal does not erase the final judgment or mean every XRP-related transaction has the same legal treatment",
+      "status": "official SEC release dated August 7, 2025; use the SEC's procedural description and do not summarize the outcome as an unconditional ruling that all XRP sales are legally identical",
+      "source_url": "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-26369"
+    },
+    {
+      "id": "hidden-road-ripple-prime-acquisition-2025",
+      "date": "2025-10-24",
+      "entities": [
+        "Ripple",
+        "Hidden Road",
+        "Ripple Prime",
+        "RLUSD",
+        "XRP Ledger",
+        "XRP"
+      ],
+      "aliases": [
+        "Hidden Road",
+        "Ripple Prime",
+        "prime brokerage",
+        "prime broker",
+        "RLUSD collateral"
+      ],
+      "relationship": "Ripple announced that its acquisition of Hidden Road had closed and that the business was now Ripple Prime, a multi-asset institutional prime brokerage, clearing, and financing platform. Ripple also said RLUSD was being used as collateral for some prime-brokerage products and described plans for Hidden Road post-trade activity to migrate across XRPL; these are distinct from proof that XRP is used as collateral or settlement in every product.",
+      "classification": "completed corporate acquisition and institutional prime-brokerage expansion; RLUSD collateral and XRPL migration are separate claims",
+      "status": "Ripple announced acquisition completion on October 24, 2025; verify current product scope and implementation before describing planned XRPL migration as complete",
+      "source_url": "https://ripple.com/insights/ripple-closes-hidden-road-acquisition/"
+    },
+    {
+      "id": "ripple-gtreasury-acquisition-2025",
+      "date": "2025-10-16",
+      "entities": [
+        "Ripple",
+        "GTreasury",
+        "Ripple Treasury"
+      ],
+      "aliases": [
+        "GTreasury",
+        "treasury management system",
+        "corporate treasury",
+        "Ripple Treasury"
+      ],
+      "relationship": "Ripple announced a $1 billion acquisition of GTreasury, expanding its business into enterprise treasury-management software and corporate finance workflows.",
+      "classification": "corporate acquisition and treasury-management expansion; not by itself evidence of XRP adoption by GTreasury customers",
+      "status": "initial acquisition announcement dated October 16, 2025; later Ripple material describes the acquisition as closed, but specific customer digital-asset usage requires separate evidence",
+      "source_url": "https://ripple.com/ripple-press/ripple-breaks-into-corporate-treasury-with-gtreasury-acquisition/"
+    },
+    {
+      "id": "ripple-treasury-native-digital-assets-2026",
+      "date": "2026-04-01",
+      "entities": [
+        "Ripple Treasury",
+        "GTreasury",
+        "Ripple",
+        "XRP",
+        "RLUSD"
+      ],
+      "aliases": [
+        "Ripple Treasury",
+        "GTreasury",
+        "digital asset accounts",
+        "Unified Treasury",
+        "corporate treasury"
+      ],
+      "relationship": "Ripple announced the launch of Digital Asset Accounts and Unified Treasury within Ripple Treasury, enabling enterprise treasury teams to view and manage fiat and digital-asset balances, including XRP and RLUSD, through its treasury-management platform.",
+      "classification": "enterprise treasury product launch with digital-asset support; capability availability is not evidence that all customers use XRP or RLUSD",
+      "status": "launch announced April 1, 2026; availability varies by geography and service provider, and actual customer usage requires specific evidence",
+      "source_url": "https://ripple.com/ripple-press/ripple-treasury-launches-the-first-treasury-management-system-tms-with-native-digital-asset-capabilities/"
+    },
+    {
+      "id": "ripple-prime-brevan-howard-2026",
+      "date": "2026-10-06",
+      "entities": [
+        "Ripple Prime",
+        "Ripple",
+        "Brevan Howard"
+      ],
+      "aliases": [
+        "Brevan Howard",
+        "Ripple Prime",
+        "prime brokerage",
+        "institutional funds"
+      ],
+      "relationship": "Ripple and Brevan Howard announced an expanded relationship under which Ripple Prime would provide multi-asset prime brokerage, clearing, and financing services to Brevan Howard funds.",
+      "classification": "institutional prime-brokerage relationship; not evidence of XRP purchases, XRP settlement, or direct XRP exposure",
+      "status": "relationship expansion announced October 6, 2026; scope beyond the stated prime-brokerage services requires separate confirmation",
+      "source_url": "https://ripple.com/ripple-press/ripple-and-brevan-howard-deepen-relationship/"
+    },
+    {
+      "id": "ripple-full-mica-casp-authorization-2026",
+      "date": "2026-07-06",
+      "entities": [
+        "Ripple",
+        "CSSF",
+        "MiCA",
+        "Ripple Payments",
+        "European Economic Area"
+      ],
+      "aliases": [
+        "MiCA",
+        "CASP",
+        "CSSF",
+        "Luxembourg license",
+        "European license",
+        "Ripple Payments"
+      ],
+      "relationship": "Ripple announced that Luxembourg's CSSF had authorized its Crypto Asset Service Provider license under MiCA, following preliminary approval in June 2026, enabling regulated cryptoasset services across the European Economic Area subject to applicable service and entity conditions.",
+      "classification": "regulatory authorization milestone; not evidence that every Ripple product or XRP-related activity is available in every country",
+      "status": "full CASP authorization announced July 6, 2026; verify jurisdiction, legal entity, and service-specific availability before claiming a particular service is live",
+      "source_url": "https://ripple.com/ripple-press/ripple-receives-full-eu-mica-casp-license/"
     }
   ]
 }
