@@ -74,10 +74,12 @@ def _validate_claim_grounding(
             evidence_text.get(reference, "")
             for reference in claim.evidence
         ).lower()
-        for anchor in _claim_anchor_tokens(claim.text):
+        for anchor in sorted(_claim_anchor_tokens(claim.text)):
             if anchor not in cited_text:
+                excerpt = " ".join(claim.text.split())[:180]
                 raise LLMError(
-                    "LLM analysis rejected: claim contains an unsupported evidence anchor"
+                    "LLM analysis rejected: claim contains an unsupported evidence anchor "
+                    f"{anchor!r}; claim={excerpt!r}; evidence={claim.evidence!r}"
                 )
     return analysis
 
