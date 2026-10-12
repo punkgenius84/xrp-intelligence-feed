@@ -19,7 +19,11 @@ def test_context_selects_matching_historical_relationships():
     assert records
     moneygram = [record for record in records if record["id"] == "moneygram-xrp-odl-2018-2021"]
     assert moneygram
-    assert "ended partnership as of 2021-03-09" in moneygram[0]["status"]
+    assert "suspended in February 2021" in moneygram[0]["status"]
+    assert "March 8, 2021" in moneygram[0]["status"]
+    assert "Ripple statement page dated March 9" in moneygram[0]["status"]
+    assert "committed to revisiting" in moneygram[0]["status"]
+    assert "committed to revisiting" in moneygram[0]["relationship"]
 
 
 def test_context_distinguishes_ripplenet_from_xrp_usage():
