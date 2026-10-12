@@ -1,0 +1,94 @@
+name: Intelligence Headline Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      case:
+        description: "Optional case ID; leave blank to run the full 10-case evaluation"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xrp-intelligence-headline-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install test and runtime dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Restore Ollama model cache
+        id: model_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ollama/models
+          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
+
+      - name: Install pinned Ollama release
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
+          curl --connect-timeout 15 --max-time 300 -fsSL \
+            "https://github.com/ollama/ollama/releases/download/v0.40.3/ollama-linux-amd64.tar.zst" \
+            -o "$archive"
+          printf '%s  %s\\n' \
+            'ce6f8b671a699bf1ebafb28d60dbbabf4f37b30b499145fa308a8ba72de021d6' \
+            "$archive" | sha256sum --check -
+          sudo rm -rf /usr/local/lib/ollama
+          sudo tar --zstd -xf "$archive" -C /usr/local
+          ollama --version
+
+      - name: Start Ollama
+        env:
+          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+        run: |
+          sudo systemctl stop ollama || true
+          nohup env OLLAMA_MODELS="$OLLAMA_MODELS" ollama serve >/tmp/ollama.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ollama.log
+          exit 1
+
+      - name: Ensure evaluation model is available
+        env:
+          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
+        run: |
+          if ollama list | awk 'NR > 1 {print $1}' | grep -Fxq 'qwen2.5:3b'; then
+            echo "qwen2.5:3b available from cache"
+          else
+            ollama pull qwen2.5:3b
+          fi
+
+      - name: Run fixed headline evaluation
+        env:
+          OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
+          OLLAMA_MODEL: "qwen2.5:3b"
+          EVALUATION_CASE: ${{ inputs.case }}
+        run: |
+          if [ -n "$EVALUATION_CASE" ]; then
+            python scripts/evaluate_intelligence.py --case "$EVALUATION_CASE" --timeout 75
+          else
+            python scripts/evaluate_intelligence.py --timeout 75
+          fi
+
+      - name: Save Ollama model cache
+        if: success() && steps.model_cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ollama/models
+          key: ollama-${{ runner.os }}-qwen2.5-3b-v1
