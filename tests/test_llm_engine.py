@@ -438,3 +438,10 @@ def test_custody_selection_misclassified_as_filing_is_corrected_to_partnership()
         FakeProvider(),
     )
     assert result.event_type == "partnership"
+
+def test_prompt_treats_xrpl_and_xrp_ledger_as_the_same_network():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert "XRPL and XRP Ledger refer to the same network" in SYSTEM_PROMPT
+    assert "never describe movement \"from XRP Ledger to XRPL\"" in SYSTEM_PROMPT
+    assert "Only claim a network migration when the source explicitly identifies a distinct origin and destination network." in SYSTEM_PROMPT
