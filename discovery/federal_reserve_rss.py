@@ -199,6 +199,7 @@ class FederalReserveRSSDiscovery:
         candidates: dict[str, DiscoveryCandidate] = {}
         errors: list[str] = []
         state_updates: dict[str, dict[str, str]] = {}
+        not_modified_count = 0
         cutoff = fetched_at.astimezone(timezone.utc) - timedelta(days=self.source["lookback_days"])
 
         for feed_id, feed in FED_FEEDS.items():
@@ -218,6 +219,7 @@ class FederalReserveRSSDiscovery:
                 continue
 
             if response.status_code == 304:
+                not_modified_count += 1
                 state_updates[feed_id] = {
                     key: response.headers.get(key, validators.get(key, ""))
                     for key in ("etag", "last_modified")
@@ -289,9 +291,11 @@ class FederalReserveRSSDiscovery:
             key=lambda item: (item.published_at or fetched_at, item.source_native_id),
             reverse=True,
         )
+        all_feeds_unchanged = not_modified_count == len(FED_FEEDS)
         status = (
             "partial" if errors and ordered
             else "failed" if errors
+            else "not_modified" if not ordered and all_feeds_unchanged
             else "empty" if not ordered
             else "success"
         )

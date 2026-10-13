@@ -179,6 +179,18 @@ def test_lookback_and_item_processing_are_bounded():
                for item in result.candidates)
 
 
+def test_all_unchanged_feeds_are_not_reported_as_empty():
+    from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
+
+    http = FakeHttp([response(status=304, body=b"") for _ in range(6)])
+    result = FederalReserveRSSDiscovery(source(), http=http, now=lambda: STAMP).collect({})
+
+    assert result.status == "not_modified"
+    assert result.candidates == []
+    assert len(http.calls) == 6
+    assert len(result.state_updates) == 6
+
+
 def test_disabled_federal_reserve_source_makes_no_requests():
     from discovery.dispatch import collect_source
     http = FakeHttp([])
