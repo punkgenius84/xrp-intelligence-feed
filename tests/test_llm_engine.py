@@ -259,7 +259,10 @@ def test_parse_analysis_bounds_conflicts():
 def test_parse_analysis_rejects_unsupported_evidence_reference():
     import pytest
 
-    with pytest.raises(ValueError, match="unsupported evidence"):
+    with pytest.raises(
+        ValueError,
+        match=r"unsupported evidence reference.*source-9 summary.*source-1 summary.*source-1 title",
+    ):
         parse_analysis(
             '{"event_type":"announcement","event_summary":"x","significance":"y",'
             '"claims":[{"text":"Claim","evidence":["source-9 summary"]}]}',
