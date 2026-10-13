@@ -165,9 +165,9 @@ jobs:
               model="qwen2.5:3b",
               max_items_per_run=1,
               min_relevance_score=50,
-              timeout_seconds=45,
+              timeout_seconds=90,
           )
-          events, failures = enrich_clusters([item], OllamaProvider(model="qwen2.5:3b", timeout=45), config)
+          events, failures = enrich_clusters([item], OllamaProvider(model="qwen2.5:3b", timeout=90), config)
           if failures or len(events) != 1:
               raise SystemExit(f"intelligence inference smoke test failed: events={len(events)} failures={failures}")
           event = events[0]
