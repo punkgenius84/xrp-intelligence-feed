@@ -82,7 +82,12 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
         if allowed_evidence is not None:
             invalid = [reference for reference in evidence if reference not in allowed_evidence]
             if invalid:
-                raise ValueError("LLM output contains unsupported evidence reference")
+                allowed = ", ".join(repr(label) for label in sorted(allowed_evidence))
+                rejected = ", ".join(repr(label) for label in invalid)
+                raise ValueError(
+                    "LLM output contains unsupported evidence reference(s): "
+                    f"{rejected}; allowed labels: {allowed}"
+                )
         claims.append(Claim(
             text=text.strip()[:500],
             claim_type=claim_type.strip()[:80],
