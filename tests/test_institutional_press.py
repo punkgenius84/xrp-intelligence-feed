@@ -58,13 +58,21 @@ def test_unchanged_index_is_not_reported_as_empty():
     )
     http = FakeHttp(unchanged)
     state = {
-        "etag": '"circle-v1"',
-        "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
+        "sources": {
+            "circle-pressroom": {
+                "requests": {
+                    "index": {
+                        "etag": '"circle-v1"',
+                        "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
+                    }
+                }
+            }
+        }
     }
 
     result = InstitutionalPressDiscovery(
         source(), http=http, now=lambda: STAMP
-    ).collect({"circle-pressroom": state})
+    ).collect(state)
 
     assert result.status == "not_modified"
     assert result.candidates == []
