@@ -49,6 +49,37 @@ def response(payload):
     return HttpResponse(200, {"content-type": "text/html"}, payload, "https://www.circle.com/pressroom")
 
 
+def test_unchanged_index_is_not_reported_as_empty():
+    unchanged = HttpResponse(
+        304,
+        {},
+        b"",
+        "https://www.circle.com/pressroom",
+    )
+    http = FakeHttp(unchanged)
+    state = {
+        "etag": '"circle-v1"',
+        "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
+    }
+
+    result = InstitutionalPressDiscovery(
+        source(), http=http, now=lambda: STAMP
+    ).collect({"circle-pressroom": state})
+
+    assert result.status == "not_modified"
+    assert result.candidates == []
+    assert result.errors == []
+    assert result.state_updates == {
+        "index": {
+            "etag": '"circle-v1"',
+            "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
+        }
+    }
+    assert len(http.calls) == 1
+    assert http.calls[0][1]["etag"] == '"circle-v1"'
+    assert http.calls[0][1]["last_modified"] == "Tue, 29 Sep 2026 12:00:00 GMT"
+
+
 def test_registered_institutional_sources_are_bounded():
     sources = load_discovery_sources()
     ids = {item["source_id"] for item in sources}
