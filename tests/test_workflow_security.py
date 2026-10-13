@@ -56,3 +56,8 @@ def test_headline_evaluation_workflow_does_not_escape_shell_or_github_expression
     assert "${RUNNER_TEMP}" in workflow
     assert "${{ github.workspace }}" in workflow
     assert "${{ runner.os }}" in workflow
+
+def test_production_inference_smoke_test_allows_slow_cold_model_startup():
+    workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
+    assert "timeout_seconds=90" in workflow
+    assert 'OllamaProvider(model="qwen2.5:3b", timeout=90)' in workflow
