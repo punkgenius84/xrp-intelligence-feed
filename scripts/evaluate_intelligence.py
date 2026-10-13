@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
+from intelligence.llm.base import LLMUnavailable
 from intelligence.llm.enrichment import analyze_item
 from intelligence.llm.ollama import OllamaProvider
 from models import NewsItem
@@ -79,12 +80,24 @@ def check_analysis(case: dict[str, Any], analysis: Any) -> list[str]:
     return failures
 
 
+def analyze_with_retry(item: NewsItem, provider: OllamaProvider, retries: int = 1) -> Any:
+    """Retry transient Ollama availability/time-out failures, never quality failures."""
+    for attempt in range(retries + 1):
+        try:
+            return analyze_item(item, provider)
+        except LLMUnavailable:
+            if attempt >= retries:
+                raise
+            print(f"RETRY {item.candidate_id}: Ollama temporarily unavailable; retrying once")
+    raise RuntimeError("unreachable evaluation retry state")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", default=str(DEFAULT_CASES), help="Path to evaluation JSON")
     parser.add_argument("--case", action="append", dest="selected", help="Run only this case ID; may be repeated")
     parser.add_argument("--model", default=os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), help="Installed Ollama model")
-    parser.add_argument("--timeout", type=float, default=60.0, help="Per-case Ollama timeout in seconds")
+    parser.add_argument("--timeout", type=float, default=75.0, help="Per-attempt Ollama timeout in seconds")
     args = parser.parse_args()
 
     try:
@@ -115,7 +128,7 @@ def main() -> int:
             relevance_score=90,
         )
         try:
-            analysis = analyze_item(item, provider)
+            analysis = analyze_with_retry(item, provider)
             failures = check_analysis(case, analysis)
             if failures:
                 failed += 1
