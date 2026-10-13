@@ -358,6 +358,13 @@ def test_single_source_prompt_guides_evidence_label_selection():
     assert "Do not cite the title for details found only in the summary" in SYSTEM_PROMPT
 
 
+def test_single_source_prompt_forbids_urls_and_free_form_evidence_labels():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert 'the ONLY valid evidence labels are the exact strings "source title" and "source summary"' in SYSTEM_PROMPT
+    assert "never put a URL, source name, citation, quote, or free-form explanation in the evidence array" in SYSTEM_PROMPT
+
+
 def test_prompt_distinguishes_press_releases_from_filings_and_maps_event_types():
     from intelligence.llm.prompts import SYSTEM_PROMPT
 
