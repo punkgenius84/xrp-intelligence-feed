@@ -142,6 +142,7 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
                 source=item.source,
                 historical_context=historical_context,
             ),
+            options={"temperature": 0},
         )
         analysis = parse_analysis(
             response.content,
@@ -178,6 +179,7 @@ def analyze_cluster(
         response = provider.generate(
             system=SYSTEM_PROMPT,
             user=build_cluster_user_prompt(cluster.members, historical_context),
+            options={"temperature": 0},
         )
         analysis = parse_analysis(
             response.content,

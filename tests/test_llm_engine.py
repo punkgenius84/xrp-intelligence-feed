@@ -139,6 +139,7 @@ def test_llm_analysis_uses_provider_response_and_preserves_source_url():
     class FakeProvider:
         def generate(self, **kwargs):
             assert "UNTRUSTED ARTICLE" in kwargs["user"]
+            assert kwargs["options"] == {"temperature": 0}
             return LLMResponse(
                 '{"event_type":"partnership","event_summary":"A partnership was announced.",'
                 '"significance":"Potentially relevant.","entities":["Ripple"],"claims":[{"text":"The source reports a partnership announcement.","certainty":"high","evidence":["source summary"]}]}',
