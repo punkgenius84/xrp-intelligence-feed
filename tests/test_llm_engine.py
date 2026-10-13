@@ -353,3 +353,14 @@ def test_single_source_prompt_guides_evidence_label_selection():
     assert 'Prefer "source summary" for factual details' in SYSTEM_PROMPT
     assert "Keep claims short and literal" in SYSTEM_PROMPT
     assert "Do not cite the title for details found only in the summary" in SYSTEM_PROMPT
+
+
+def test_prompt_distinguishes_press_releases_from_filings_and_maps_event_types():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert '"filing" is for a formal filing or submitted document' in SYSTEM_PROMPT
+    assert 'a company\'s press release or announcement is not a filing' in SYSTEM_PROMPT
+    assert '"partnership" is for an explicitly described commercial relationship' in SYSTEM_PROMPT
+    assert '"product_launch" is for a product, service, or payment capability explicitly launched' in SYSTEM_PROMPT
+    assert '"institutional_adoption" is for a named institution explicitly adopting' in SYSTEM_PROMPT
+    assert 'Do not default to "announcement" when the source explicitly describes a launch or commercial relationship.' in SYSTEM_PROMPT
