@@ -493,7 +493,7 @@ class InstitutionalPressDiscovery:
                 for key in ("etag", "last_modified")
                 if response.headers.get(key, validators.get(key, ""))
             }
-            return DiscoveryResult(self.source["source_id"], METHOD, "empty",
+            return DiscoveryResult(self.source["source_id"], METHOD, "not_modified",
                                    fetched_at=fetched_at, state_updates=updates)
 
         if response.status_code != 200:
