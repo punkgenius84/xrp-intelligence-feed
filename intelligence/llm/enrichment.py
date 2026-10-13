@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 from models import NewsItem
 
@@ -112,11 +113,42 @@ def _validate_event_metadata_grounding(
 
 
 def _validate_event_type(analysis: IntelligenceAnalysis, source_text: str) -> IntelligenceAnalysis:
-    """Fail closed when a high-specificity event type is unsupported by source text."""
+    """Apply narrow, source-explicit corrections, then fail closed on unsupported acquisitions."""
+    normalized = " ".join(source_text.lower().split())
+    title = source_text.splitlines()[0].strip().lower() if source_text.splitlines() else ""
+
+    # Some small local models repeatedly label an explicit launch as a generic
+    # announcement despite the prompt. Correct only when the headline itself
+    # states a completed launch; "to launch" / planned launches are excluded.
+    if (
+        analysis.event_type == "announcement"
+        and re.search(r"\\blaunch(?:es|ed)?\\b", title)
+        and not re.search(r"\\bto launch\\b|\\bplans? to launch\\b|\\bplanned launch\\b", title)
+    ):
+        return replace(analysis, event_type="product_launch")
+
+    # A custody press release is not a regulatory filing. If the model chooses
+    # "filing" but the supplied text describes an organization being selected
+    # as custodian and contains no formal filing language, use partnership.
+    formal_filing_terms = (
+        r"\\bfiled\\b", r"\\bfiling\\b", r"\\bsubmitted\\b",
+        r"\\bpetition\\b", r"\\bcomplaint\\b", r"\\bmotion\\b",
+        r"\\bregistration statement\\b", r"\\bform [a-z0-9-]+\\b",
+    )
+    has_formal_filing_language = any(re.search(pattern, normalized) for pattern in formal_filing_terms)
+    describes_custody_selection = (
+        re.search(r"\\b(selects?|selected|appoints?|appointed)\\b", normalized)
+        and re.search(r"\\b(custody|custodian|custodial)\\b", normalized)
+    )
+    if (
+        analysis.event_type == "filing"
+        and describes_custody_selection
+        and not has_formal_filing_language
+    ):
+        return replace(analysis, event_type="partnership")
+
     if analysis.event_type != "acquisition":
         return analysis
-
-    normalized = " ".join(source_text.lower().split())
     if any(re.search(pattern, normalized) for pattern in _NON_FINAL_ACQUISITION_PATTERNS):
         raise LLMError(
             "LLM analysis rejected: acquisition event type is unsupported by source text"
