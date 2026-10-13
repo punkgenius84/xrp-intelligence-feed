@@ -364,3 +364,77 @@ def test_prompt_distinguishes_press_releases_from_filings_and_maps_event_types()
     assert '"product_launch" is for a product, service, or payment capability explicitly launched' in SYSTEM_PROMPT
     assert '"institutional_adoption" is for a named institution explicitly adopting' in SYSTEM_PROMPT
     assert 'Do not default to "announcement" when the source explicitly describes a launch or commercial relationship.' in SYSTEM_PROMPT
+
+
+
+def test_announcement_is_corrected_when_headline_explicitly_states_launch():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Ripple launched a payment capability.",'
+                '"significance":"A product launch is reported.","entities":["Ripple"],'
+                '"claims":[{"text":"Ripple launched On-Demand Liquidity.","evidence":["source title"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_item(
+        NewsItem(
+            title="Ripple Launches On-Demand Liquidity with SBI Remit",
+            url="https://example.test/article",
+            source="Ripple",
+            published_at=datetime.now(timezone.utc),
+            summary="Ripple announced a live On-Demand Liquidity implementation using XRP.",
+            source_id="ripple",
+        ),
+        FakeProvider(),
+    )
+    assert result.event_type == "product_launch"
+
+
+def test_planned_launch_is_not_reclassified_as_completed_product_launch():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"A future launch was announced.",'
+                '"significance":"The capability is planned.","entities":["Example"],'
+                '"claims":[{"text":"The organizations plan to launch a service.","evidence":["source title"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_item(
+        NewsItem(
+            title="Organizations to Launch Trading and Lending Solutions",
+            url="https://example.test/article",
+            source="Example",
+            published_at=datetime.now(timezone.utc),
+            summary="The organizations signed an MoU for planned trading and lending solutions.",
+            source_id="example",
+        ),
+        FakeProvider(),
+    )
+    assert result.event_type == "announcement"
+
+
+def test_custody_selection_misclassified_as_filing_is_corrected_to_partnership():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"filing","event_summary":"A custodian was selected.",'
+                '"significance":"This is a custody relationship.","entities":["BNY"],'
+                '"claims":[{"text":"Ripple selected BNY as custodian for RLUSD reserves.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_item(
+        NewsItem(
+            title="Ripple Selects BNY to Custody Ripple USD Reserves",
+            url="https://example.test/article",
+            source="Ripple",
+            published_at=datetime.now(timezone.utc),
+            summary="Ripple announced that BNY was selected as primary custodian for RLUSD reserves.",
+            source_id="ripple",
+        ),
+        FakeProvider(),
+    )
+    assert result.event_type == "partnership"
