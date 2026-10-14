@@ -66,21 +66,30 @@ def _article_identity(value: object) -> tuple[str, str] | None:
 
 
 class _FDICListingParser(HTMLParser):
-    """Extract official FDIC press-release anchors without depending on CSS classes."""
+    """Extract FDIC releases from the main listing when a semantic main region exists."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.items: list[dict[str, str]] = []
+        self._all_items: list[dict[str, str]] = []
         self._anchor: dict[str, str] | None = None
+        self._anchor_in_main = False
+        self._main_depth = 0
+        self._saw_main = False
         self.no_results = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "main":
+            self._saw_main = True
+            self._main_depth += 1
+            return
         if tag != "a":
             return
         href = next((value or "" for key, value in attrs if key.casefold() == "href"), "")
         identity = _article_identity(href)
         if identity is not None:
             self._anchor = {"native_id": identity[0], "url": identity[1], "title": ""}
+            self._anchor_in_main = self._main_depth > 0
 
     def handle_data(self, data: str) -> None:
         if self._anchor is not None:
@@ -92,8 +101,19 @@ class _FDICListingParser(HTMLParser):
         if tag == "a" and self._anchor is not None:
             title = " ".join(self._anchor["title"].split())
             if title:
-                self.items.append(self._anchor)
+                self._all_items.append(self._anchor)
+                if self._anchor_in_main:
+                    self.items.append(self._anchor)
             self._anchor = None
+            self._anchor_in_main = False
+        elif tag == "main" and self._main_depth:
+            self._main_depth -= 1
+
+    def listing_items(self) -> list[dict[str, str]]:
+        # Prefer the actual semantic content region so an old sidebar/related link
+        # cannot masquerade as the saved pagination boundary. Keep compatibility
+        # with official pages that do not expose a <main> element.
+        return self.items if self._saw_main else self._all_items
 
 
 def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
@@ -108,7 +128,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
         raise ValueError("FDIC Press Releases HTML ended inside an article link")
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
-    for item in parser.items:
+    for item in parser.listing_items():
         if item["native_id"] not in seen:
             seen.add(item["native_id"])
             rows.append(item)
