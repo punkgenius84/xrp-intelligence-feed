@@ -362,11 +362,19 @@ def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> 
     title = _clean(re.sub(r"<[^>]+>", " ", heading.group(1)))
     if not title:
         return None
-    dates = list(_DATE_RE.finditer(text))
-    if not dates:
-        return None
-    nearest = min(dates, key=lambda item: abs(item.start() - heading.start()))
-    published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
+    date_attrs = list(re.finditer(
+        r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    if date_attrs:
+        nearest_attr = min(date_attrs, key=lambda item: abs(item.start() - heading.start()))
+        published = _parse_date(nearest_attr.group("date"), source.get("numeric_date_order", "mdy"))
+    else:
+        dates = list(_DATE_RE.finditer(text))
+        if not dates:
+            return None
+        nearest = min(dates, key=lambda item: abs(item.start() - heading.start()))
+        published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
     if published is None:
         return None
     return {"url": safe[0], "native_id": safe[1], "title": title, "date": published}

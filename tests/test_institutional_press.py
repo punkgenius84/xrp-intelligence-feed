@@ -7,6 +7,7 @@ from discovery.institutional_press import (
     METHOD,
     InstitutionalPressDiscovery,
     _official_article,
+    _parse_article_detail,
     _parse_page,
     validate_institutional_source,
 )
@@ -155,6 +156,20 @@ def test_parser_accepts_official_blogposting_json_ld():
     assert len(rows) == 1
     assert rows[0]["title"] == "Official blog announcement"
     assert rows[0]["date"] == datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
+
+
+def test_detail_fallback_reads_machine_readable_time_datetime():
+    html = b'''<html><body><h1>Official detail announcement</h1>
+      <time datetime="2026-10-11T08:00:00Z"></time>
+    </body></html>'''
+    row = _parse_article_detail(
+        source(),
+        "https://www.circle.com/pressroom/example-detail-announcement",
+        html,
+    )
+    assert row is not None
+    assert row["title"] == "Official detail announcement"
+    assert row["date"] == datetime(2026, 10, 11, 8, tzinfo=timezone.utc)
 
 
 def test_parser_keeps_only_dated_official_articles():
