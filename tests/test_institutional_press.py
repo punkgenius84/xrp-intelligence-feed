@@ -855,3 +855,30 @@ def test_enabled_imf_sources_parse_official_dated_article_routes(source_id, arti
     assert rows[0]["url"] == article_url
     assert rows[0]["title"] == title
     assert rows[0]["date"] == date
+
+
+def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
+    imf_source = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "imf-media-center-gfsr"
+    )
+    assert imf_source["enabled"] is True
+    article_url = (
+        "https://mediacenter.imf.org/news/"
+        "imf---global-financial-stability-report-annual-meetings--2026/"
+        "s/f55368c1-983b-45b7-ba7c-1978f67c168c"
+    )
+    html = (
+        '<html><body><span>October 13, 2026</span>'
+        f'<a href="{article_url}">IMF / Global Financial Stability Report Annual Meetings, 2026</a>'
+        '</body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(imf_source, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["url"] == article_url
+    assert rows[0]["title"] == "IMF / Global Financial Stability Report Annual Meetings, 2026"
+    assert rows[0]["date"] == datetime(2026, 10, 13, tzinfo=timezone.utc)
+
