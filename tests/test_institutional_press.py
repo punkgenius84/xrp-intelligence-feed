@@ -158,6 +158,31 @@ def test_parser_accepts_official_blogposting_json_ld():
     assert rows[0]["date"] == datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
 
 
+def test_parser_accepts_schema_org_url_json_ld_type():
+    html = b'''<html><head><script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"https://schema.org/NewsArticle",
+     "headline":"Official URL-typed news article",
+     "url":"https://www.circle.com/pressroom/url-typed-news-article",
+     "datePublished":"2026-10-12T12:00:00Z"}
+    </script></head><body></body></html>'''
+    rows, complete = _parse_page(source(), html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Official URL-typed news article"
+    assert rows[0]["native_id"] == "/pressroom/url-typed-news-article"
+
+
+def test_parser_ignores_unrelated_schema_org_url_json_ld_type():
+    html = b'''<html><head><script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"https://schema.org/Organization",
+     "name":"Circle",
+     "url":"https://www.circle.com/pressroom/not-an-article",
+     "datePublished":"2026-10-12T12:00:00Z"}
+    </script></head><body></body></html>'''
+    with pytest.raises(ValueError, match="missing links and structured article metadata"):
+        _parse_page(source(), html)
+
+
 def test_detail_fallback_reads_machine_readable_time_datetime():
     html = b'''<html><body><h1>Official detail announcement</h1>
       <time datetime="2026-10-11T08:00:00Z"></time>

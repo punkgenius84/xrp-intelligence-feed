@@ -183,10 +183,15 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
             types = item.get("@type")
             if isinstance(types, str):
                 types = [types]
-            if not isinstance(types, list) or not any(
-                isinstance(kind, str) and kind.casefold() in {"article", "newsarticle", "pressrelease", "blogposting"}
+            # Schema.org commonly serializes @type as a full URL
+            # (https://schema.org/NewsArticle) rather than a bare type name.
+            # Normalize both forms without accepting unrelated structured data.
+            normalized_types = {
+                kind.rsplit("/", 1)[-1].rsplit("#", 1)[-1].casefold()
                 for kind in types
-            ):
+                if isinstance(kind, str)
+            } if isinstance(types, list) else set()
+            if not normalized_types.intersection({"article", "newsarticle", "pressrelease", "blogposting"}):
                 continue
             title = _clean(item.get("headline") or item.get("name"))
             href = item.get("url") or item.get("mainEntityOfPage")
