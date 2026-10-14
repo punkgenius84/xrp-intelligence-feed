@@ -131,6 +131,32 @@ def test_registered_institutional_sources_are_bounded():
     assert visa["numeric_date_order"] == "dmy"
 
 
+def test_parser_reads_machine_readable_time_datetime_for_official_article():
+    html = b'''<html><body><article>
+      <time datetime="2026-10-13T09:30:00-04:00"></time>
+      <a href="/pressroom/example-tokenization-announcement">Example tokenization announcement</a>
+    </article></body></html>'''
+    rows, complete = _parse_page(source(), html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Example tokenization announcement"
+    assert rows[0]["date"] == datetime(2026, 10, 13, 13, 30, tzinfo=timezone.utc)
+
+
+def test_parser_accepts_official_blogposting_json_ld():
+    html = b'''<html><head><script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"BlogPosting",
+     "headline":"Official blog announcement",
+     "url":"https://www.circle.com/pressroom/example-blog-announcement",
+     "datePublished":"2026-10-12T12:00:00Z"}
+    </script></head><body></body></html>'''
+    rows, complete = _parse_page(source(), html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Official blog announcement"
+    assert rows[0]["date"] == datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
+
+
 def test_parser_keeps_only_dated_official_articles():
     rows, complete = _parse_page(source(), FIXTURE.read_bytes())
     assert complete is True
