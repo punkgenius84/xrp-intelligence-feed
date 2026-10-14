@@ -138,6 +138,7 @@ class CFTCRSSDiscovery:
         candidates: dict[str, DiscoveryCandidate] = {}
         errors: list[str] = []
         state_updates: dict[str, dict[str, str]] = {}
+        unchanged_feeds = 0
         cutoff = fetched_at.astimezone(timezone.utc) - timedelta(days=self.source["lookback_days"])
 
         for feed_id, feed in CFTC_FEEDS.items():
@@ -154,6 +155,7 @@ class CFTCRSSDiscovery:
                 continue
 
             if response.status_code == 304:
+                unchanged_feeds += 1
                 state_updates[feed_id] = {
                     key: response.headers.get(key, validators.get(key, ""))
                     for key in ("etag", "last_modified")
@@ -216,7 +218,8 @@ class CFTCRSSDiscovery:
             item.published_at or fetched_at, item.source_native_id,
         ), reverse=True)
         status = "partial" if errors and ordered else "failed" if errors else (
-            "empty" if not ordered else "success"
+            "not_modified" if not ordered and unchanged_feeds == len(CFTC_FEEDS)
+            else "empty" if not ordered else "success"
         )
         return DiscoveryResult(
             self.source_id, self.discovery_method, status, candidates=ordered,
