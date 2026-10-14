@@ -411,7 +411,7 @@
       "allowed_hosts": [
         "mediacenter.imf.org"
       ],
-      "article_path_regex": "/news/[^/?#]+/s/[0-9a-f-]{36}"
+      "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     }
   ]
 }
