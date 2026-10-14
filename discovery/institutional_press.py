@@ -447,12 +447,12 @@ class InstitutionalPressDiscovery:
             return []
 
         matches = re.finditer(
-            r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+            r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>(?P<title>.*?)</a>",
             text, re.IGNORECASE | re.DOTALL,
         )
         links: dict[str, str] = {}
         for match in matches:
-            safe = _official_article(self.source, match.group("href"))
+            safe = _official_article(self.source, _clean_href(match.group("href")))
             if safe is not None:
                 links.setdefault(safe[1], safe[0])
         rows: list[dict[str, Any]] = []
