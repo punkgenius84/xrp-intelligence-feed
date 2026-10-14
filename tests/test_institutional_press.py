@@ -100,7 +100,7 @@ def test_registered_institutional_sources_are_bounded():
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
     imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
     assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report"}
-    assert all(item["enabled"] is False for item in imf_sources.values())
+    assert all(item["enabled"] is True for item in imf_sources.values())
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
     mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
@@ -818,3 +818,40 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert len(http.calls) == 1
     assert any("bounded detail fallback found no allowlisted official article links" in error
                for error in result.errors)
+
+
+@pytest.mark.parametrize(
+    ("source_id", "article_url", "title", "date"),
+    [
+        (
+            "imf-blogs",
+            "https://www.imf.org/en/blogs/articles/2026/07/02/tokenization-can-change-the-worlds-financial-architecture/",
+            "Tokenization Can Change The World's Financial Architecture",
+            datetime(2026, 7, 2, tzinfo=timezone.utc),
+        ),
+        (
+            "imf-global-financial-stability-report",
+            "https://www.imf.org/en/publications/gfsr/issues/2026/10/13/global-financial-stability-report-october-2026/",
+            "Global Financial Stability Report — Resilience, Risk, and Transformation",
+            datetime(2026, 10, 13, tzinfo=timezone.utc),
+        ),
+    ],
+)
+def test_enabled_imf_sources_parse_official_dated_article_routes(source_id, article_url, title, date):
+    imf_source = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == source_id
+    )
+    assert imf_source["enabled"] is True
+    html = (
+        f'<html><body><span>{date.strftime("%B")} {date.day}, {date.year}</span>'
+        f'<a href="{article_url}">{title}</a></body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(imf_source, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["url"] == article_url
+    assert rows[0]["title"] == title
+    assert rows[0]["date"] == date
