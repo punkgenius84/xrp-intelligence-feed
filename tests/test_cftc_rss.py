@@ -183,6 +183,24 @@ def test_validator_requests_and_persists_per_feed_and_304_keeps_existing_values(
     assert result.state_updates["enforcement"] == {"last_modified": "Wed, 23 Sep 2026 12:00:00 GMT"}
 
 
+def test_both_unchanged_feeds_report_not_modified_not_empty():
+    state = {"sources": {CFTC_SOURCE_ID: {"requests": {
+        "general": {"etag": '"general-v1"', "last_modified": "Tue, 22 Sep 2026 12:00:00 GMT"},
+        "enforcement": {"etag": '"enforcement-v1"', "last_modified": "Tue, 22 Sep 2026 12:00:00 GMT"},
+    }}}}
+    http = FakeHttp([
+        response(status=304, headers={"content-type": "application/rss+xml"}),
+        response(status=304, headers={"content-type": "application/rss+xml"}),
+    ])
+    result = make_adapter(http).collect(state)
+    assert result.status == "not_modified"
+    assert result.candidates == []
+    assert result.state_updates == {
+        "general": {"etag": '"general-v1"', "last_modified": "Tue, 22 Sep 2026 12:00:00 GMT"},
+        "enforcement": {"etag": '"enforcement-v1"', "last_modified": "Tue, 22 Sep 2026 12:00:00 GMT"},
+    }
+
+
 def test_failed_feed_does_not_erase_other_feed_results_or_validators():
     http = FakeHttp([DiscoveryHttpError("timeout", kind="timeout"),
                      response((FIXTURES / "cftc_enforcement.xml").read_bytes())])
