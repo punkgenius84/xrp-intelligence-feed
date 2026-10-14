@@ -72,6 +72,22 @@ def test_registry_rejects_invalid_configuration(changes):
         validate_discovery_sources({"schema_version":1,"sources":[source(**changes)]})
 
 
+def test_listing_ignores_stale_related_release_outside_main_region():
+    html = b"""<html><body>
+      <aside><a href="/news/press-releases/2026/fdic-publishes-july-enforcement-actions">Old related link</a></aside>
+      <main>
+        <a href="/news/press-releases/2026/newer-release">Newer release</a>
+        <a href="/news/press-releases/2026/fdic-publishes-july-enforcement-actions">Boundary release</a>
+      </main>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete is True
+    assert [row["native_id"] for row in rows] == [
+        "2026/newer-release",
+        "2026/fdic-publishes-july-enforcement-actions",
+    ]
+
+
 def test_parse_listing_uses_official_route_and_native_year_slug_identity():
     rows, complete = _parse_page(FIXTURE.read_bytes())
     assert complete is True
