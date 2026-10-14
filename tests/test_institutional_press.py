@@ -825,13 +825,13 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     [
         (
             "imf-blogs",
-            "https://www.imf.org/en/blogs/articles/2026/07/02/tokenization-can-change-the-worlds-financial-architecture",
+            "https://www.imf.org/en/blogs/articles/2026/07/02/tokenization-can-change-the-worlds-financial-architecture/",
             "Tokenization Can Change The World's Financial Architecture",
             datetime(2026, 7, 2, tzinfo=timezone.utc),
         ),
         (
             "imf-global-financial-stability-report",
-            "https://www.imf.org/en/publications/gfsr/issues/2026/10/13/global-financial-stability-report-october-2026",
+            "https://www.imf.org/en/publications/gfsr/issues/2026/10/13/global-financial-stability-report-october-2026/",
             "Global Financial Stability Report — Resilience, Risk, and Transformation",
             datetime(2026, 10, 13, tzinfo=timezone.utc),
         ),
