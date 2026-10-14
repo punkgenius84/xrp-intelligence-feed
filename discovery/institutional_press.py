@@ -184,7 +184,7 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
             if isinstance(types, str):
                 types = [types]
             if not isinstance(types, list) or not any(
-                isinstance(kind, str) and kind.casefold() in {"article", "newsarticle", "pressrelease"}
+                isinstance(kind, str) and kind.casefold() in {"article", "newsarticle", "pressrelease", "blogposting"}
                 for kind in types
             ):
                 continue
@@ -237,8 +237,14 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         # article, so the next card's date cannot be borrowed by an undated item.
         previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
         raw_window = text[previous:match.start()]
+        date_attrs = list(re.finditer(
+            r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+            raw_window, re.IGNORECASE | re.DOTALL,
+        ))
         date_matches = list(_DATE_RE.finditer(raw_window))
-        if date_matches:
+        if date_attrs:
+            published = _parse_date(date_attrs[-1].group("date"), source.get("numeric_date_order", "mdy"))
+        elif date_matches:
             nearest = date_matches[-1]
             published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
         else:
@@ -248,11 +254,19 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
                 next_is_different_article = next_safe is not None and next_safe[1] != safe[1]
             if not next_is_different_article:
                 following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
-                trailing_dates = list(_DATE_RE.finditer(text[match.end():following]))
-                published = (
-                    _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
-                    if trailing_dates else None
-                )
+                trailing_window = text[match.end():following]
+                trailing_attrs = list(re.finditer(
+                    r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+                    trailing_window, re.IGNORECASE | re.DOTALL,
+                ))
+                trailing_dates = list(_DATE_RE.finditer(trailing_window))
+                if trailing_attrs:
+                    published = _parse_date(trailing_attrs[0].group("date"), source.get("numeric_date_order", "mdy"))
+                else:
+                    published = (
+                        _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
+                        if trailing_dates else None
+                    )
             else:
                 published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
