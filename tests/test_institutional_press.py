@@ -652,7 +652,7 @@ def test_jpmorgan_newsroom_recovers_dated_article_with_bounded_fallback():
     index_url = "https://www.jpmorgan.com/payments/newsroom"
     index = HttpResponse(
         200, {"content-type": "text/html"},
-        f'<html><body><a href="{article_url}">Read More</a><p>Loading</p></body></html>'.encode(),
+        f'<html><body><a href={article_url}>Read More</a><p>Loading</p></body></html>'.encode(),
         index_url,
     )
     detail = HttpResponse(
