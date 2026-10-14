@@ -132,6 +132,20 @@ def test_registered_institutional_sources_are_bounded():
     assert visa["numeric_date_order"] == "dmy"
 
 
+
+def test_parser_accepts_unquoted_href_and_decodes_html_entities():
+    html = b'''<html><body>
+      <article><time datetime="2026-10-13T09:30:00Z"></time>
+      <a class="release-link" href=/pressroom/example-unquoted-release>Circle &amp; Partners Announce Tokenization Pilot</a>
+      </article></body></html>'''
+    rows, complete = _parse_page(source(), html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["url"] == "https://www.circle.com/pressroom/example-unquoted-release/"
+    assert rows[0]["title"] == "Circle & Partners Announce Tokenization Pilot"
+    assert rows[0]["date"] == datetime(2026, 10, 13, 9, 30, tzinfo=timezone.utc)
+
+
 def test_parser_reads_machine_readable_time_datetime_for_official_article():
     html = b'''<html><body><article>
       <time datetime="2026-10-13T09:30:00-04:00"></time>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from html import unescape
 from html.parser import HTMLParser
 import json
 import re
@@ -52,7 +53,17 @@ class _LinkParser(HTMLParser):
 
 
 def _clean(value: object) -> str:
-    return " ".join(value.split()) if isinstance(value, str) else ""
+    return " ".join(unescape(value).split()) if isinstance(value, str) else ""
+
+
+def _clean_href(value: object) -> str:
+    """Decode an HTML href attribute, including optional surrounding quotes."""
+    if not isinstance(value, str):
+        return ""
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    return unescape(value)
 
 
 def _parse_date(value: object, numeric_date_order: str = "mdy") -> datetime | None:
@@ -218,7 +229,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         raise ValueError("institutional response is not valid UTF-8") from exc
 
     matches = list(re.finditer(
-        r"<a[^>]+href=['\"](?P<href>[^'\"]+)['\"][^>]*>(?P<title>.*?)</a>",
+        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
     structured_rows = _json_ld_articles(source, text)
@@ -234,7 +245,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         "continue reading", "more",
     }
     for index, match in enumerate(matches):
-        safe = _official_article(source, match.group("href"))
+        safe = _official_article(source, _clean_href(match.group("href")))
         if safe is None:
             continue
         # Prefer a date immediately before the current article link. A date after
@@ -255,7 +266,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         else:
             next_is_different_article = False
             if index + 1 < len(matches):
-                next_safe = _official_article(source, matches[index + 1].group("href"))
+                next_safe = _official_article(source, _clean_href(matches[index + 1].group("href")))
                 next_is_different_article = next_safe is not None and next_safe[1] != safe[1]
             if not next_is_different_article:
                 following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
