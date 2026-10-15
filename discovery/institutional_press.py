@@ -593,6 +593,10 @@ class InstitutionalPressDiscovery:
                     return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                            fetched_at=fetched_at, errors=errors)
             else:
+                if str(exc) == "institutional response has no dated official articles":
+                    errors.append(
+                        f"{self.source['name']}: {_index_diagnostics(self.source, response.content, response)}"
+                    )
                 errors.append(f"{self.source['name']}: malformed HTML ({exc})")
                 return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                        fetched_at=fetched_at, errors=errors)
