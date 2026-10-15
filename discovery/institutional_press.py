@@ -297,6 +297,40 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         _, _, native_id = nearest[0]
         dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
 
+    heading_titles_by_native_id: dict[str, list[tuple[int, int, str]]] = {}
+    generic_heading_labels = {"news", "press release", "press releases", "blog", "article", "read more", "learn more"}
+    heading_matches = list(re.finditer(
+        r"<h[1-6]\b[^>]*>(?P<title>.*?)</h[1-6]\s*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    for heading in heading_matches:
+        heading_title = _clean(re.sub(r"<[^>]+>", " ", heading.group("title")))
+        normalized_heading = re.sub(r"[^a-z0-9]+", " ", heading_title.casefold()).strip()
+        if len(normalized_heading) < 12 or len(normalized_heading.split()) < 2 or normalized_heading in generic_heading_labels:
+            continue
+        distances = []
+        for link_index, link_match in enumerate(matches):
+            safe_link = safe_by_index[link_index]
+            if safe_link is None:
+                continue
+            if heading.end() <= link_match.start():
+                distance = link_match.start() - heading.end()
+            elif heading.start() >= link_match.end():
+                distance = heading.start() - link_match.end()
+            else:
+                distance = 0
+            if distance <= 2500:
+                distances.append((distance, safe_link[1]))
+        if not distances:
+            continue
+        nearest_distance = min(value[0] for value in distances)
+        nearest_ids = {native_id for distance, native_id in distances if distance == nearest_distance}
+        if len(nearest_ids) == 1:
+            native_id = next(iter(nearest_ids))
+            heading_titles_by_native_id.setdefault(native_id, []).append(
+                (heading.start(), heading.end(), heading_title)
+            )
+
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
     complete = True
@@ -351,6 +385,21 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             published = nearest_assigned[2] if nearest_assigned is not None else None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+        if not title or normalized_title in generic_titles:
+            assigned_titles = heading_titles_by_native_id.get(safe[1], [])
+
+            def distance_to_heading(item: tuple[int, int, str]) -> int:
+                heading_start, heading_end, _ = item
+                if heading_end <= match.start():
+                    return match.start() - heading_end
+                if heading_start >= match.end():
+                    return heading_start - match.end()
+                return 0
+
+            nearest_title = min(assigned_titles, key=distance_to_heading) if assigned_titles else None
+            if nearest_title is not None and distance_to_heading(nearest_title) <= 2500:
+                title = nearest_title[2]
+                normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles or published is None:
             incomplete_ids.add(safe[1])
             continue
@@ -459,6 +508,14 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     ]
     official_links_with_text = sum(bool(title) for title in normalized_link_titles)
     official_links_with_generic_text = sum(title in generic_titles for title in normalized_link_titles)
+    heading_matches = list(re.finditer(
+        r"<h[1-6]\b[^>]*>(?P<title>.*?)</h[1-6]\s*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    heading_titles_with_text = sum(
+        bool(_clean(re.sub(r"<[^>]+>", " ", match.group("title"))))
+        for match in heading_matches
+    )
     article_blocks = list(re.finditer(r"<article\b[^>]*>.*?</article\s*>", text, re.IGNORECASE | re.DOTALL))
     official_links_in_article_blocks = sum(
         any(block.start() <= match.start() < block.end() for block in article_blocks)
@@ -576,6 +633,8 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"articles_with_parseable_date_within_2500={len(articles_with_parseable_date_within_2500)} "
         f"official_links_with_text={official_links_with_text} "
         f"official_links_with_generic_text={official_links_with_generic_text} "
+        f"official_links_without_text={max(0, official_links - official_links_with_text)} "
+        f"heading_tags={len(heading_matches)} heading_titles_with_text={heading_titles_with_text} "
         f"official_links_in_article_blocks={official_links_in_article_blocks} article_blocks={len(article_blocks)} "
         f"median_nearest_date_distance={median_nearest_distance} "
         f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
