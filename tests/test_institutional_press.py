@@ -581,6 +581,7 @@ def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
         item for item in load_discovery_sources()
         if item["source_id"] == "citi-press-releases"
     )
+    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "failed"
