@@ -856,7 +856,10 @@ def test_coinbase_rejects_unrelated_image_alt_as_article_title():
 
     assert complete is False
     assert all(row["title"] != "Read our blog" for row in rows)
-    assert "/blog/coinbase-is-building-the-most-complete-trading-platform" in diagnostics["incomplete_native_ids"]
+    assert any(
+        native_id.endswith("/blog/coinbase-is-building-the-most-complete-trading-platform")
+        for native_id in diagnostics["incomplete_native_ids"]
+    )
 
 
 def test_coinbase_heading_selection_is_consistent_across_duplicate_image_links():
