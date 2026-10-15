@@ -660,7 +660,7 @@ def _official_anchor_ids(source: dict[str, Any], content: bytes) -> list[str]:
         text = content.decode("utf-8", errors="replace")
     ids: list[str] = []
     pattern = re.compile(
-        r"<a\\b[^>]*?\\bhref\\s*=\\s*(?P<href>\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)[^>]*>",
+        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>",
         re.IGNORECASE | re.DOTALL,
     )
     for match in pattern.finditer(text):
