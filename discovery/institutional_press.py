@@ -424,7 +424,7 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         for match in href_anchors
     )
     full_links = list(re.finditer(
-        r"<a\\b[^>]*?\\bhref\\s*=\\s*(?P<href>\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)[^>]*>(?P<title>.*?)</a>",
+        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>(?P<title>.*?)</a>",
         text, re.IGNORECASE | re.DOTALL,
     ))
     validated_links = [
