@@ -105,6 +105,13 @@ def test_unrecognized_listing_error_includes_bounded_structure_counts():
         _parse_page(html)
 
 
+def test_view_empty_outside_main_does_not_masquerade_as_empty_listing():
+    html = b"""<html><body><aside><div class="view-empty">No results found.</div></aside>
+    <main><h1>Press Releases</h1></main></body></html>"""
+    with pytest.raises(ValueError, match="no recognizable Press Releases listing"):
+        _parse_page(html)
+
+
 def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
     html = b"""<html><body>
       <main>
