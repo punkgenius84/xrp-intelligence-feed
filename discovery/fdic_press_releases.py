@@ -78,12 +78,22 @@ class _FDICListingParser(HTMLParser):
         self._saw_main = False
         self.no_results = False
         self._route_like_links = 0
+        self._empty_state_tags: list[str] = []
+        self._empty_state_text: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = {key.casefold(): value or "" for key, value in attrs}
+        classes = set(values.get("class", "").casefold().split())
+        empty_state_classes = {
+            "view-empty", "no-results", "no-results-found", "empty-state",
+            "empty-results", "results-empty",
+        }
+        if classes & empty_state_classes:
+            self._empty_state_tags.append(tag)
+            self._empty_state_text = []
         if tag == "main":
             self._saw_main = True
             self._main_depth += 1
-            return
         if tag != "a":
             return
         href = next((value or "" for key, value in attrs if key.casefold() == "href"), "")
@@ -106,8 +116,8 @@ class _FDICListingParser(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._anchor is not None:
             self._anchor["title"] += data
-        elif "no results found" in data.casefold():
-            self.no_results = True
+        if self._empty_state_tags:
+            self._empty_state_text.append(data)
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "a" and self._anchor is not None:
@@ -120,6 +130,14 @@ class _FDICListingParser(HTMLParser):
             self._anchor_in_main = False
         elif tag == "main" and self._main_depth:
             self._main_depth -= 1
+        for index in range(len(self._empty_state_tags) - 1, -1, -1):
+            if self._empty_state_tags[index] == tag:
+                del self._empty_state_tags[index:]
+                if not self._empty_state_tags:
+                    if "no results found" in " ".join(self._empty_state_text).casefold():
+                        self.no_results = True
+                    self._empty_state_text = []
+                break
 
     def listing_items(self) -> list[dict[str, str]]:
         # Prefer the actual semantic content region so an old sidebar/related link
