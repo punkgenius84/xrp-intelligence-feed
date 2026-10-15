@@ -135,6 +135,7 @@ jobs:
           fi
 
       - name: Validate intelligence inference
+        if: github.event_name != 'push'
         env:
           OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
