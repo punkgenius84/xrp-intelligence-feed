@@ -514,6 +514,44 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     )
 
 
+def _official_links_from_index(source: dict[str, Any], text: str) -> dict[str, str]:
+    """Find allowlisted article routes in anchors and bounded quoted page-data strings."""
+    links: dict[str, str] = {}
+    anchor_pattern = re.compile(
+        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>",
+        re.IGNORECASE | re.DOTALL,
+    )
+    for match in anchor_pattern.finditer(text):
+        safe = _official_article(source, _clean_href(match.group("href")))
+        if safe is not None:
+            links.setdefault(safe[1], safe[0])
+
+    source_path = urlsplit(source["source_url"]).path.rstrip("/") + "/"
+    quoted_strings = re.finditer(
+        r"""(?P<quote>["'])(?P<value>(?:\\.|[^"'\\]){1,1200})(?P=quote)""",
+        text,
+    )
+    inspected = 0
+    for match in quoted_strings:
+        inspected += 1
+        if inspected > 20000:
+            break
+        value = match.group("value")
+        # JSON/JavaScript may escape URL separators. Only the route itself is
+        # retained; _official_article still enforces the configured host/path.
+        normalized = value.replace(r"\/", "/").replace(r"\u002F", "/").replace(r"\u002f", "/")
+        if normalized.startswith(("https://", "http://")):
+            candidate = normalized
+        elif normalized.startswith(source_path):
+            candidate = normalized
+        else:
+            continue
+        safe = _official_article(source, candidate)
+        if safe is not None:
+            links.setdefault(safe[1], safe[0])
+    return links
+
+
 def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> dict[str, Any] | None:
     """Extract one dated item from an official article page reached through an allowlisted index link."""
     safe = _official_article(source, href)
@@ -603,15 +641,7 @@ class InstitutionalPressDiscovery:
             errors.append(f"{self.source['name']}: index is not valid UTF-8 for detail fallback")
             return []
 
-        matches = re.finditer(
-            r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>(?P<title>.*?)</a>",
-            text, re.IGNORECASE | re.DOTALL,
-        )
-        links: dict[str, str] = {}
-        for match in matches:
-            safe = _official_article(self.source, _clean_href(match.group("href")))
-            if safe is not None:
-                links.setdefault(safe[1], safe[0])
+        links = _official_links_from_index(self.source, text)
         rows: list[dict[str, Any]] = []
         excluded = exclude_ids or set()
         pending = [
@@ -700,7 +730,11 @@ class InstitutionalPressDiscovery:
         try:
             rows, complete = _parse_page(self.source, response.content)
         except ValueError as exc:
-            if str(exc) == "institutional response has no dated official articles" and self.source.get("detail_fallback_limit"):
+            fallback_eligible = str(exc) in {
+                "institutional response has no dated official articles",
+                "institutional response is missing links and structured article metadata",
+            }
+            if fallback_eligible and self.source.get("detail_fallback_limit"):
                 rows = self._detail_fallback(response.content, errors)
                 if rows:
                     complete = False

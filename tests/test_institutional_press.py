@@ -135,14 +135,14 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert citi["detail_fallback_limit"] == 1
+    assert citi["detail_fallback_limit"] == 3
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["detail_fallback_limit"] == 1
+    assert citi["detail_fallback_limit"] == 3
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     assert swift_registry["article_path_regex"] == r"(?:/about-us/media-centre/press-releases|/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
@@ -521,6 +521,30 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
     assert result.candidates[0].published_at == datetime(2026, 9, 23, tzinfo=timezone.utc)
     assert len(http.calls) == 2
     assert "bounded detail fallback" in " ".join(result.errors)
+
+
+def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
+    source_url = "https://www.citigroup.com/global/news/press-release"
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/citi-example"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'''<html><body><script type="application/json">{"article":"/global/news/press-release/2026/citi-example"}</script></body></html>''',
+        source_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>Citi Example Press Release</h1><p>September 23, 2026</p></body></html>",
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+    citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
+    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial", result.errors
+    assert len(result.candidates) == 1, result.errors
+    assert result.candidates[0].url == article_url + "/"
+    assert result.candidates[0].title == "Citi Example Press Release"
+    assert len(http.calls) == 2
 
 
 def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
