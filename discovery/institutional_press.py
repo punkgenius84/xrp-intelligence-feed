@@ -273,7 +273,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     unique_dates: dict[tuple[int, int, datetime], tuple[int, int, datetime]] = {}
     for candidate in date_candidates:
         unique_dates.setdefault(candidate, candidate)
-    dates_by_link: dict[int, list[tuple[int, datetime]]] = {}
+    dates_by_native_id: dict[str, list[tuple[int, datetime]]] = {}
     for date_start, date_end, parsed in unique_dates.values():
         distances: list[tuple[int, int, str]] = []
         for link_index, link_match in enumerate(matches):
@@ -294,8 +294,8 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         nearest = [value for value in distances if value[0] == nearest_distance]
         if len({value[2] for value in nearest}) != 1:
             continue
-        _, link_index, _ = nearest[0]
-        dates_by_link.setdefault(link_index, []).append((nearest_distance, parsed))
+        _, _, native_id = nearest[0]
+        dates_by_native_id.setdefault(native_id, []).append((nearest_distance, parsed))
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
@@ -337,7 +337,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         # but fall back to the same bounded, unique nearest-link association when
         # the semantic wrapper contains no parseable date.
         if published is None:
-            assigned_dates = dates_by_link.get(index, [])
+            assigned_dates = dates_by_native_id.get(safe[1], [])
             published = min(assigned_dates, key=lambda item: item[0])[1] if assigned_dates else None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
