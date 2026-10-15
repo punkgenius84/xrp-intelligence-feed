@@ -411,21 +411,6 @@
         "mediacenter.imf.org"
       ],
       "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-    },
-    {
-      "source_id": "imf-media-center-news",
-      "name": "International Monetary Fund — Media Center News",
-      "authority_tier": 1,
-      "category": "institutional",
-      "discovery_method": "institutional_press_html",
-      "source_url": "https://mediacenter.imf.org/newslisting",
-      "enabled": true,
-      "lookback_days": 60,
-      "max_items": 50,
-      "allowed_hosts": [
-        "mediacenter.imf.org"
-      ],
-      "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     }
   ]
 }
