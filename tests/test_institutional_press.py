@@ -523,6 +523,30 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
     assert "bounded detail fallback" in " ".join(result.errors)
 
 
+def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
+    source_url = "https://www.citigroup.com/global/news/press-release"
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/citi-example"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'''<html><body><script type="application/json">{"article":"/global/news/press-release/2026/citi-example"}</script></body></html>''',
+        source_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b"<html><body><h1>Citi Example Press Release</h1><p>September 23, 2026</p></body></html>",
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+    citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
+    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].url == article_url + "/"
+    assert result.candidates[0].title == "Citi Example Press Release"
+    assert len(http.calls) == 2
+
+
 def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
     source_url = "https://www.citigroup.com/global/news/press-release"
     index = HttpResponse(
