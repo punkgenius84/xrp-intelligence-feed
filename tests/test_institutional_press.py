@@ -691,6 +691,30 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
 
 
 
+def test_article_date_association_allows_bounded_generic_card_spacing():
+    coinbase_blog = source(
+        source_id="coinbase-blog",
+        name="Coinbase Blog",
+        source_url="https://www.coinbase.com/blog",
+        allowed_hosts=["www.coinbase.com"],
+        article_path_regex=r"/(?:[a-z]{2}-[a-z]{2}/)?blog/[^/?#]+",
+    )
+    article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
+    html = (
+        '<html><body><span>Oct 8, 2026</span>'
+        + (" " * 1800)
+        + f'<a href="{article_url}">Official Example Post</a>'
+        + '</body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Official Example Post"
+    assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
 def test_coinbase_blog_accepts_current_localized_article_route():
     coinbase_blog = next(
         item for item in load_discovery_sources()
