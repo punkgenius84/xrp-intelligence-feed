@@ -232,7 +232,9 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
     return list(unique.values())
 
 
-def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, Any]], bool]:
+def _parse_page(
+    source: dict[str, Any], content: bytes, diagnostics: dict[str, Any] | None = None
+) -> tuple[list[dict[str, Any]], bool]:
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
@@ -353,6 +355,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
+    conflicting_ids: set[str] = set()
     complete = True
     generic_titles = {
         "read more", "read more about", "learn more", "learn more about",
@@ -461,13 +464,18 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             rows.append(structured)
         else:
             complete = False
+            conflicting_ids.add(native_id)
             # Preserve unresolved conflicts for the collector's fail-closed
             # duplicate identity handling; never choose arbitrarily.
             rows.extend(variants)
 
     valid_ids = set(grouped_rows)
     structured_ids = set(structured_by_id)
-    if incomplete_ids - valid_ids - structured_ids:
+    unresolved_incomplete_ids = incomplete_ids - valid_ids - structured_ids
+    if diagnostics is not None:
+        diagnostics["incomplete_native_ids"] = sorted(unresolved_incomplete_ids)
+        diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
+    if unresolved_incomplete_ids:
         complete = False
     if not rows:
         if structured_rows:
@@ -650,24 +658,6 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
         f"script_date_tokens={script_date_tokens} script_bytes={script_bytes}"
     )
-
-
-def _official_anchor_ids(source: dict[str, Any], content: bytes) -> list[str]:
-    """Return unique allowlisted article IDs present in actual HTML anchors only."""
-    try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        text = content.decode("utf-8", errors="replace")
-    ids: list[str] = []
-    pattern = re.compile(
-        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>",
-        re.IGNORECASE | re.DOTALL,
-    )
-    for match in pattern.finditer(text):
-        safe = _official_article(source, _clean_href(match.group("href")))
-        if safe is not None and safe[1] not in ids:
-            ids.append(safe[1])
-    return ids
 
 
 def _official_links_from_index(source: dict[str, Any], text: str) -> dict[str, str]:
@@ -883,8 +873,9 @@ class InstitutionalPressDiscovery:
             return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                    fetched_at=fetched_at, errors=errors)
 
+        parse_diagnostics: dict[str, Any] = {}
         try:
-            rows, complete = _parse_page(self.source, response.content)
+            rows, complete = _parse_page(self.source, response.content, parse_diagnostics)
         except ValueError as exc:
             fallback_eligible = str(exc) in {
                 "institutional response has no dated official articles",
@@ -916,15 +907,12 @@ class InstitutionalPressDiscovery:
                                        fetched_at=fetched_at, errors=errors)
 
         if not complete:
-            parsed_ids = {row["native_id"] for row in rows}
-            unparsed_ids = [
-                native_id for native_id in _official_anchor_ids(self.source, response.content)
-                if native_id not in parsed_ids
-            ]
-            sample = unparsed_ids[:3]
+            unparsed_ids = parse_diagnostics.get("incomplete_native_ids", [])
+            conflicting_ids = parse_diagnostics.get("conflicting_native_ids", [])
             errors.append(
                 f"{self.source['name']}: malformed article on official index "
-                f"(unparsed_official_routes={len(unparsed_ids)} sample={sample})"
+                f"(unparsed_official_routes={len(unparsed_ids)} sample={unparsed_ids[:3]}, "
+                f"conflicting_duplicate_routes={len(conflicting_ids)} sample={conflicting_ids[:3]})"
             )
             if not used_detail_fallback and self.source.get("detail_fallback_limit"):
                 known_ids = {row["native_id"] for row in rows}
