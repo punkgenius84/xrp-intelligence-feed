@@ -1172,12 +1172,16 @@ def test_partial_index_recovers_one_missing_official_card_without_claiming_full_
     index_url = "https://www.circle.com/pressroom"
     known_url = "https://www.circle.com/pressroom/known-good-release"
     missing_url = "https://www.circle.com/pressroom/missing-date-release"
+    unresolved_url = "https://www.circle.com/pressroom/second-missing-date-release"
     index = HttpResponse(
         200, {"content-type": "text/html"},
-        f"""<html><body>
-        <span>September 28, 2026</span><a href="{known_url}">Circle Known Good Release</a>
-        <a href="{missing_url}">Read More</a>
-        </body></html>""".encode(),
+        (
+            f"""<html><body>
+            <span>September 28, 2026</span><a href="{known_url}">Circle Known Good Release</a>
+            <a href="{missing_url}">Read More</a>"""
+            + (" " * 3000)
+            + f'<a href="{unresolved_url}">Second Missing Date Release</a></body></html>'
+        ).encode(),
         index_url,
     )
     detail = HttpResponse(
@@ -1198,6 +1202,11 @@ def test_partial_index_recovers_one_missing_official_card_without_claiming_full_
     assert len(http.calls) == 2
     assert http.calls[1][0] == missing_url + "/"
     assert any("bounded detail fallback recovered 1 additional official article" in error for error in result.errors)
+    diagnostic = next(error for error in result.errors if "malformed article on official index" in error)
+    assert "index_unparsed_routes=2" in diagnostic
+    assert "recovered_unparsed_routes=1" in diagnostic
+    assert "unresolved_after_fallback=1" in diagnostic
+    assert "second-missing-date-release" in diagnostic
 
 
 
