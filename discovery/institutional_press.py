@@ -244,7 +244,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     # publication date is not silently borrowed.
     date_candidates: list[tuple[int, datetime]] = []
     for date_match in re.finditer(
-        r"<time\\b[^>]*\\bdatetime=['\\\"](?P<date>[^'\\\"]+)['\\\"][^>]*>",
+        r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
         text, re.IGNORECASE | re.DOTALL,
     ):
         parsed = _parse_date(date_match.group("date"), source.get("numeric_date_order", "mdy"))
