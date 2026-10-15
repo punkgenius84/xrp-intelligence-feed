@@ -680,6 +680,23 @@ def test_duplicate_official_article_cards_ignore_generic_links_and_merge_title_v
     assert rows[0]["date"] == datetime(2026, 7, 9, tzinfo=timezone.utc)
 
 
+def test_collect_reports_bounded_sample_of_unparsed_official_routes():
+    html = (
+        '<html><body><span>Sep 29, 2026</span>'
+        '<a href="https://www.circle.com/pressroom/official-article">Official Article</a>'
+        + (" " * 1500)
+        + '<a href="https://www.circle.com/pressroom/undated-article">Undated Article</a>'
+        + '</body></html>'
+    ).encode()
+    result = InstitutionalPressDiscovery(
+        source(), http=FakeHttp(response(html)), now=lambda: STAMP
+    ).collect()
+    assert result.status == "partial"
+    diagnostic = next(error for error in result.errors if "malformed article on official index" in error)
+    assert "unparsed_official_routes=1" in diagnostic
+    assert "undated-article" in diagnostic
+
+
 def test_unique_official_article_without_date_still_marks_index_incomplete():
     mastercard = source(
         source_id="mastercard-press-releases",

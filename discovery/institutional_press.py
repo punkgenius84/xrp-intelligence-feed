@@ -898,7 +898,18 @@ class InstitutionalPressDiscovery:
                                        fetched_at=fetched_at, errors=errors)
 
         if not complete:
-            errors.append(f"{self.source['name']}: malformed article on official index")
+            parsed_ids = {row["native_id"] for row in rows}
+            unparsed_ids = [
+                native_id for native_id in _official_links_from_index(
+                    self.source, response.content.decode("utf-8-sig", errors="replace")
+                )
+                if native_id not in parsed_ids
+            ]
+            sample = unparsed_ids[:3]
+            errors.append(
+                f"{self.source['name']}: malformed article on official index "
+                f"(unparsed_official_routes={len(unparsed_ids)} sample={sample})"
+            )
             if not used_detail_fallback and self.source.get("detail_fallback_limit"):
                 known_ids = {row["native_id"] for row in rows}
                 recovered = self._detail_fallback(
