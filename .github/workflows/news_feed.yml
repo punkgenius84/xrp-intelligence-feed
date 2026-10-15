@@ -88,6 +88,7 @@ jobs:
                   print(f"State: {name}: unreadable ({exc})")
           PY
       - name: Restore intelligence model cache
+        if: github.event_name != 'push'
         id: ollama_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -95,6 +96,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Install Ollama
+        if: github.event_name != 'push'
         # Pinned v0.40.3 release archive; verify the published SHA-256 before extraction.
         run: |
           set -euo pipefail
@@ -110,6 +112,7 @@ jobs:
           ollama --version
 
       - name: Start Ollama
+        if: github.event_name != 'push'
         env:
           OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
         run: |
@@ -125,6 +128,7 @@ jobs:
           exit 1
 
       - name: Ensure intelligence model is available
+        if: github.event_name != 'push'
         env:
           OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
         run: |
@@ -194,7 +198,7 @@ jobs:
           OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
       - name: Save intelligence model cache
-        if: success() && steps.ollama_cache.outputs.cache-hit != 'true'
+        if: github.event_name != 'push' && success() && steps.ollama_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ollama/models

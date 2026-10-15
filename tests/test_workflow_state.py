@@ -102,6 +102,11 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
     app = contents.index("run: python main.py")
 
     assert "if: github.event_name != 'push'" in smoke
+    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Restore intelligence model cache")
+    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Install Ollama")
+    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Start Ollama")
+    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Ensure intelligence model is available")
+    assert "if: github.event_name != 'push' && success()" in _step_block(contents, "name: Save intelligence model cache")
     assert "OllamaProvider(model=\"qwen2.5:3b\", timeout=90)" in smoke
     assert "enrich_clusters([item]" in smoke
     assert "if failures or len(events) != 1:" in smoke
