@@ -692,6 +692,7 @@ def test_parser_diagnostics_ignore_embedded_page_data_routes():
     assert len(rows) == 1
     assert diagnostics["incomplete_native_ids"] == []
     assert diagnostics["incomplete_reasons"] == {}
+    assert diagnostics["incomplete_date_proximity"] == {}
     assert diagnostics["conflicting_native_ids"] == []
 
 
@@ -715,6 +716,8 @@ def test_collect_reports_bounded_sample_of_unparsed_official_routes():
     assert "undated-article" in diagnostic
     assert "incomplete_reasons=" in diagnostic
     assert "'date'" in diagnostic
+    assert "date_proximity=" in diagnostic
+    assert "nearest_gap" in diagnostic
     assert "conflicting_duplicate_routes=0" in diagnostic
 
 
