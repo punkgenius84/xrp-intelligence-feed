@@ -132,6 +132,18 @@ def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
     with pytest.raises(ValueError, match="unrecognized routes.*1 link"):
         _parse_page(html)
 
+def test_listing_structure_diagnostics_distinguish_all_links_from_main_links():
+    diagnostics = {}
+    rows, complete = _parse_page(FIXTURE.read_bytes(), diagnostics)
+
+    assert complete is True
+    assert len(rows) == 3
+    assert diagnostics["all_official_articles"] == 3
+    assert diagnostics["main_official_articles"] == 3
+    assert diagnostics["main_tags"] == 1
+    assert diagnostics["semantic_empty_state"] is False
+
+
 def test_parse_listing_uses_official_route_and_native_year_slug_identity():
     rows, complete = _parse_page(FIXTURE.read_bytes())
     assert complete is True
