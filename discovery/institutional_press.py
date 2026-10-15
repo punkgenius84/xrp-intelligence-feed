@@ -269,7 +269,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         if containing_block is not None:
             block_start, _, block_text = containing_block
             date_attrs = list(re.finditer(
-                r"<time\b[^>]*\bdatetime=['\\"](?P<date>[^'\\"]+)['\\"][^>]*>",
+                r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
                 block_text, re.IGNORECASE | re.DOTALL,
             ))
             date_matches = list(_DATE_RE.finditer(block_text))
@@ -290,7 +290,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
             raw_window = text[previous:match.start()]
             date_attrs = list(re.finditer(
-                r"<time\b[^>]*\bdatetime=['\\"](?P<date>[^'\\"]+)['\\"][^>]*>",
+                r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
                 raw_window, re.IGNORECASE | re.DOTALL,
             ))
             date_matches = list(_DATE_RE.finditer(raw_window))
