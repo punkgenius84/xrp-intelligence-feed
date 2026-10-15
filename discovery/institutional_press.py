@@ -799,7 +799,10 @@ class InstitutionalPressDiscovery:
         )
 
 
-    def _detail_fallback(self, content: bytes, errors: list[str], *, exclude_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    def _detail_fallback(
+        self, content: bytes, errors: list[str], *, exclude_ids: set[str] | None = None,
+        preferred_ids: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Fetch a tightly bounded number of dated official article details from a sparse index."""
         limit = self.source.get("detail_fallback_limit", 0)
         if not limit:
@@ -813,10 +816,12 @@ class InstitutionalPressDiscovery:
         links = _official_links_from_index(self.source, text)
         rows: list[dict[str, Any]] = []
         excluded = exclude_ids or set()
+        preferred = preferred_ids or set()
         pending = [
             (native_id, url) for native_id, url in links.items()
             if native_id not in excluded
         ]
+        pending.sort(key=lambda item: item[0] not in preferred)
         if not links:
             errors.append(
                 f"{self.source['name']}: bounded detail fallback found no allowlisted official article links"
@@ -932,25 +937,49 @@ class InstitutionalPressDiscovery:
                                        fetched_at=fetched_at, errors=errors)
 
         if not complete:
-            unparsed_ids = parse_diagnostics.get("incomplete_native_ids", [])
-            conflicting_ids = parse_diagnostics.get("conflicting_native_ids", [])
-            errors.append(
-                f"{self.source['name']}: malformed article on official index "
-                f"(unparsed_official_routes={len(unparsed_ids)} sample={unparsed_ids[:3]}, "
-                f"conflicting_duplicate_routes={len(conflicting_ids)} sample={conflicting_ids[:3]})"
-            )
+            unparsed_ids = set(parse_diagnostics.get("incomplete_native_ids", []))
+            conflicting_ids = set(parse_diagnostics.get("conflicting_native_ids", []))
+            resolved_conflicts: set[str] = set()
             if not used_detail_fallback and self.source.get("detail_fallback_limit"):
-                known_ids = {row["native_id"] for row in rows}
+                known_ids = {
+                    row["native_id"] for row in rows
+                    if row["native_id"] not in conflicting_ids
+                }
                 recovered = self._detail_fallback(
-                    response.content, errors, exclude_ids=known_ids
+                    response.content, errors, exclude_ids=known_ids,
+                    preferred_ids=conflicting_ids,
                 )
                 if recovered:
-                    rows.extend(recovered)
+                    recovered_ids = {row["native_id"] for row in recovered}
+                    resolved_conflicts = conflicting_ids & recovered_ids
+                    if resolved_conflicts:
+                        rows = [row for row in rows if row["native_id"] not in resolved_conflicts]
+                    existing_ids = {row["native_id"] for row in rows}
+                    additional_rows = [row for row in recovered if row["native_id"] not in existing_ids]
+                    rows.extend(additional_rows)
                     used_detail_fallback = True
-                    errors.append(
-                        f"{self.source['name']}: bounded detail fallback recovered "
-                        f"{len(recovered)} additional official article(s); source remains partial"
-                    )
+                    if resolved_conflicts:
+                        print(
+                            f"Source recovery: {self.source['source_id']} resolved "
+                            f"{len(resolved_conflicts)} conflicting duplicate article(s) from official detail pages"
+                        )
+                    if additional_rows:
+                        errors.append(
+                            f"{self.source['name']}: bounded detail fallback recovered "
+                            f"{len(additional_rows)} additional official article(s); source remains partial"
+                        )
+            unresolved_conflicts = conflicting_ids - resolved_conflicts
+            if unparsed_ids or unresolved_conflicts:
+                errors.append(
+                    f"{self.source['name']}: malformed article on official index "
+                    f"(unparsed_official_routes={len(unparsed_ids)} sample={sorted(unparsed_ids)[:3]}, "
+                    f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
+                )
+            if not unparsed_ids and not unresolved_conflicts and not errors:
+                updates[index_request_id] = {
+                    key: response.headers[key]
+                    for key in ("etag", "last_modified") if response.headers.get(key)
+                }
         else:
             updates[index_request_id] = {
                 key: response.headers[key]
