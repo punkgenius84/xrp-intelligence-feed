@@ -1,6 +1,7 @@
 import html
 import re
 import unicodedata
+import time
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
@@ -182,7 +183,15 @@ def run_pipeline(
 
     if run_discovery:
         for source in discovery_sources:
+            source_id = source.get("source_id", "unknown-source")
+            started_at = time.monotonic()
+            print(f"Discovery start: {source_id}")
             result = collect_source(source, discovery_state_value)
+            elapsed_ms = round((time.monotonic() - started_at) * 1000)
+            print(
+                f"Discovery complete: {source_id} status={result.status} "
+                f"candidates={len(result.candidates)} elapsed_ms={elapsed_ms}"
+            )
             discovery_results.append(result)
             collected.extend(result.candidates)
             JsonDiscoveryState.record_health(
