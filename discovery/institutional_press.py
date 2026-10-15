@@ -295,7 +295,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         if len({value[2] for value in nearest}) != 1:
             continue
         _, _, native_id = nearest[0]
-        dates_by_native_id.setdefault(native_id, []).append((nearest_distance, parsed))
+        dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
@@ -338,7 +338,17 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         # the semantic wrapper contains no parseable date.
         if published is None:
             assigned_dates = dates_by_native_id.get(safe[1], [])
-            published = min(assigned_dates, key=lambda item: item[0])[1] if assigned_dates else None
+
+            def distance_to_link(item: tuple[int, int, datetime]) -> int:
+                date_start, date_end, _ = item
+                if date_end <= match.start():
+                    return match.start() - date_end
+                if date_start >= match.end():
+                    return date_start - match.end()
+                return 0
+
+            nearest_assigned = min(assigned_dates, key=distance_to_link) if assigned_dates else None
+            published = nearest_assigned[2] if nearest_assigned is not None else None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles or published is None:
