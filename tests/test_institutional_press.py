@@ -9,6 +9,7 @@ from discovery.institutional_press import (
     _official_article,
     _parse_article_detail,
     _index_request_id,
+    _official_anchor_ids,
     _parse_page,
     validate_institutional_source,
 )
@@ -680,12 +681,21 @@ def test_duplicate_official_article_cards_ignore_generic_links_and_merge_title_v
     assert rows[0]["date"] == datetime(2026, 7, 9, tzinfo=timezone.utc)
 
 
+def test_unparsed_anchor_diagnostics_ignore_embedded_page_data_routes():
+    html = b'''<html><body>
+      <a href="https://www.circle.com/pressroom/visible-release">Visible release</a>
+      <script>const oldRoute = "https://www.circle.com/pressroom/embedded-old-release";</script>
+    </body></html>'''
+    assert _official_anchor_ids(source(), html) == ["/pressroom/visible-release"]
+
+
 def test_collect_reports_bounded_sample_of_unparsed_official_routes():
     html = (
         '<html><body><span>Sep 29, 2026</span>'
         '<a href="https://www.circle.com/pressroom/official-article">Official Article</a>'
         + (" " * 1500)
         + '<a href="https://www.circle.com/pressroom/undated-article">Undated Article</a>'
+        + '<script>const hidden = "https://www.circle.com/pressroom/old-embedded-route";</script>'
         + '</body></html>'
     ).encode()
     result = InstitutionalPressDiscovery(
