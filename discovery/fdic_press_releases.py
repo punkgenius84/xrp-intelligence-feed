@@ -157,7 +157,7 @@ class _FDICListingParser(HTMLParser):
         return self.items if self._saw_main else self._all_items
 
 
-def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
+def _parse_page(content: bytes, diagnostics: dict[str, object] | None = None) -> tuple[list[dict[str, str]], bool]:
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -165,6 +165,17 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
     parser = _FDICListingParser()
     parser.feed(text)
     parser.close()
+    if diagnostics is not None:
+        diagnostics.update({
+            "bytes": len(content),
+            "anchor_tags": parser._anchor_tags,
+            "href_anchors": parser._href_anchors,
+            "main_tags": parser._main_tags,
+            "all_official_articles": len(parser._all_items),
+            "main_official_articles": len(parser.items),
+            "route_like_links": parser._route_like_links,
+            "semantic_empty_state": parser.no_results,
+        })
     if parser._anchor is not None:
         raise ValueError("FDIC Press Releases HTML ended inside an article link")
     rows: list[dict[str, str]] = []
@@ -289,6 +300,15 @@ class FDICPressReleasesDiscovery:
             page_fetches += 1
             pages_probed.append(page)
             url = self._page_url(page)
+            diagnostics: dict[str, object] = {}
+
+            def report_diagnostics() -> None:
+                if page == 0 and diagnostics:
+                    print(
+                        "FDIC listing structure: "
+                        + " ".join(f"{key}={value}" for key, value in diagnostics.items())
+                    )
+
             try:
                 validators = {}
                 if isinstance(state, dict):
@@ -299,7 +319,8 @@ class FDICPressReleasesDiscovery:
                                          expected_content_types=("text/html",), attempt_budget=budget)
                 if response.status_code == 304:
                     return True, True
-                rows, complete = _parse_page(response.content)
+                rows, complete = _parse_page(response.content, diagnostics)
+                report_diagnostics()
                 if not complete:
                     errors.append(f"Malformed FDIC listing page {page}")
                     return False, False
@@ -312,6 +333,7 @@ class FDICPressReleasesDiscovery:
                 errors.append(f"page {page}: {exc.kind}" + (f" (HTTP {exc.status_code})" if exc.status_code else ""))
                 return False, False
             except (UnicodeError, ValueError, TypeError) as exc:
+                report_diagnostics()
                 errors.append(f"page {page}: {exc}")
                 return False, False
 
