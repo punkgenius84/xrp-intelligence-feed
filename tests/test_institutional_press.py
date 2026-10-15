@@ -108,7 +108,7 @@ def test_registered_institutional_sources_are_bounded():
     assert mastercard["detail_fallback_limit"] == 1
     assert dbs["detail_fallback_limit"] == 1
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
-    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog/landing"
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
@@ -631,7 +631,7 @@ def test_coinbase_blog_accepts_current_localized_article_route():
         item for item in load_discovery_sources()
         if item["source_id"] == "coinbase-blog"
     )
-    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog/landing"
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
 
     html = b"""<html><body>
     <span>Oct 8, 2026</span>
