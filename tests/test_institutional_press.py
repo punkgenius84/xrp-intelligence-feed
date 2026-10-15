@@ -904,6 +904,8 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert "bytes=" in diagnostic
     assert "allowlisted_article_links=0" in diagnostic
     assert "json_ld_scripts=0" in diagnostic
+    assert "date_tokens_near_article_links=" in diagnostic
+    assert "articles_with_nearby_date_tokens=" in diagnostic
     assert "https://" not in diagnostic
 
 
