@@ -686,7 +686,7 @@ def test_unparsed_anchor_diagnostics_ignore_embedded_page_data_routes():
       <a href="https://www.circle.com/pressroom/visible-release">Visible release</a>
       <script>const oldRoute = "https://www.circle.com/pressroom/embedded-old-release";</script>
     </body></html>'''
-    assert _official_anchor_ids(source(), html) == ["visible-release"]
+    assert _official_anchor_ids(source(), html) == ["/pressroom/visible-release"]
 
 
 def test_collect_reports_bounded_sample_of_unparsed_official_routes():
