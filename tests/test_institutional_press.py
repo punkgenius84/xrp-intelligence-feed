@@ -756,6 +756,27 @@ def test_article_date_association_allows_bounded_generic_card_spacing():
     assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
 
 
+def test_date_nearest_to_generic_duplicate_link_is_shared_by_same_article_title_link():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
+    html = (
+        '<html><body><span>Oct 8, 2026</span>'
+        + f'<a href="{article_url}">Read More</a>'
+        + (" " * 1600)
+        + f'<a href="{article_url}">Official Example Post</a>'
+        + '</body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Official Example Post"
+    assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
 def test_coinbase_article_shell_can_fall_back_to_nearby_outside_date():
     coinbase_blog = next(
         item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
