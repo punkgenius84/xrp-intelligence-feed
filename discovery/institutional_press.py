@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 from html import unescape
 from html.parser import HTMLParser
 import json
@@ -16,6 +17,12 @@ from storage.discovery_state import JsonDiscoveryState
 
 METHOD = "institutional_press_html"
 _MAX_ITEMS_HARD = 100
+
+
+def _index_request_id(source_url: str) -> str:
+    """Scope conditional-request validators to the exact index URL."""
+    digest = hashlib.sha256(source_url.encode("utf-8")).hexdigest()[:16]
+    return f"index:{digest}"
 _DATE_RE = re.compile(
     r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
     r"Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b"
@@ -576,7 +583,8 @@ class InstitutionalPressDiscovery:
 
         cutoff = fetched_at.astimezone(timezone.utc) - timedelta(days=self.source["lookback_days"])
         state = source_state if isinstance(source_state, dict) else {}
-        validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], "index")
+        index_request_id = _index_request_id(self.source["source_url"])
+        validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], index_request_id)
         errors: list[str] = []
         updates: dict[str, dict[str, str]] = {}
         candidates: dict[str, DiscoveryCandidate] = {}
@@ -598,7 +606,7 @@ class InstitutionalPressDiscovery:
                                    fetched_at=fetched_at, errors=errors)
 
         if response.status_code == 304:
-            updates["index"] = {
+            updates[index_request_id] = {
                 key: response.headers.get(key, validators.get(key, ""))
                 for key in ("etag", "last_modified")
                 if response.headers.get(key, validators.get(key, ""))
@@ -654,7 +662,7 @@ class InstitutionalPressDiscovery:
                         f"{len(recovered)} additional official article(s); source remains partial"
                     )
         else:
-            updates["index"] = {
+            updates[index_request_id] = {
                 key: response.headers[key]
                 for key in ("etag", "last_modified") if response.headers.get(key)
             }
