@@ -169,6 +169,18 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
         raise ValueError("FDIC Press Releases HTML ended inside an article link")
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
+    if parser._saw_main and len(parser.items) <= 1:
+        main_ids = {item["native_id"] for item in parser.items}
+        outside_ids = {
+            item["native_id"] for item in parser._all_items
+            if item["native_id"] not in main_ids
+        }
+        if outside_ids:
+            raise ValueError(
+                "FDIC main region contains at most one recognized release while "
+                f"{len(outside_ids)} additional official release route(s) exist outside it; "
+                "refusing to treat the main region as a complete listing"
+            )
     for item in parser.listing_items():
         if item["native_id"] not in seen:
             seen.add(item["native_id"])
