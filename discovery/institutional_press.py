@@ -967,6 +967,7 @@ class InstitutionalPressDiscovery:
             incomplete_reasons = parse_diagnostics.get("incomplete_reasons", {})
             conflicting_ids = set(parse_diagnostics.get("conflicting_native_ids", []))
             resolved_conflicts: set[str] = set()
+            recovered_unparsed_ids: set[str] = set()
             if not used_detail_fallback and self.source.get("detail_fallback_limit"):
                 known_ids = {
                     row["native_id"] for row in rows
@@ -978,6 +979,7 @@ class InstitutionalPressDiscovery:
                 )
                 if recovered:
                     recovered_ids = {row["native_id"] for row in recovered}
+                    recovered_unparsed_ids = unparsed_ids & recovered_ids
                     resolved_conflicts = conflicting_ids & recovered_ids
                     if resolved_conflicts:
                         rows = [row for row in rows if row["native_id"] not in resolved_conflicts]
@@ -1000,7 +1002,10 @@ class InstitutionalPressDiscovery:
             if unparsed_ids or unresolved_conflicts:
                 errors.append(
                     f"{self.source['name']}: malformed article on official index "
-                    f"(unparsed_official_routes={len(unparsed_ids)} sample={sorted(unparsed_ids)[:3]}, "
+                    f"(index_unparsed_routes={len(unparsed_ids)} sample={sorted(unparsed_ids)[:3]}, "
+                    f"recovered_unparsed_routes={len(recovered_unparsed_ids)}, "
+                    f"unresolved_after_fallback={len(unparsed_ids - recovered_unparsed_ids)} "
+                    f"sample={sorted(unparsed_ids - recovered_unparsed_ids)[:3]}, "
                     f"incomplete_reasons={ {key: incomplete_reasons.get(key, []) for key in sorted(unparsed_ids)[:3]} }, "
                     f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
                 )
