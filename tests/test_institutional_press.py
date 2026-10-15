@@ -834,6 +834,12 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert len(http.calls) == 1
     assert any("bounded detail fallback found no allowlisted official article links" in error
                for error in result.errors)
+    diagnostic = next(error for error in result.errors if "index diagnostics:" in error)
+    assert "content_type='text/html'" in diagnostic
+    assert "bytes=" in diagnostic
+    assert "allowlisted_article_links=0" in diagnostic
+    assert "json_ld_scripts=0" in diagnostic
+    assert "https://" not in diagnostic
 
 
 @pytest.mark.parametrize(
