@@ -398,12 +398,12 @@
       "article_path_regex": "/en/Publications/GFSR/Issues/\\d{4}/\\d{2}/\\d{2}/[^/?#]+"
     },
     {
-      "source_id": "imf-media-center-gfsr",
-      "name": "International Monetary Fund — Media Center (GFSR)",
+      "source_id": "imf-media-center-news",
+      "name": "International Monetary Fund — Media Center News",
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://mediacenter.imf.org/Tags?tags=GFSR",
+      "source_url": "https://mediacenter.imf.org/newslisting",
       "enabled": true,
       "lookback_days": 365,
       "max_items": 50,
