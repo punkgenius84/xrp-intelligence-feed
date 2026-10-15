@@ -910,6 +910,10 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert "json_data_scripts=" in diagnostic
     assert "script_date_tokens=" in diagnostic
     assert "script_bytes=" in diagnostic
+    assert "date_tokens_within_2500=" in diagnostic
+    assert "articles_within_5000=" in diagnostic
+    assert "date_tokens_within_10000=" in diagnostic
+    assert "median_nearest_date_distance=" in diagnostic
     assert "https://" not in diagnostic
 
 
