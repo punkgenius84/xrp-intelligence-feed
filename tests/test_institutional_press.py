@@ -142,7 +142,7 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["detail_fallback_limit"] == 1
+    assert citi["detail_fallback_limit"] == 3
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     assert swift_registry["article_path_regex"] == r"(?:/about-us/media-centre/press-releases|/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
