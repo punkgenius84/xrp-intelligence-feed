@@ -67,10 +67,11 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@")
 
 
-def test_workflow_enables_intelligence_in_shadow_mode_with_local_model():
+def test_workflow_skips_full_enrichment_on_push_but_keeps_scheduled_shadow_mode():
     contents = WORKFLOW.read_text(encoding="utf-8")
     run = _step_block(contents, "run: python main.py")
-    assert 'INTELLIGENCE_ENABLED: "true"' in run
+    assert "INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}" in run
+    assert "Scheduled and manual runs keep full intelligence enrichment enabled." in run
     assert 'INTELLIGENCE_PUBLISH: "false"' in run
     assert 'OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"' in run
     assert 'OLLAMA_MODEL: "qwen2.5:3b"' in run
