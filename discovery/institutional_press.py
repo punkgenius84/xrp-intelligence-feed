@@ -730,7 +730,11 @@ class InstitutionalPressDiscovery:
         try:
             rows, complete = _parse_page(self.source, response.content)
         except ValueError as exc:
-            if str(exc) == "institutional response has no dated official articles" and self.source.get("detail_fallback_limit"):
+            fallback_eligible = str(exc) in {
+                "institutional response has no dated official articles",
+                "institutional response is missing links and structured article metadata",
+            }
+            if fallback_eligible and self.source.get("detail_fallback_limit"):
                 rows = self._detail_fallback(response.content, errors)
                 if rows:
                     complete = False
