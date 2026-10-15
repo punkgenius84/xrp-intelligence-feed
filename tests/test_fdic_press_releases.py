@@ -97,6 +97,14 @@ def test_generic_filter_message_does_not_masquerade_as_empty_listing():
         _parse_page(html)
 
 
+def test_unrecognized_listing_error_includes_bounded_structure_counts():
+    html = b'''<html><body><main>
+      <a href="/news/press-releases">Press releases</a>
+    </main></body></html>'''
+    with pytest.raises(ValueError, match=r"no recognizable Press Releases listing.*bytes=.*anchor_tags=1.*main_tags=1"):
+        _parse_page(html)
+
+
 def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
     html = b"""<html><body>
       <main>

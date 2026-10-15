@@ -78,6 +78,9 @@ class _FDICListingParser(HTMLParser):
         self._saw_main = False
         self.no_results = False
         self._route_like_links = 0
+        self._anchor_tags = 0
+        self._href_anchors = 0
+        self._main_tags = 0
         self._empty_state_tags: list[str] = []
         self._empty_state_text: list[str] = []
 
@@ -93,10 +96,14 @@ class _FDICListingParser(HTMLParser):
             self._empty_state_text = []
         if tag == "main":
             self._saw_main = True
+            self._main_tags += 1
             self._main_depth += 1
         if tag != "a":
             return
+        self._anchor_tags += 1
         href = next((value or "" for key, value in attrs if key.casefold() == "href"), "")
+        if href:
+            self._href_anchors += 1
         identity = _article_identity(href)
         if identity is not None:
             self._anchor = {"native_id": identity[0], "url": identity[1], "title": ""}
@@ -168,7 +175,13 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
             f"({parser._route_like_links} link(s)); refusing to treat it as an empty listing"
         )
     if not rows and not parser.no_results:
-        raise ValueError("FDIC response contains no recognizable Press Releases listing")
+        raise ValueError(
+            "FDIC response contains no recognizable Press Releases listing "
+            f"(bytes={len(content)}, anchor_tags={parser._anchor_tags}, "
+            f"href_anchors={parser._href_anchors}, main_tags={parser._main_tags}, "
+            f"recognized_articles={len(rows)}, route_like_links={parser._route_like_links}, "
+            f"semantic_empty_state={parser.no_results})"
+        )
     return rows, True
 
 
