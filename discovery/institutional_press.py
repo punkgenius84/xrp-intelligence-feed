@@ -286,7 +286,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
                 distance = date_start - link_match.end()
             else:
                 distance = 0
-            if distance <= 1200:
+            if distance <= 2500:
                 distances.append((distance, link_index, safe_link[1]))
         if not distances:
             continue
