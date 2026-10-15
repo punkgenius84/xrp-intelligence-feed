@@ -297,8 +297,12 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         _, _, native_id = nearest[0]
         dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
 
-    heading_titles_by_native_id: dict[str, list[tuple[int, int, str]]] = {}
+    heading_candidates_by_native_id: dict[str, list[tuple[float, int, int, str]]] = {}
     generic_heading_labels = {"news", "press release", "press releases", "blog", "article", "read more", "learn more"}
+    stop_words = {"a", "an", "and", "for", "in", "of", "on", "the", "to", "with"}
+    safe_url_by_id = {
+        safe[1]: safe[0] for safe in safe_by_index.values() if safe is not None
+    }
     heading_matches = list(re.finditer(
         r"<h[1-6]\b[^>]*>(?P<title>.*?)</h[1-6]\s*>",
         text, re.IGNORECASE | re.DOTALL,
@@ -325,11 +329,27 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             continue
         nearest_distance = min(value[0] for value in distances)
         nearest_ids = {native_id for distance, native_id in distances if distance == nearest_distance}
-        if len(nearest_ids) == 1:
-            native_id = next(iter(nearest_ids))
-            heading_titles_by_native_id.setdefault(native_id, []).append(
-                (heading.start(), heading.end(), heading_title)
-            )
+        if len(nearest_ids) != 1:
+            continue
+        native_id = next(iter(nearest_ids))
+        article_path = urlsplit(safe_url_by_id[native_id]).path.rstrip("/")
+        slug = re.sub(r"\.(?:html?|aspx?)$", "", article_path.rsplit("/", 1)[-1].casefold())
+        slug_tokens = set(re.findall(r"[a-z0-9]+", slug)) - stop_words
+        heading_tokens = set(re.findall(r"[a-z0-9]+", normalized_heading)) - stop_words
+        shared_tokens = slug_tokens & heading_tokens
+        if not slug_tokens or len(shared_tokens) < min(2, len(slug_tokens)):
+            continue
+        coverage = len(shared_tokens) / len(slug_tokens)
+        heading_candidates_by_native_id.setdefault(native_id, []).append(
+            (coverage, len(shared_tokens), nearest_distance, heading_title)
+        )
+    heading_title_by_native_id = {
+        native_id: max(
+            candidates,
+            key=lambda item: (item[0], item[1], -item[2], len(item[3])),
+        )[3]
+        for native_id, candidates in heading_candidates_by_native_id.items()
+    }
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
@@ -386,19 +406,9 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles:
-            assigned_titles = heading_titles_by_native_id.get(safe[1], [])
-
-            def distance_to_heading(item: tuple[int, int, str]) -> int:
-                heading_start, heading_end, _ = item
-                if heading_end <= match.start():
-                    return match.start() - heading_end
-                if heading_start >= match.end():
-                    return heading_start - match.end()
-                return 0
-
-            nearest_title = min(assigned_titles, key=distance_to_heading) if assigned_titles else None
-            if nearest_title is not None and distance_to_heading(nearest_title) <= 2500:
-                title = nearest_title[2]
+            assigned_title = heading_title_by_native_id.get(safe[1])
+            if assigned_title:
+                title = assigned_title
                 normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles or published is None:
             incomplete_ids.add(safe[1])

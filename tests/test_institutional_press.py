@@ -732,6 +732,28 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
 
 
 
+def test_coinbase_heading_selection_is_consistent_across_duplicate_image_links():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    article_url = "https://www.coinbase.com/en-us/blog/system-update-take-control-of-your-money-with-coinbase"
+    html = (
+        '<html><body><span>Oct 8, 2026</span>'
+        + '<h2>How to contact support about account security</h2>'
+        + f'<a href="{article_url}"><img src="/first.png" alt=""></a>'
+        + '<h2>System Update: Take Control of Your Money With Coinbase</h2>'
+        + f'<a href="{article_url}"><img src="/second.png" alt=""></a>'
+        + '</body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "System Update: Take Control of Your Money With Coinbase"
+    assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
 def test_coinbase_recovers_title_from_nearby_heading_when_link_is_empty():
     coinbase_blog = next(
         item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
