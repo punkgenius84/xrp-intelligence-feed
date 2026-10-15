@@ -1020,6 +1020,11 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert "articles_within_5000=" in diagnostic
     assert "date_tokens_within_10000=" in diagnostic
     assert "median_nearest_date_distance=" in diagnostic
+    assert "parseable_date_tokens=" in diagnostic
+    assert "parseable_date_tokens_within_2500=" in diagnostic
+    assert "official_links_with_text=" in diagnostic
+    assert "official_links_with_generic_text=" in diagnostic
+    assert "official_links_in_article_blocks=" in diagnostic
     assert "https://" not in diagnostic
 
 
