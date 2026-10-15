@@ -88,6 +88,17 @@ def test_listing_ignores_stale_related_release_outside_main_region():
     ]
 
 
+
+def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
+    html = b"""<html><body>
+      <main>
+        <a href="/news/press-releases/2026/10/15/fdic-new-release">New release</a>
+      </main>
+      <div class="filter-status">No results found.</div>
+    </body></html>"""
+    with pytest.raises(ValueError, match="unrecognized routes.*1 link"):
+        _parse_page(html)
+
 def test_parse_listing_uses_official_route_and_native_year_slug_identity():
     rows, complete = _parse_page(FIXTURE.read_bytes())
     assert complete is True

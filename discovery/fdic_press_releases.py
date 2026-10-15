@@ -77,6 +77,7 @@ class _FDICListingParser(HTMLParser):
         self._main_depth = 0
         self._saw_main = False
         self.no_results = False
+        self._route_like_links = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "main":
@@ -90,6 +91,17 @@ class _FDICListingParser(HTMLParser):
         if identity is not None:
             self._anchor = {"native_id": identity[0], "url": identity[1], "title": ""}
             self._anchor_in_main = self._main_depth > 0
+        else:
+            # Distinguish a genuinely empty listing from a page whose official
+            # press-release links changed shape and are no longer recognized.
+            try:
+                parts = urlsplit(urljoin(FDIC_URL, href.strip()))
+            except ValueError:
+                return
+            if (parts.scheme.lower() == "https" and parts.hostname is not None
+                    and parts.hostname.casefold() == FDIC_HOST
+                    and parts.path.startswith("/news/press-releases/")):
+                self._route_like_links += 1
 
     def handle_data(self, data: str) -> None:
         if self._anchor is not None:
@@ -132,6 +144,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, str]], bool]:
         if item["native_id"] not in seen:
             seen.add(item["native_id"])
             rows.append(item)
+    if not rows and parser._route_like_links:
+        raise ValueError(
+            "FDIC response contains official press-release links with unrecognized routes "
+            f"({parser._route_like_links} link(s)); refusing to treat it as an empty listing"
+        )
     if not rows and not parser.no_results:
         raise ValueError("FDIC response contains no recognizable Press Releases listing")
     return rows, True
