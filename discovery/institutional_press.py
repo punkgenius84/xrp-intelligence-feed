@@ -540,10 +540,12 @@ def _official_links_from_index(source: dict[str, Any], text: str) -> dict[str, s
         # JSON/JavaScript may escape URL separators. Only the route itself is
         # retained; _official_article still enforces the configured host/path.
         normalized = value.replace(r"\/", "/").replace(r"\u002F", "/").replace(r"\u002f", "/")
-        offset = normalized.find(source_path)
-        if offset < 0:
+        if normalized.startswith(("https://", "http://")):
+            candidate = normalized
+        elif normalized.startswith(source_path):
+            candidate = normalized
+        else:
             continue
-        candidate = normalized[offset:]
         safe = _official_article(source, candidate)
         if safe is not None:
             links.setdefault(safe[1], safe[0])
