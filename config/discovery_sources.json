@@ -269,7 +269,7 @@
         "www.coinbase.com",
         "coinbase.com"
       ],
-      "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
+      "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
     },
     {
       "source_id": "coinbase-investor-news",
