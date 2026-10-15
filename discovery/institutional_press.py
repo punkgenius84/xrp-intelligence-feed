@@ -333,6 +333,13 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         else:
             assigned_dates = dates_by_link.get(index, [])
             published = min(assigned_dates, key=lambda item: item[0])[1] if assigned_dates else None
+        # Some JS-heavy indexes wrap each link in an <article> shell while the
+        # date sits outside that shell. Prefer a local card date when available,
+        # but fall back to the same bounded, unique nearest-link association when
+        # the semantic wrapper contains no parseable date.
+        if published is None:
+            assigned_dates = dates_by_link.get(index, [])
+            published = min(assigned_dates, key=lambda item: item[0])[1] if assigned_dates else None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles or published is None:
