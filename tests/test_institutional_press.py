@@ -225,6 +225,28 @@ def test_detail_fallback_reads_machine_readable_time_datetime():
     assert row["date"] == datetime(2026, 10, 11, 8, tzinfo=timezone.utc)
 
 
+def test_parser_maps_dates_after_generic_div_cards_without_borrowing_neighbors():
+    coinbase = source(
+        source_id="coinbase-blog",
+        name="Coinbase",
+        source_url="https://www.coinbase.com/blog",
+        allowed_hosts=["www.coinbase.com", "coinbase.com"],
+        article_path_regex=r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+",
+    )
+    html = b'''<html><body>
+      <div class="story-card"><a href="/blog/first-announcement">First official announcement</a>
+        <span>Oct 14, 2026</span></div>
+      <div class="story-card"><a href="/blog/second-announcement">Second official announcement</a>
+        <span>Oct 13, 2026</span></div>
+    </body></html>'''
+    rows, complete = _parse_page(coinbase, html)
+    assert complete is True
+    assert {row["title"]: row["date"] for row in rows} == {
+        "First official announcement": datetime(2026, 10, 14, tzinfo=timezone.utc),
+        "Second official announcement": datetime(2026, 10, 13, tzinfo=timezone.utc),
+    }
+
+
 def test_parser_associates_dates_after_titles_with_their_own_cards():
     coinbase = source(
         source_id="coinbase-blog",
