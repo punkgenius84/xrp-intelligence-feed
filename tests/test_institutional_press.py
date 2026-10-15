@@ -740,7 +740,7 @@ def test_historical_mastercard_route_outside_lookback_does_not_mark_index_incomp
         name="Mastercard",
         source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
         allowed_hosts=["www.mastercard.com", "mastercard.com"],
-        article_path_regex=r"/global/en/news-and-trends/press/\\d{4}/[^/?#]+/[^/?#]+",
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
     )
     current_url = "https://www.mastercard.com/global/en/news-and-trends/press/2026/september/current-release.html"
     old_url = "https://www.mastercard.com/global/en/news-and-trends/press/2024/april/old-release.html"
@@ -765,7 +765,7 @@ def test_current_lookback_month_undated_mastercard_route_remains_incomplete():
         name="Mastercard",
         source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
         allowed_hosts=["www.mastercard.com", "mastercard.com"],
-        article_path_regex=r"/global/en/news-and-trends/press/\\d{4}/[^/?#]+/[^/?#]+",
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
     )
     current_url = "https://www.mastercard.com/global/en/news-and-trends/press/2026/april/undated-release.html"
     html = (
