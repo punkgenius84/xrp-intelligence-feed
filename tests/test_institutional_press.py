@@ -135,7 +135,7 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert citi["detail_fallback_limit"] == 1
+    assert citi["detail_fallback_limit"] == 3
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
@@ -540,8 +540,8 @@ def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
     citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
-    assert result.status == "partial"
-    assert len(result.candidates) == 1
+    assert result.status == "partial", result.errors
+    assert len(result.candidates) == 1, result.errors
     assert result.candidates[0].url == article_url + "/"
     assert result.candidates[0].title == "Citi Example Press Release"
     assert len(http.calls) == 2
