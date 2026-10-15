@@ -331,8 +331,7 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
             else:
                 published = None
         else:
-            assigned_dates = dates_by_link.get(index, [])
-            published = min(assigned_dates, key=lambda item: item[0])[1] if assigned_dates else None
+            published = None
         # Some JS-heavy indexes wrap each link in an <article> shell while the
         # date sits outside that shell. Prefer a local card date when available,
         # but fall back to the same bounded, unique nearest-link association when
