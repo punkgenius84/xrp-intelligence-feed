@@ -652,6 +652,24 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     )
 
 
+def _official_anchor_ids(source: dict[str, Any], content: bytes) -> list[str]:
+    """Return unique allowlisted article IDs present in actual HTML anchors only."""
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("utf-8", errors="replace")
+    ids: list[str] = []
+    pattern = re.compile(
+        r"<a\\b[^>]*?\\bhref\\s*=\\s*(?P<href>\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)[^>]*>",
+        re.IGNORECASE | re.DOTALL,
+    )
+    for match in pattern.finditer(text):
+        safe = _official_article(source, _clean_href(match.group("href")))
+        if safe is not None and safe[1] not in ids:
+            ids.append(safe[1])
+    return ids
+
+
 def _official_links_from_index(source: dict[str, Any], text: str) -> dict[str, str]:
     """Find allowlisted article routes in anchors and bounded quoted page-data strings."""
     links: dict[str, str] = {}
@@ -900,9 +918,7 @@ class InstitutionalPressDiscovery:
         if not complete:
             parsed_ids = {row["native_id"] for row in rows}
             unparsed_ids = [
-                native_id for native_id in _official_links_from_index(
-                    self.source, response.content.decode("utf-8-sig", errors="replace")
-                )
+                native_id for native_id in _official_anchor_ids(self.source, response.content)
                 if native_id not in parsed_ids
             ]
             sample = unparsed_ids[:3]
