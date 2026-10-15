@@ -235,7 +235,7 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
 def _route_month_is_before_cutoff(native_id: str, cutoff: datetime) -> bool:
     """Recognize old Mastercard press routes only when their whole URL month predates cutoff."""
     match = re.search(
-        r"/press/(20\\d{2})/(january|february|march|april|may|june|july|august|september|october|november|december)/",
+        r"/press/(20\d{2})/(january|february|march|april|may|june|july|august|september|october|november|december)/",
         native_id.casefold(),
     )
     if match is None:
