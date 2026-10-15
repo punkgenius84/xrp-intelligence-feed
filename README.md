@@ -205,3 +205,7 @@ The JSON state is saved only after entity detection, source-quality classificati
     python main.py
 
 The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs four times per hour at minutes 7, 22, 37, and 52. It runs the full test suite, restores persistent state, runs the intelligence layer in shadow mode, and then executes the feed. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
+
+## Source availability notes
+
+- **Citi press releases are temporarily parked.** The GitHub Actions runner receives a large HTML shell without allowlisted official release links or embedded article routes. The parser fails closed rather than inventing releases. Re-enable the source only after an official machine-readable listing/feed is verified; fixture tests continue to exercise the parser and bounded detail fallback.
