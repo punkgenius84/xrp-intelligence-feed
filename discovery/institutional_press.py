@@ -428,6 +428,21 @@ def _parse_page(
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles:
+            opening_tag = match.group(0).split(">", 1)[0] + ">"
+            label_match = re.search(
+                r"<a\b[^>]*?\b(?:aria-label|title)\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)')",
+                opening_tag, re.IGNORECASE | re.DOTALL,
+            )
+            label_title = _clean(label_match.group("double") or label_match.group("single") or "") if label_match else ""
+            if label_title:
+                article_path = urlsplit(safe[0]).path.rstrip("/")
+                slug = re.sub(r"\.(?:html?|aspx?)$", "", article_path.rsplit("/", 1)[-1].casefold())
+                slug_tokens = set(re.findall(r"[a-z0-9]+", slug)) - stop_words
+                label_tokens = set(re.findall(r"[a-z0-9]+", label_title.casefold())) - stop_words
+                if slug_tokens and len(slug_tokens & label_tokens) >= min(2, len(slug_tokens)):
+                    title = label_title
+                    normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+        if not title or normalized_title in generic_titles:
             alt_match = re.search(
                 r"<img\b[^>]*?\balt\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)')[^>]*>",
                 match.group("title"), re.IGNORECASE | re.DOTALL,
