@@ -817,6 +817,51 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
 
 
 
+def test_coinbase_uses_image_alt_when_it_matches_the_official_route_slug():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    article_url = (
+        "https://www.coinbase.com/en-us/blog/"
+        "coinbase-is-building-the-most-complete-trading-platform"
+    )
+    title = "Coinbase Is Building the Most Complete Trading Platform"
+    html = (
+        f'<span>September 29, 2026</span><a href="{article_url}">'
+        f'<img src="/image.jpg" alt="{title}"></a>'
+    ).encode()
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == title
+    assert rows[0]["url"] == article_url + "/"
+
+
+def test_coinbase_rejects_unrelated_image_alt_as_article_title():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    article_url = "https://www.coinbase.com/en-us/blog/coinbase-is-building-the-most-complete-trading-platform"
+    html = (
+        f'<span>September 29, 2026</span><a href="{article_url}">'
+        '<img src="/image.jpg" alt="Read our blog"></a>'
+        + (" " * 1600)
+        + '<span>September 28, 2026</span><a href="https://www.coinbase.com/en-us/blog/another-valid-post">Another Valid Post</a>'
+    ).encode()
+    diagnostics = {}
+
+    rows, complete = _parse_page(coinbase_blog, html, diagnostics)
+
+    assert complete is False
+    assert all(row["title"] != "Read our blog" for row in rows)
+    assert any(
+        native_id.endswith("/blog/coinbase-is-building-the-most-complete-trading-platform")
+        for native_id in diagnostics["incomplete_native_ids"]
+    )
+
+
 def test_coinbase_heading_selection_is_consistent_across_duplicate_image_links():
     coinbase_blog = next(
         item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
