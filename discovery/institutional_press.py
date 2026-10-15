@@ -428,6 +428,20 @@ def _parse_page(
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles:
+            alt_match = re.search(
+                r"<img\\b[^>]*?\\balt\\s*=\\s*(?:\\\"(?P<double>[^\\\"]*)\\\"|'(?P<single>[^']*)')[^>]*>",
+                match.group("title"), re.IGNORECASE | re.DOTALL,
+            )
+            alt_title = _clean(alt_match.group("double") or alt_match.group("single") or "") if alt_match else ""
+            if alt_title:
+                article_path = urlsplit(safe[0]).path.rstrip("/")
+                slug = re.sub(r"\\.(?:html?|aspx?)$", "", article_path.rsplit("/", 1)[-1].casefold())
+                slug_tokens = set(re.findall(r"[a-z0-9]+", slug)) - stop_words
+                alt_tokens = set(re.findall(r"[a-z0-9]+", alt_title.casefold())) - stop_words
+                if slug_tokens and len(slug_tokens & alt_tokens) >= min(2, len(slug_tokens)):
+                    title = alt_title
+                    normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
+        if not title or normalized_title in generic_titles:
             assigned_title = heading_title_by_native_id.get(safe[1])
             if assigned_title:
                 title = assigned_title
