@@ -1080,6 +1080,46 @@ def test_json_ld_resolves_duplicate_anchor_date_conflict_only_when_consistent():
 
 
 
+def test_detail_fallback_resolves_conflicting_duplicate_article_rows():
+    article_url = (
+        "https://www.mastercard.com/global/en/news-and-trends/press/2026/july/"
+        "mastercard-expands-virtual-card-platform.html"
+    )
+    index = HttpResponse(
+        200, {"content-type": "text/html", "etag": '"index-v1"'},
+        (
+            f'<span>July 9, 2026</span><a href="{article_url}">Mastercard Expands Virtual Card Platform</a>'
+            f'<span>July 10, 2026</span><a href="{article_url}">Unrelated Anchor Label</a>'
+        ).encode(),
+        "https://www.mastercard.com/global/en/news-and-trends/press.html",
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'<html><body><h1>Mastercard Expands Virtual Card Platform</h1>'
+        b'<time datetime="2026-07-09T12:00:00Z">July 9, 2026</time></body></html>',
+        article_url,
+    )
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+        detail_fallback_limit=1,
+    )
+    http = SequenceHttp([index, detail])
+
+    result = InstitutionalPressDiscovery(mastercard, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == "Mastercard Expands Virtual Card Platform"
+    assert result.candidates[0].published_at == datetime(2026, 7, 9, 12, tzinfo=timezone.utc)
+    assert not any("conflicting duplicate article" in error for error in result.errors)
+    assert len(http.calls) == 2
+    assert http.calls[1][0] == article_url
+
+
 def test_partial_index_recovers_one_missing_official_card_without_claiming_full_health():
     index_url = "https://www.circle.com/pressroom"
     known_url = "https://www.circle.com/pressroom/known-good-release"
