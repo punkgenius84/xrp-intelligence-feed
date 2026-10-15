@@ -415,6 +415,11 @@ class FDICPressReleasesDiscovery:
         rows = rows_by_page[boundary_page]
         boundary_index = index_of(rows, boundary)
         assert boundary_index is not None
+        print(
+            "FDIC frontier position: "
+            f"page={boundary_page} boundary_index={boundary_index} page_rows={len(rows)} "
+            f"first_is_boundary={boundary_index == 0} last_is_boundary={boundary_index == len(rows) - 1}"
+        )
         ordered_new.extend(rows[:boundary_index])
         # Every fetched page before the boundary is newer than it. Page 0 is
         # included explicitly because it is always the first shallow page.

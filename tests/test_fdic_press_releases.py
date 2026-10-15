@@ -189,6 +189,20 @@ def test_first_run_seeds_boundary_without_calendar_date():
     assert progress == {"boundary_id":"2026/older", "deep_page_hint":1, "frontier_status":"active"}
 
 
+def test_frontier_position_diagnostic_reports_boundary_index(capsys):
+    boundary = "2026/fdic-saved-boundary"
+    html = listing(
+        ("/news/press-releases/2026/fdic-saved-boundary", "Saved boundary"),
+        ("/news/press-releases/2026/older-release", "Older release"),
+    )
+    result = adapter(FakeHttp([response(html)])).collect(state(boundary=boundary, hint=1))
+
+    assert result.status == "empty"
+    output = capsys.readouterr().out
+    assert "FDIC frontier position: page=0 boundary_index=0 page_rows=2" in output
+    assert "first_is_boundary=True" in output
+
+
 def test_boundary_on_page_zero_emits_only_newer_prefix_and_advances_frontier():
     rows = listing(
         ("/news/press-releases/2026/newer", "Newer"),
