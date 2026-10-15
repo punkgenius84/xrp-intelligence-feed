@@ -954,6 +954,7 @@ class InstitutionalPressDiscovery:
                     resolved_conflicts = conflicting_ids & recovered_ids
                     if resolved_conflicts:
                         rows = [row for row in rows if row["native_id"] not in resolved_conflicts]
+                        rows.extend(row for row in recovered if row["native_id"] in resolved_conflicts)
                     existing_ids = {row["native_id"] for row in rows}
                     additional_rows = [row for row in recovered if row["native_id"] not in existing_ids]
                     rows.extend(additional_rows)
