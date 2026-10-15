@@ -691,6 +691,7 @@ def test_parser_diagnostics_ignore_embedded_page_data_routes():
     assert complete is True
     assert len(rows) == 1
     assert diagnostics["incomplete_native_ids"] == []
+    assert diagnostics["incomplete_reasons"] == {}
     assert diagnostics["conflicting_native_ids"] == []
 
 
@@ -710,6 +711,8 @@ def test_collect_reports_bounded_sample_of_unparsed_official_routes():
     diagnostic = next(error for error in result.errors if "malformed article on official index" in error)
     assert "unparsed_official_routes=1" in diagnostic
     assert "undated-article" in diagnostic
+    assert "incomplete_reasons=" in diagnostic
+    assert "'date'" in diagnostic
     assert "conflicting_duplicate_routes=0" in diagnostic
 
 

@@ -373,6 +373,7 @@ def _parse_page(
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
+    incomplete_reasons: dict[str, set[str]] = {}
     conflicting_ids: set[str] = set()
     complete = True
     generic_titles = {
@@ -431,8 +432,15 @@ def _parse_page(
             if assigned_title:
                 title = assigned_title
                 normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
-        if not title or normalized_title in generic_titles or published is None:
+        missing_title = not title or normalized_title in generic_titles
+        missing_date = published is None
+        if missing_title or missing_date:
             incomplete_ids.add(safe[1])
+            reasons = incomplete_reasons.setdefault(safe[1], set())
+            if missing_title:
+                reasons.add("title")
+            if missing_date:
+                reasons.add("date")
             continue
         grouped_rows.setdefault(safe[1], []).append({
             "url": safe[0],
@@ -497,6 +505,10 @@ def _parse_page(
         }
     if diagnostics is not None:
         diagnostics["incomplete_native_ids"] = sorted(unresolved_incomplete_ids)
+        diagnostics["incomplete_reasons"] = {
+            native_id: sorted(incomplete_reasons.get(native_id, set()))
+            for native_id in sorted(unresolved_incomplete_ids)
+        }
         diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
     if unresolved_incomplete_ids:
         complete = False
@@ -938,6 +950,7 @@ class InstitutionalPressDiscovery:
 
         if not complete:
             unparsed_ids = set(parse_diagnostics.get("incomplete_native_ids", []))
+            incomplete_reasons = parse_diagnostics.get("incomplete_reasons", {})
             conflicting_ids = set(parse_diagnostics.get("conflicting_native_ids", []))
             resolved_conflicts: set[str] = set()
             if not used_detail_fallback and self.source.get("detail_fallback_limit"):
@@ -974,6 +987,7 @@ class InstitutionalPressDiscovery:
                 errors.append(
                     f"{self.source['name']}: malformed article on official index "
                     f"(unparsed_official_routes={len(unparsed_ids)} sample={sorted(unparsed_ids)[:3]}, "
+                    f"incomplete_reasons={ {key: incomplete_reasons.get(key, []) for key in sorted(unparsed_ids)[:3]} }, "
                     f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
                 )
             if not unparsed_ids and not unresolved_conflicts and not errors:
