@@ -127,7 +127,7 @@ def test_registered_institutional_sources_are_bounded():
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
     assert circle["detail_fallback_limit"] == 1
     assert mastercard["detail_fallback_limit"] == 1
-    assert dbs["detail_fallback_limit"] == 1
+    assert dbs["detail_fallback_limit"] == 3
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
