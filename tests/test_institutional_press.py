@@ -709,7 +709,9 @@ def test_collect_reports_bounded_sample_of_unparsed_official_routes():
     ).collect()
     assert result.status == "partial"
     diagnostic = next(error for error in result.errors if "malformed article on official index" in error)
-    assert "unparsed_official_routes=1" in diagnostic
+    assert "index_unparsed_routes=1" in diagnostic
+    assert "recovered_unparsed_routes=0" in diagnostic
+    assert "unresolved_after_fallback=1" in diagnostic
     assert "undated-article" in diagnostic
     assert "incomplete_reasons=" in diagnostic
     assert "'date'" in diagnostic
