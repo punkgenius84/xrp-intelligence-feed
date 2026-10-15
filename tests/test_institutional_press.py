@@ -130,7 +130,7 @@ def test_registered_institutional_sources_are_bounded():
     assert dbs["detail_fallback_limit"] == 3
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
-    assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
+    assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
@@ -1010,6 +1010,18 @@ def test_coinbase_article_shell_can_fall_back_to_nearby_outside_date():
     assert len(rows) == 1
     assert rows[0]["title"] == "Official Example Post"
     assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
+def test_coinbase_blog_rejects_landing_index_as_article_route():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing") is None
+    assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing/") is None
+    assert _official_article(
+        coinbase_blog,
+        "https://www.coinbase.com/en-us/blog/coinbase-is-building-the-most-complete-trading-platform",
+    ) is not None
 
 
 def test_coinbase_blog_accepts_current_localized_article_route():
