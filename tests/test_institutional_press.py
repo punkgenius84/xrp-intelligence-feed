@@ -732,6 +732,28 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
 
 
 
+def test_coinbase_recovers_title_from_nearby_heading_when_link_is_empty():
+    coinbase_blog = next(
+        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
+    )
+    article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
+    html = (
+        '<html><body><span>Oct 8, 2026</span>'
+        + (" " * 250)
+        + '<h2>Official Example Post About Institutional Payments</h2>'
+        + (" " * 100)
+        + f'<a href="{article_url}"><img src="/image.png" alt=""></a>'
+        + '</body></html>'
+    ).encode()
+
+    rows, complete = _parse_page(coinbase_blog, html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Official Example Post About Institutional Payments"
+    assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
+
+
 def test_article_date_association_allows_bounded_generic_card_spacing():
     coinbase_blog = source(
         source_id="coinbase-blog",
@@ -1025,6 +1047,9 @@ def test_detail_fallback_reports_when_index_has_no_allowlisted_article_links():
     assert "official_links_with_text=" in diagnostic
     assert "official_links_with_generic_text=" in diagnostic
     assert "official_links_in_article_blocks=" in diagnostic
+    assert "official_links_without_text=" in diagnostic
+    assert "heading_tags=" in diagnostic
+    assert "heading_titles_with_text=" in diagnostic
     assert "https://" not in diagnostic
 
 
