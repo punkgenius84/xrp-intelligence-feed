@@ -210,7 +210,7 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://www.citigroup.com/global/news",
+      "source_url": "https://www.citigroup.com/global/news/press-release",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
