@@ -185,7 +185,7 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
     # values. Match the script's opening tag first, then locate its type
     # attribute without assuming it appears before every other attribute.
     scripts = re.findall(
-        r'<script\\b(?=[^>]*\\btype\\s*=\\s*(?:"application/ld\\+json"|\'application/ld\\+json\'|application/ld\\+json(?:\\s|/|>)))[^>]*>(.*?)</script\\s*>',
+        r'<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|\'application/ld\+json\'|application/ld\+json(?:\s|/|>)))[^>]*>(.*?)</script\s*>',
         text, re.IGNORECASE | re.DOTALL,
     )
     for raw in scripts:
