@@ -734,6 +734,55 @@ def test_unique_official_article_without_date_still_marks_index_incomplete():
 
 
 
+def test_historical_mastercard_route_outside_lookback_does_not_mark_index_incomplete():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    current_url = "https://www.mastercard.com/global/en/news-and-trends/press/2026/september/current-release.html"
+    old_url = "https://www.mastercard.com/global/en/news-and-trends/press/2024/april/old-release.html"
+    html = (
+        f'<span>September 29, 2026</span><a href="{current_url}">Current Release</a>'
+        + (" " * 1600)
+        + f'<a href="{old_url}">Old Release</a>'
+    ).encode()
+    diagnostics = {}
+    cutoff = datetime(2026, 4, 18, tzinfo=timezone.utc)
+
+    rows, complete = _parse_page(mastercard, html, diagnostics, lookback_cutoff=cutoff)
+
+    assert complete is True
+    assert [row["url"] for row in rows] == [current_url]
+    assert diagnostics["incomplete_native_ids"] == []
+
+
+def test_current_lookback_month_undated_mastercard_route_remains_incomplete():
+    mastercard = source(
+        source_id="mastercard-press-releases",
+        name="Mastercard",
+        source_url="https://www.mastercard.com/global/en/news-and-trends/press.html",
+        allowed_hosts=["www.mastercard.com", "mastercard.com"],
+        article_path_regex=r"/global/en/news-and-trends/press/\d{4}/[^/?#]+/[^/?#]+",
+    )
+    current_url = "https://www.mastercard.com/global/en/news-and-trends/press/2026/april/undated-release.html"
+    html = (
+        '<span>September 29, 2026</span>'
+        '<a href="https://www.mastercard.com/global/en/news-and-trends/press/2026/september/current-release.html">Current Release</a>'
+        + (" " * 1600)
+        + f'<a href="{current_url}">Undated Release</a>'
+    ).encode()
+    diagnostics = {}
+    cutoff = datetime(2026, 4, 18, tzinfo=timezone.utc)
+
+    rows, complete = _parse_page(mastercard, html, diagnostics, lookback_cutoff=cutoff)
+
+    assert complete is False
+    assert diagnostics["incomplete_native_ids"] == ["/global/en/news-and-trends/press/2026/april/undated-release.html"]
+
+
 def test_official_article_preserves_file_extension_routes_and_is_idempotent():
     cases = [
         (
