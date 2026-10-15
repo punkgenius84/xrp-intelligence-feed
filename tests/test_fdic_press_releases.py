@@ -189,6 +189,22 @@ def test_first_run_seeds_boundary_without_calendar_date():
     assert progress == {"boundary_id":"2026/older", "deep_page_hint":1, "frontier_status":"active"}
 
 
+def test_listing_diagnostics_include_ordered_main_and_all_article_ids():
+    html = b"""<html><body>
+      <aside><a href="/news/press-releases/2026/featured">Featured release</a></aside>
+      <main>
+        <a href="/news/press-releases/2026/newer">Newer release</a>
+        <a href="/news/press-releases/2026/boundary">Boundary release</a>
+      </main>
+    </body></html>"""
+    diagnostics = {}
+    rows, complete = _parse_page(html, diagnostics)
+    assert complete is True
+    assert diagnostics["all_article_ids"] == ["2026/featured", "2026/newer", "2026/boundary"]
+    assert diagnostics["main_article_ids"] == ["2026/newer", "2026/boundary"]
+    assert [row["native_id"] for row in rows] == diagnostics["main_article_ids"]
+
+
 def test_frontier_position_diagnostic_reports_boundary_index(capsys):
     boundary = "2026/fdic-saved-boundary"
     html = listing(
