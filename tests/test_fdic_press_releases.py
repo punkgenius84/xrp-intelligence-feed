@@ -89,6 +89,14 @@ def test_listing_ignores_stale_related_release_outside_main_region():
 
 
 
+def test_generic_filter_message_does_not_masquerade_as_empty_listing():
+    html = b"""<html><body><main>
+      <div class="filter-status">No results found.</div>
+    </main></body></html>"""
+    with pytest.raises(ValueError, match="no recognizable Press Releases listing"):
+        _parse_page(html)
+
+
 def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
     html = b"""<html><body>
       <main>
@@ -170,7 +178,7 @@ def test_missing_boundary_recovers_on_deep_page_and_emits_newer_pages():
 def test_missing_boundary_does_not_claim_page_zero_rows_as_new():
     http = FakeHttp([response(listing(("/news/press-releases/2026/new", "New"))),
                      response(listing(("/news/press-releases/2026/other", "Other"))),
-                     response(b"<html><body>No results found.</body></html>")])
+                     response(b'<html><body><main><div class="view-empty">No results found.</div></main></body></html>')])
     result = adapter(http).collect(state(hint=1))
     assert result.candidates == []
     assert result.status == "empty"
@@ -180,7 +188,7 @@ def test_missing_boundary_does_not_claim_page_zero_rows_as_new():
 
 def test_empty_deep_page_is_not_boundary_expiration():
     http = FakeHttp([response(listing(("/news/press-releases/2026/new", "New"))),
-                     response(b"<html><body>No results found.</body></html>")])
+                     response(b'<html><body><main><div class="view-empty">No results found.</div></main></body></html>')])
     result = adapter(http).collect(state(hint=1))
     assert result.pagination["fdic_pages_probed"] == [0, 1]
     assert result.pagination["fdic_press_releases"]["frontier_status"] == "active"
