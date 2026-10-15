@@ -448,7 +448,54 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         for match in full_links
     ]
     validated_links = [(match, safe) for match, safe in validated_links if safe is not None]
+    generic_titles = {
+        "read more", "read more about", "learn more", "learn more about",
+        "view more", "view article", "view release", "read full story",
+        "continue reading", "more",
+    }
+    normalized_link_titles = [
+        re.sub(r"[^a-z0-9]+", " ", _clean(re.sub(r"<[^>]+>", " ", match.group("title"))).casefold()).strip()
+        for match, _ in validated_links
+    ]
+    official_links_with_text = sum(bool(title) for title in normalized_link_titles)
+    official_links_with_generic_text = sum(title in generic_titles for title in normalized_link_titles)
+    article_blocks = list(re.finditer(r"<article\\b[^>]*>.*?</article\\s*>", text, re.IGNORECASE | re.DOTALL))
+    official_links_in_article_blocks = sum(
+        any(block.start() <= match.start() < block.end() for block in article_blocks)
+        for match, _ in validated_links
+    )
     date_matches = list(_DATE_RE.finditer(text))
+    parseable_date_matches = [
+        match for match in date_matches
+        if _parse_date(match.group(0), source.get("numeric_date_order", "mdy")) is not None
+    ]
+    time_date_matches = list(re.finditer(
+        r"<time\\b[^>]*\\bdatetime=['\\\"](?P<date>[^'\\\"]+)['\\\"][^>]*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    parseable_time_dates = sum(
+        _parse_date(match.group("date"), source.get("numeric_date_order", "mdy")) is not None
+        for match in time_date_matches
+    )
+    parseable_date_tokens_within_2500 = 0
+    articles_with_parseable_date_within_2500: set[str] = set()
+    for date_match in parseable_date_matches:
+        distances = []
+        for link_match, safe in validated_links:
+            if date_match.end() <= link_match.start():
+                distance = link_match.start() - date_match.end()
+            elif date_match.start() >= link_match.end():
+                distance = date_match.start() - link_match.end()
+            else:
+                distance = 0
+            distances.append((distance, safe[1]))
+        if not distances:
+            continue
+        nearest_distance = min(value[0] for value in distances)
+        nearest_ids = {native_id for distance, native_id in distances if distance == nearest_distance}
+        if len(nearest_ids) == 1 and nearest_distance <= 2500:
+            parseable_date_tokens_within_2500 += 1
+            articles_with_parseable_date_within_2500.update(nearest_ids)
     date_tokens_near_articles = 0
     dates_near_articles: set[str] = set()
     date_tokens_within_2500 = 0
@@ -524,6 +571,12 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"articles_within_5000={len(articles_within_5000)} "
         f"date_tokens_within_10000={date_tokens_within_10000} "
         f"articles_within_10000={len(articles_within_10000)} "
+        f"parseable_date_tokens={len(parseable_date_matches)} parseable_time_dates={parseable_time_dates} "
+        f"parseable_date_tokens_within_2500={parseable_date_tokens_within_2500} "
+        f"articles_with_parseable_date_within_2500={len(articles_with_parseable_date_within_2500)} "
+        f"official_links_with_text={official_links_with_text} "
+        f"official_links_with_generic_text={official_links_with_generic_text} "
+        f"official_links_in_article_blocks={official_links_in_article_blocks} article_blocks={len(article_blocks)} "
         f"median_nearest_date_distance={median_nearest_distance} "
         f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
         f"script_date_tokens={script_date_tokens} script_bytes={script_bytes}"
