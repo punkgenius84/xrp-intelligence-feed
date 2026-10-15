@@ -360,6 +360,37 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     return rows, complete
 
 
+def _index_diagnostics(source: dict[str, Any], content: bytes, response: object) -> str:
+    """Return bounded structural diagnostics without logging response bodies or query strings."""
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("utf-8", errors="replace")
+    url = urlsplit(getattr(response, "url", ""))
+    final_path = url.path[:180] or "/"
+    headers = getattr(response, "headers", {})
+    content_type = headers.get("content-type", "missing").split(";", 1)[0]
+    href_anchors = list(re.finditer(
+        r"<a\b[^>]*?\bhref\s*=\s*(?P<href>\"[^\"]*\"|'[^']*'|[^\s>]+)[^>]*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    official_links = sum(
+        _official_article(source, _clean_href(match.group("href"))) is not None
+        for match in href_anchors
+    )
+    json_ld_scripts = len(re.findall(
+        r"<script\b(?=[^>]*\btype\s*=\s*(?:\"application/ld\+json\"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    return (
+        "index diagnostics: "
+        f"final_path={final_path!r} content_type={content_type!r} "
+        f"bytes={len(content)} anchor_tags={len(re.findall(r'<a\b', text, re.IGNORECASE))} "
+        f"href_anchors={len(href_anchors)} allowlisted_article_links={official_links} "
+        f"json_ld_scripts={json_ld_scripts} date_tokens={len(_DATE_RE.findall(text))}"
+    )
+
+
 def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> dict[str, Any] | None:
     """Extract one dated item from an official article page reached through an allowlisted index link."""
     safe = _official_article(source, href)
@@ -555,6 +586,9 @@ class InstitutionalPressDiscovery:
                         "bounded detail fallback used, so source remains partial"
                     )
                 else:
+                    errors.append(
+                        f"{self.source['name']}: {_index_diagnostics(self.source, response.content, response)}"
+                    )
                     errors.append(f"{self.source['name']}: malformed HTML ({exc})")
                     return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                            fetched_at=fetched_at, errors=errors)
