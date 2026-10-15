@@ -453,10 +453,26 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         if len(nearest_ids) == 1:
             date_tokens_near_articles += 1
             dates_near_articles.update(nearest_ids)
-    json_ld_scripts = len(re.findall(
-        r"<script\b(?=[^>]*\btype\s*=\s*(?:\"application/ld\+json\"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>",
+    script_blocks = list(re.finditer(
+        r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
         text, re.IGNORECASE | re.DOTALL,
     ))
+    json_ld_scripts = sum(
+        bool(re.search(
+            r"\btype\s*=\s*(?:\"application/ld\+json\"|'application/ld\+json'|application/ld\+json(?:\s|/|>))",
+            match.group("attrs"), re.IGNORECASE,
+        ))
+        for match in script_blocks
+    )
+    json_data_scripts = sum(
+        bool(re.search(
+            r"\btype\s*=\s*(?:\"application/json\"|'application/json'|application/json(?:\s|/|>))|\bid\s*=\s*(?:\"__NEXT_DATA__\"|'__NEXT_DATA__')",
+            match.group("attrs"), re.IGNORECASE,
+        ))
+        for match in script_blocks
+    )
+    script_date_tokens = sum(len(_DATE_RE.findall(match.group("body"))) for match in script_blocks)
+    script_bytes = sum(len(match.group("body").encode("utf-8")) for match in script_blocks)
     return (
         "index diagnostics: "
         f"final_path={final_path!r} content_type={content_type!r} "
@@ -464,7 +480,9 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"href_anchors={len(href_anchors)} allowlisted_article_links={official_links} "
         f"json_ld_scripts={json_ld_scripts} date_tokens={len(_DATE_RE.findall(text))} "
         f"date_tokens_near_article_links={date_tokens_near_articles} "
-        f"articles_with_nearby_date_tokens={len(dates_near_articles)}"
+        f"articles_with_nearby_date_tokens={len(dates_near_articles)} "
+        f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
+        f"script_date_tokens={script_date_tokens} script_bytes={script_bytes}"
     )
 
 
