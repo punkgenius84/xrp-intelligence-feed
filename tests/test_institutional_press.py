@@ -135,6 +135,7 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
+    assert citi["enabled"] is False  # Parked until the runner can read an official article index.
     assert citi["detail_fallback_limit"] == 3
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
@@ -142,6 +143,7 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
+    assert citi["enabled"] is False
     assert citi["detail_fallback_limit"] == 3
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
@@ -487,6 +489,18 @@ class SequenceHttp:
         return self.responses.pop(0)
 
 
+def test_citi_source_is_parked_without_network_requests():
+    citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
+    http = SequenceHttp([])
+
+    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+
+    assert citi["enabled"] is False
+    assert result.status == "not_configured"
+    assert result.candidates == []
+    assert http.calls == []
+
+
 def test_citi_recovers_featured_release_but_keeps_source_partial():
     source_url = "https://www.citigroup.com/global/news/press-release"
     article_url = (
@@ -511,6 +525,7 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
         item for item in load_discovery_sources()
         if item["source_id"] == "citi-press-releases"
     )
+    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial"
@@ -538,6 +553,7 @@ def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
     )
     http = SequenceHttp([index, detail])
     citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
+    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial", result.errors
