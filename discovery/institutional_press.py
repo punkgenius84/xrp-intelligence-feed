@@ -239,6 +239,17 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
     if not matches and not structured_rows:
         raise ValueError("institutional response is missing links and structured article metadata")
 
+    # Preserve the existing before-link association for ordinary flat indexes.
+    # Semantic article cards get a stricter within-card date association below.
+    article_blocks = [
+        (block.start(), block.end(), block.group(0))
+        for block in re.finditer(r"<article\b[^>]*>.*?</article\s*>", text, re.IGNORECASE | re.DOTALL)
+    ]
+    safe_by_index = {
+        index: _official_article(source, _clean_href(match.group("href")))
+        for index, match in enumerate(matches)
+    }
+
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
     complete = True
@@ -248,44 +259,53 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
         "continue reading", "more",
     }
     for index, match in enumerate(matches):
-        safe = _official_article(source, _clean_href(match.group("href")))
+        safe = safe_by_index[index]
         if safe is None:
             continue
-        # Prefer a date immediately before the current article link. A date after
-        # a link is used only when the next anchor is not a different allowlisted
-        # article, so the next card's date cannot be borrowed by an undated item.
-        previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
-        raw_window = text[previous:match.start()]
-        date_attrs = list(re.finditer(
-            r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
-            raw_window, re.IGNORECASE | re.DOTALL,
-        ))
-        date_matches = list(_DATE_RE.finditer(raw_window))
-        if date_attrs:
-            published = _parse_date(date_attrs[-1].group("date"), source.get("numeric_date_order", "mdy"))
-        elif date_matches:
-            nearest = date_matches[-1]
-            published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
+        containing_block = next(
+            (block for block in article_blocks if block[0] <= match.start() < block[1]),
+            None,
+        )
+        if containing_block is not None:
+            block_start, _, block_text = containing_block
+            date_attrs = list(re.finditer(
+                r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+                block_text, re.IGNORECASE | re.DOTALL,
+            ))
+            date_matches = list(_DATE_RE.finditer(block_text))
+            if date_attrs:
+                published = _parse_date(
+                    min(date_attrs, key=lambda item: abs(block_start + item.start() - match.start())).group("date"),
+                    source.get("numeric_date_order", "mdy"),
+                )
+            elif date_matches:
+                nearest = min(date_matches, key=lambda item: abs(block_start + item.start() - match.start()))
+                published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
+            else:
+                published = None
         else:
-            next_is_different_article = False
-            if index + 1 < len(matches):
-                next_safe = _official_article(source, _clean_href(matches[index + 1].group("href")))
-                next_is_different_article = next_safe is not None and next_safe[1] != safe[1]
-            if not next_is_different_article:
-                following = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1800)
-                trailing_window = text[match.end():following]
-                trailing_attrs = list(re.finditer(
-                    r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
-                    trailing_window, re.IGNORECASE | re.DOTALL,
-                ))
-                trailing_dates = list(_DATE_RE.finditer(trailing_window))
-                if trailing_attrs:
-                    published = _parse_date(trailing_attrs[0].group("date"), source.get("numeric_date_order", "mdy"))
-                else:
-                    published = (
-                        _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
-                        if trailing_dates else None
-                    )
+            # For flat lists, dates between two links belong to the following
+            # link, matching the source ordering contract and avoiding borrowing
+            # the prior release's date for the next item.
+            previous = matches[index - 1].end() if index else max(0, match.start() - 1800)
+            raw_window = text[previous:match.start()]
+            date_attrs = list(re.finditer(
+                r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+                raw_window, re.IGNORECASE | re.DOTALL,
+            ))
+            date_matches = list(_DATE_RE.finditer(raw_window))
+            if date_attrs:
+                published = _parse_date(date_attrs[-1].group("date"), source.get("numeric_date_order", "mdy"))
+            elif date_matches:
+                published = _parse_date(date_matches[-1].group(0), source.get("numeric_date_order", "mdy"))
+            elif index == len(matches) - 1:
+                # The final flat-list card can place its date after the title link.
+                trailing = text[match.end():min(len(text), match.end() + 1800)]
+                trailing_dates = list(_DATE_RE.finditer(trailing))
+                published = (
+                    _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
+                    if trailing_dates else None
+                )
             else:
                 published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
