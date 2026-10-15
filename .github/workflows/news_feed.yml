@@ -184,7 +184,9 @@ jobs:
           DISCORD_MAX_POSTS: "5"
           # Never post anything published more than this many days ago (0 disables).
           DISCORD_MAX_AGE_DAYS: "14"
-          INTELLIGENCE_ENABLED: "true"
+          # Push-triggered runs are dry-run source diagnostics; the separate smoke test above validates inference.
+          # Scheduled and manual runs keep full intelligence enrichment enabled.
+          INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
           INTELLIGENCE_PUBLISH: "false"
           INTELLIGENCE_MIN_SCORE: "35"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
