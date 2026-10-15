@@ -232,8 +232,26 @@ def _json_ld_articles(source: dict[str, Any], text: str) -> list[dict[str, Any]]
     return list(unique.values())
 
 
+def _route_month_is_before_cutoff(native_id: str, cutoff: datetime) -> bool:
+    """Recognize old Mastercard press routes only when their whole URL month predates cutoff."""
+    match = re.search(
+        r"/press/(20\\d{2})/(january|february|march|april|may|june|july|august|september|october|november|december)/",
+        native_id.casefold(),
+    )
+    if match is None:
+        return False
+    year = int(match.group(1))
+    month = {
+        "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+        "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    }[match.group(2)]
+    next_month = datetime(year + (month == 12), 1 if month == 12 else month + 1, 1, tzinfo=timezone.utc)
+    return next_month <= cutoff.astimezone(timezone.utc)
+
+
 def _parse_page(
-    source: dict[str, Any], content: bytes, diagnostics: dict[str, Any] | None = None
+    source: dict[str, Any], content: bytes, diagnostics: dict[str, Any] | None = None,
+    *, lookback_cutoff: datetime | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     try:
         text = content.decode("utf-8-sig")
@@ -472,6 +490,11 @@ def _parse_page(
     valid_ids = set(grouped_rows)
     structured_ids = set(structured_by_id)
     unresolved_incomplete_ids = incomplete_ids - valid_ids - structured_ids
+    if lookback_cutoff is not None:
+        unresolved_incomplete_ids = {
+            native_id for native_id in unresolved_incomplete_ids
+            if not _route_month_is_before_cutoff(native_id, lookback_cutoff)
+        }
     if diagnostics is not None:
         diagnostics["incomplete_native_ids"] = sorted(unresolved_incomplete_ids)
         diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
@@ -875,7 +898,9 @@ class InstitutionalPressDiscovery:
 
         parse_diagnostics: dict[str, Any] = {}
         try:
-            rows, complete = _parse_page(self.source, response.content, parse_diagnostics)
+            rows, complete = _parse_page(
+                self.source, response.content, parse_diagnostics, lookback_cutoff=cutoff
+            )
         except ValueError as exc:
             fallback_eligible = str(exc) in {
                 "institutional response has no dated official articles",
