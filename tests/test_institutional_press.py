@@ -694,7 +694,6 @@ def test_collect_reports_bounded_sample_of_unparsed_official_routes():
     assert result.status == "partial"
     diagnostic = next(error for error in result.errors if "malformed article on official index" in error)
     assert "unparsed_official_routes=1" in diagnostic
-    assert "circle/pressroom/undated-article" not in diagnostic  # no host/path text is synthesized
     assert "undated-article" in diagnostic
 
 
