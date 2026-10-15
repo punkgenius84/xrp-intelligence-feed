@@ -172,6 +172,20 @@ def test_parser_accepts_official_blogposting_json_ld():
     assert rows[0]["date"] == datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
 
 
+def test_parser_accepts_json_ld_type_after_other_script_attributes():
+    html = b'''<html><head><script async type=application/ld+json>
+    {"@context":"https://schema.org","@type":"NewsArticle",
+     "headline":"JSON-LD with reordered unquoted type attribute",
+     "url":"https://www.circle.com/pressroom/reordered-jsonld",
+     "datePublished":"2026-10-12T12:00:00Z"}
+    </script></head><body></body></html>'''
+    rows, complete = _parse_page(source(), html)
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "JSON-LD with reordered unquoted type attribute"
+    assert rows[0]["native_id"] == "/pressroom/reordered-jsonld"
+
+
 def test_parser_accepts_schema_org_url_json_ld_type():
     html = b'''<html><head><script type="application/ld+json">
     {"@context":"https://schema.org","@type":"https://schema.org/NewsArticle",
