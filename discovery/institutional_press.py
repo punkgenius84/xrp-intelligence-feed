@@ -298,6 +298,14 @@ def _parse_page(source: dict[str, Any], content: bytes) -> tuple[list[dict[str, 
                 published = _parse_date(date_attrs[-1].group("date"), source.get("numeric_date_order", "mdy"))
             elif date_matches:
                 published = _parse_date(date_matches[-1].group(0), source.get("numeric_date_order", "mdy"))
+            elif index == len(matches) - 1:
+                # The final flat-list card can place its date after the title link.
+                trailing = text[match.end():min(len(text), match.end() + 1800)]
+                trailing_dates = list(_DATE_RE.finditer(trailing))
+                published = (
+                    _parse_date(trailing_dates[0].group(0), source.get("numeric_date_order", "mdy"))
+                    if trailing_dates else None
+                )
             else:
                 published = None
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
