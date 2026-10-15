@@ -1089,7 +1089,7 @@ def test_detail_fallback_resolves_conflicting_duplicate_article_rows():
         200, {"content-type": "text/html", "etag": '"index-v1"'},
         (
             f'<span>July 9, 2026</span><a href="{article_url}">Mastercard Expands Virtual Card Platform</a>'
-            f'<span>July 10, 2026</span><a href="{article_url}">Mastercard Expands Virtual Card Platform</a>'
+            f'<span>July 10, 2026</span><a href="{article_url}">Unrelated Anchor Label</a>'
         ).encode(),
         "https://www.mastercard.com/global/en/news-and-trends/press.html",
     )
