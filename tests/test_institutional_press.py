@@ -120,7 +120,7 @@ def test_registered_institutional_sources_are_bounded():
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
     imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
-    assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-gfsr"}
+    assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"}
     assert all(item["enabled"] is True for item in imf_sources.values())
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
     mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
@@ -1005,9 +1005,10 @@ def test_enabled_imf_sources_parse_official_dated_article_routes(source_id, arti
 def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
     imf_source = next(
         item for item in load_discovery_sources()
-        if item["source_id"] == "imf-media-center-gfsr"
+        if item["source_id"] == "imf-media-center-news"
     )
     assert imf_source["enabled"] is True
+    assert imf_source["source_url"] == "https://mediacenter.imf.org/newslisting"
     article_url = (
         "https://mediacenter.imf.org/news/"
         "imf---global-financial-stability-report-annual-meetings--2026/"
