@@ -459,7 +459,7 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     ]
     official_links_with_text = sum(bool(title) for title in normalized_link_titles)
     official_links_with_generic_text = sum(title in generic_titles for title in normalized_link_titles)
-    article_blocks = list(re.finditer(r"<article\\b[^>]*>.*?</article\\s*>", text, re.IGNORECASE | re.DOTALL))
+    article_blocks = list(re.finditer(r"<article\b[^>]*>.*?</article\s*>", text, re.IGNORECASE | re.DOTALL))
     official_links_in_article_blocks = sum(
         any(block.start() <= match.start() < block.end() for block in article_blocks)
         for match, _ in validated_links
@@ -470,7 +470,7 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         if _parse_date(match.group(0), source.get("numeric_date_order", "mdy")) is not None
     ]
     time_date_matches = list(re.finditer(
-        r"<time\\b[^>]*\\bdatetime=['\\\"](?P<date>[^'\\\"]+)['\\\"][^>]*>",
+        r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
         text, re.IGNORECASE | re.DOTALL,
     ))
     parseable_time_dates = sum(
