@@ -423,6 +423,36 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         _official_article(source, _clean_href(match.group("href"))) is not None
         for match in href_anchors
     )
+    full_links = list(re.finditer(
+        r"<a\\b[^>]*?\\bhref\\s*=\\s*(?P<href>\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)[^>]*>(?P<title>.*?)</a>",
+        text, re.IGNORECASE | re.DOTALL,
+    ))
+    validated_links = [
+        (match, _official_article(source, _clean_href(match.group("href"))))
+        for match in full_links
+    ]
+    validated_links = [(match, safe) for match, safe in validated_links if safe is not None]
+    date_matches = list(_DATE_RE.finditer(text))
+    dates_near_articles: set[str] = set()
+    date_tokens_near_articles = 0
+    for date_match in date_matches:
+        distances = []
+        for link_match, safe in validated_links:
+            if date_match.end() <= link_match.start():
+                distance = link_match.start() - date_match.end()
+            elif date_match.start() >= link_match.end():
+                distance = date_match.start() - link_match.end()
+            else:
+                distance = 0
+            if distance <= 1200:
+                distances.append((distance, safe[1]))
+        if not distances:
+            continue
+        nearest_distance = min(value[0] for value in distances)
+        nearest_ids = {native_id for distance, native_id in distances if distance == nearest_distance}
+        if len(nearest_ids) == 1:
+            date_tokens_near_articles += 1
+            dates_near_articles.update(nearest_ids)
     json_ld_scripts = len(re.findall(
         r"<script\b(?=[^>]*\btype\s*=\s*(?:\"application/ld\+json\"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>",
         text, re.IGNORECASE | re.DOTALL,
@@ -432,7 +462,9 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"final_path={final_path!r} content_type={content_type!r} "
         f"bytes={len(content)} anchor_tags={len(re.findall(r'<a\b', text, re.IGNORECASE))} "
         f"href_anchors={len(href_anchors)} allowlisted_article_links={official_links} "
-        f"json_ld_scripts={json_ld_scripts} date_tokens={len(_DATE_RE.findall(text))}"
+        f"json_ld_scripts={json_ld_scripts} date_tokens={len(_DATE_RE.findall(text))} "
+        f"date_tokens_near_article_links={date_tokens_near_articles} "
+        f"articles_with_nearby_date_tokens={len(dates_near_articles)}"
     )
 
 
