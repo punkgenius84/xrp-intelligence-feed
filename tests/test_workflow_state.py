@@ -101,6 +101,7 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
     smoke = _step_block(contents, "name: Validate intelligence inference")
     app = contents.index("run: python main.py")
 
+    assert "if: github.event_name != 'push'" in smoke
     assert "OllamaProvider(model=\"qwen2.5:3b\", timeout=90)" in smoke
     assert "enrich_clusters([item]" in smoke
     assert "if failures or len(events) != 1:" in smoke
