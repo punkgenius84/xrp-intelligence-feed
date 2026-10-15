@@ -631,6 +631,8 @@ def test_coinbase_blog_accepts_current_localized_article_route():
         item for item in load_discovery_sources()
         if item["source_id"] == "coinbase-blog"
     )
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog/landing"
+
     html = b"""<html><body>
     <span>Oct 8, 2026</span>
     <a href="https://www.coinbase.com/en-sg/blog/coinbase-and-samsung-bring-usdc-to-samsung-wallet">Coinbase and Samsung Bring USDC to Samsung Wallet</a>
