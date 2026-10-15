@@ -8,6 +8,7 @@ from discovery.institutional_press import (
     InstitutionalPressDiscovery,
     _official_article,
     _parse_article_detail,
+    _index_request_id,
     _parse_page,
     validate_institutional_source,
 )
@@ -62,7 +63,7 @@ def test_unchanged_index_is_not_reported_as_empty():
         "sources": {
             "circle-pressroom": {
                 "requests": {
-                    "index": {
+                    _index_request_id(source()["source_url"]): {
                         "etag": '"circle-v1"',
                         "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
                     }
@@ -79,7 +80,7 @@ def test_unchanged_index_is_not_reported_as_empty():
     assert result.candidates == []
     assert result.errors == []
     assert result.state_updates == {
-        "index": {
+        _index_request_id(source()["source_url"]): {
             "etag": '"circle-v1"',
             "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
         }
@@ -87,6 +88,26 @@ def test_unchanged_index_is_not_reported_as_empty():
     assert len(http.calls) == 1
     assert http.calls[0][1]["etag"] == '"circle-v1"'
     assert http.calls[0][1]["last_modified"] == "Tue, 29 Sep 2026 12:00:00 GMT"
+
+
+def test_index_validators_are_not_reused_after_source_url_changes():
+    legacy_state = {
+        "sources": {
+            "circle-pressroom": {
+                "requests": {
+                    "index": {
+                        "etag": '"old-url-etag"',
+                        "last_modified": "Tue, 29 Sep 2026 12:00:00 GMT",
+                    }
+                }
+            }
+        }
+    }
+    http = FakeHttp(response(FIXTURE.read_bytes()))
+    result = InstitutionalPressDiscovery(source(), http=http, now=lambda: STAMP).collect(legacy_state)
+    assert result.status in {"success", "partial"}
+    assert http.calls[0][1]["etag"] == ""
+    assert http.calls[0][1]["last_modified"] == ""
 
 
 def test_registered_institutional_sources_are_bounded():
