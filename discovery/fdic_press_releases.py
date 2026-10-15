@@ -173,6 +173,8 @@ def _parse_page(content: bytes, diagnostics: dict[str, object] | None = None) ->
             "main_tags": parser._main_tags,
             "all_official_articles": len(parser._all_items),
             "main_official_articles": len(parser.items),
+            "all_article_ids": [item["native_id"] for item in parser._all_items],
+            "main_article_ids": [item["native_id"] for item in parser.items],
             "route_like_links": parser._route_like_links,
             "semantic_empty_state": parser.no_results,
         })
@@ -304,9 +306,26 @@ class FDICPressReleasesDiscovery:
 
             def report_diagnostics() -> None:
                 if page == 0 and diagnostics:
+                    all_ids = diagnostics.get("all_article_ids", [])
+                    main_ids = diagnostics.get("main_article_ids", [])
+                    boundary_id = previous.get("boundary_id") if has_state else None
+                    diagnostics["all_first_ids"] = all_ids[:4] if isinstance(all_ids, list) else []
+                    diagnostics["main_first_ids"] = main_ids[:4] if isinstance(main_ids, list) else []
+                    diagnostics["all_boundary_index"] = (
+                        all_ids.index(boundary_id)
+                        if isinstance(all_ids, list) and boundary_id in all_ids else -1
+                    )
+                    diagnostics["main_boundary_index"] = (
+                        main_ids.index(boundary_id)
+                        if isinstance(main_ids, list) and boundary_id in main_ids else -1
+                    )
+                    printable = {
+                        key: value for key, value in diagnostics.items()
+                        if key not in {"all_article_ids", "main_article_ids"}
+                    }
                     print(
                         "FDIC listing structure: "
-                        + " ".join(f"{key}={value}" for key, value in diagnostics.items())
+                        + " ".join(f"{key}={value}" for key, value in printable.items())
                     )
 
             try:
