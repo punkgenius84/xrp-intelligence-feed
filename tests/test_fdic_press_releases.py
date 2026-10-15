@@ -89,6 +89,16 @@ def test_listing_ignores_stale_related_release_outside_main_region():
 
 
 
+def test_single_main_release_does_not_hide_other_official_routes_outside_main():
+    html = b"""<html><body>
+      <aside><a href="/news/press-releases/2026/related-release">Related release</a></aside>
+      <main><a href="/news/press-releases/2026/saved-boundary">Saved boundary</a></main>
+      <section><a href="/news/press-releases/2026/newer-release">Newer release</a></section>
+    </body></html>"""
+    with pytest.raises(ValueError, match="main region contains at most one.*additional official release route"):
+        _parse_page(html)
+
+
 def test_generic_filter_message_does_not_masquerade_as_empty_listing():
     html = b"""<html><body><main>
       <div class="filter-status">No results found.</div>
