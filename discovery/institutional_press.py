@@ -433,8 +433,15 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     ]
     validated_links = [(match, safe) for match, safe in validated_links if safe is not None]
     date_matches = list(_DATE_RE.finditer(text))
-    dates_near_articles: set[str] = set()
     date_tokens_near_articles = 0
+    dates_near_articles: set[str] = set()
+    date_tokens_within_2500 = 0
+    date_tokens_within_5000 = 0
+    date_tokens_within_10000 = 0
+    articles_within_2500: set[str] = set()
+    articles_within_5000: set[str] = set()
+    articles_within_10000: set[str] = set()
+    nearest_distances: list[int] = []
     for date_match in date_matches:
         distances = []
         for link_match, safe in validated_links:
@@ -444,15 +451,29 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
                 distance = date_match.start() - link_match.end()
             else:
                 distance = 0
-            if distance <= 1200:
-                distances.append((distance, safe[1]))
+            distances.append((distance, safe[1]))
         if not distances:
             continue
         nearest_distance = min(value[0] for value in distances)
         nearest_ids = {native_id for distance, native_id in distances if distance == nearest_distance}
-        if len(nearest_ids) == 1:
+        nearest_distances.append(nearest_distance)
+        if len(nearest_ids) != 1:
+            continue
+        native_id = next(iter(nearest_ids))
+        if nearest_distance <= 1200:
             date_tokens_near_articles += 1
-            dates_near_articles.update(nearest_ids)
+            dates_near_articles.add(native_id)
+        if nearest_distance <= 2500:
+            date_tokens_within_2500 += 1
+            articles_within_2500.add(native_id)
+        if nearest_distance <= 5000:
+            date_tokens_within_5000 += 1
+            articles_within_5000.add(native_id)
+        if nearest_distance <= 10000:
+            date_tokens_within_10000 += 1
+            articles_within_10000.add(native_id)
+    sorted_distances = sorted(nearest_distances)
+    median_nearest_distance = sorted_distances[len(sorted_distances) // 2] if sorted_distances else -1
     script_blocks = list(re.finditer(
         r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
         text, re.IGNORECASE | re.DOTALL,
@@ -481,6 +502,13 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"json_ld_scripts={json_ld_scripts} date_tokens={len(_DATE_RE.findall(text))} "
         f"date_tokens_near_article_links={date_tokens_near_articles} "
         f"articles_with_nearby_date_tokens={len(dates_near_articles)} "
+        f"date_tokens_within_2500={date_tokens_within_2500} "
+        f"articles_within_2500={len(articles_within_2500)} "
+        f"date_tokens_within_5000={date_tokens_within_5000} "
+        f"articles_within_5000={len(articles_within_5000)} "
+        f"date_tokens_within_10000={date_tokens_within_10000} "
+        f"articles_within_10000={len(articles_within_10000)} "
+        f"median_nearest_date_distance={median_nearest_distance} "
         f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
         f"script_date_tokens={script_date_tokens} script_bytes={script_bytes}"
     )
