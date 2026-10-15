@@ -112,7 +112,7 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/[^/?#]+"
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
+    assert citi["source_url"] == "https://www.citigroup.com/global/news"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
     assert citi["detail_fallback_limit"] == 1
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
@@ -349,7 +349,7 @@ def test_json_ld_fallback_handles_js_heavy_institutional_index():
     citi = source(
         source_id="citi-press-releases",
         name="Citi",
-        source_url="https://www.citigroup.com/global/news/press-release",
+        source_url="https://www.citigroup.com/global/news",
         allowed_hosts=["www.citigroup.com", "citigroup.com"],
         article_path_regex=r"/global/news/press-release/(?:\d{4}/)?[^/?#]+",
     )
@@ -423,7 +423,7 @@ class SequenceHttp:
 
 
 def test_citi_recovers_featured_release_but_keeps_source_partial():
-    source_url = "https://www.citigroup.com/global/news/press-release"
+    source_url = "https://www.citigroup.com/global/news"
     article_url = (
         "https://www.citigroup.com/global/news/press-release/2026/"
         "citi-commerce-media-deliver-more-personalized-customer-brand-experiences"
@@ -459,7 +459,7 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
 
 
 def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
-    source_url = "https://www.citigroup.com/global/news/press-release"
+    source_url = "https://www.citigroup.com/global/news"
     index = HttpResponse(
         200, {"content-type": "text/html"},
         b"""<html><body><a href="https://evil.example/global/news/press-release/2026/fake">Fake</a>
@@ -501,7 +501,7 @@ def test_official_article_canonical_url_is_idempotently_allowlisted():
     citi = source(
         source_id="citi-press-releases",
         name="Citi",
-        source_url="https://www.citigroup.com/global/news/press-release",
+        source_url="https://www.citigroup.com/global/news",
         allowed_hosts=["www.citigroup.com", "citigroup.com"],
         article_path_regex=r"/global/news/press-release/(?:\d{4}/)?[^/?#]+",
     )
