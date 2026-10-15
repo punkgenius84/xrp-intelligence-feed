@@ -82,6 +82,7 @@ class _FDICListingParser(HTMLParser):
         self._href_anchors = 0
         self._main_tags = 0
         self._empty_state_tags: list[str] = []
+        self._empty_state_in_main: list[bool] = []
         self._empty_state_text: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -93,6 +94,7 @@ class _FDICListingParser(HTMLParser):
         }
         if classes & empty_state_classes:
             self._empty_state_tags.append(tag)
+            self._empty_state_in_main.append(self._main_depth > 0)
             self._empty_state_text = []
         if tag == "main":
             self._saw_main = True
@@ -139,9 +141,11 @@ class _FDICListingParser(HTMLParser):
             self._main_depth -= 1
         for index in range(len(self._empty_state_tags) - 1, -1, -1):
             if self._empty_state_tags[index] == tag:
+                in_main = self._empty_state_in_main[index]
                 del self._empty_state_tags[index:]
+                del self._empty_state_in_main[index:]
                 if not self._empty_state_tags:
-                    if "no results found" in " ".join(self._empty_state_text).casefold():
+                    if in_main and "no results found" in " ".join(self._empty_state_text).casefold():
                         self.no_results = True
                     self._empty_state_text = []
                 break
