@@ -209,3 +209,4 @@ The application reports source collection failures and prints scored new items. 
 ## Source availability notes
 
 - **Citi press releases are temporarily parked.** The GitHub Actions runner receives a large HTML shell without allowlisted official release links or embedded article routes. The parser fails closed rather than inventing releases. Re-enable the source only after an official machine-readable listing/feed is verified; fixture tests continue to exercise the parser and bounded detail fallback.
+- **IMF web endpoints are temporarily parked.** GitHub Actions receives HTTP 403 from the IMF Blogs and GFSR pages and HTTP 202 from the official Media Center listing. No access-control workaround is used. Re-enable after an official RSS/API endpoint is verified to be readable by the runner; parser fixtures remain covered.
