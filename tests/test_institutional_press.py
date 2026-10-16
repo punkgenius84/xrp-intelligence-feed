@@ -1051,8 +1051,12 @@ def test_coinbase_card_container_assigns_date_to_its_single_official_route():
         + filler_before_date
         + "<span>September 29, 2026</span></div>"
     )
-    rows, complete = _parse_page(coinbase_blog, ("<html><body>" + alpha_card + beta_card + "</body></html>").encode())
+    diagnostics = {}
+    rows, complete = _parse_page(
+        coinbase_blog, ("<html><body>" + alpha_card + beta_card + "</body></html>").encode(), diagnostics
+    )
 
+    assert diagnostics["coinbase_container_diagnostics"]["owned_date_spans"] == 2
     assert complete is True
     by_id = {row["native_id"]: row for row in rows}
     assert set(by_id) == {"/blog/alpha-release-announcement", "/blog/beta-release-announcement"}
