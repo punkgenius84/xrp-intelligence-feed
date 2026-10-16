@@ -142,7 +142,7 @@ def test_registered_institutional_sources_are_bounded():
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["discovery_method"] == METHOD
-    assert "detail_fallback_limit" not in coinbase_blog
+    assert coinbase_blog["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
