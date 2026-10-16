@@ -260,11 +260,16 @@
       "name": "Coinbase",
       "authority_tier": 1,
       "category": "institutional",
-      "discovery_method": "coinbase_blog_rss",
-      "source_url": "https://www.coinbase.com/blog/rss.xml",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.coinbase.com/blog",
       "enabled": true,
       "lookback_days": 180,
-      "max_items": 50
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.coinbase.com",
+        "coinbase.com"
+      ],
+      "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
     },
     {
       "source_id": "coinbase-investor-news",
