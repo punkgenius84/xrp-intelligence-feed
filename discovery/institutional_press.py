@@ -721,6 +721,44 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     )
     script_date_tokens = sum(len(_DATE_RE.findall(match.group("body"))) for match in script_blocks)
     script_bytes = sum(len(match.group("body").encode("utf-8")) for match in script_blocks)
+    json_key_names = {
+        "datePublished", "dateCreated", "publishedAt", "published_at", "createdAt",
+        "created_at", "publicationDate", "publication_date", "published", "date",
+        "title", "headline", "name", "slug", "url", "href", "link", "canonicalUrl",
+        "canonical_url", "article",
+    }
+    json_key_counts = {key: 0 for key in json_key_names}
+    script_iso_date_strings = 0
+    iso_date_pattern = re.compile(r"^20\\d{2}-\\d{2}-\\d{2}(?:T[^\\s]+)?$")
+    inspected_json_scripts = 0
+    for match in script_blocks:
+        attrs = match.group("attrs")
+        is_json_data = bool(re.search(
+            r"\\btype\\s*=\\s*(?:\\\"application/json\\\"|'application/json'|application/json(?:\\s|/|>))|\\bid\\s*=\\s*(?:\\\"__NEXT_DATA__\\\"|'__NEXT_DATA__')",
+            attrs, re.IGNORECASE,
+        ))
+        if not is_json_data or inspected_json_scripts >= 3 or len(match.group("body")) > 300000:
+            continue
+        inspected_json_scripts += 1
+        try:
+            payload = json.loads(match.group("body").strip())
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        stack = [payload]
+        visited = 0
+        while stack and visited < 30000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                for key, child in item.items():
+                    if key in json_key_counts:
+                        json_key_counts[key] += 1
+                    stack.append(child)
+            elif isinstance(item, list):
+                stack.extend(item[:10000])
+            elif isinstance(item, str) and iso_date_pattern.fullmatch(item.strip()):
+                script_iso_date_strings += 1
+    json_key_counts = {key: count for key, count in json_key_counts.items() if count}
     return (
         "index diagnostics: "
         f"final_path={final_path!r} content_type={content_type!r} "
@@ -745,7 +783,8 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
         f"official_links_in_article_blocks={official_links_in_article_blocks} article_blocks={len(article_blocks)} "
         f"median_nearest_date_distance={median_nearest_distance} "
         f"script_tags={len(script_blocks)} json_data_scripts={json_data_scripts} "
-        f"script_date_tokens={script_date_tokens} script_bytes={script_bytes}"
+        f"script_date_tokens={script_date_tokens} script_iso_date_strings={script_iso_date_strings} "
+        f"json_data_key_counts={json_key_counts} script_bytes={script_bytes}"
     )
 
 
