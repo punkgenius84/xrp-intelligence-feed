@@ -230,6 +230,53 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     assert outbox.load() == []
     assert published == []
 
+def test_publish_feed_does_not_replay_successfully_delivered_item_on_next_run(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    from storage.delivery_history import JsonDeliveryHistory
+    from storage.outbox import JsonOutboxState, QueuedPublication
+
+    stamp = datetime.now(timezone.utc)
+    item = QueuedPublication(
+        key="discord|candidate-repeat|hash-repeat",
+        candidate_id="candidate-repeat",
+        content_hash="hash-repeat",
+        title="One-time delivery regression",
+        url="https://example.test/one-time-delivery",
+        source="Example",
+        published_at=stamp,
+        collected_at=stamp,
+        relevance_score=55,
+        detected_entities=["Ripple", "XRP"],
+        score_reasons=["official source"],
+    )
+    outbox = JsonOutboxState(tmp_path / "outbox.json")
+    history_path = tmp_path / "delivery_history.json"
+    monkeypatch.setattr(main, "JsonDeliveryHistory", lambda: JsonDeliveryHistory(history_path))
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False, publish_enabled=False),
+    )
+    publish_calls = []
+
+    def fake_publish(items, settings):
+        publish_calls.append([item.url for item in items])
+        return SimpleNamespace(posted_keys={item.key for item in items})
+
+    monkeypatch.setattr(main, "publish", fake_publish)
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_age_days=14,
+    )
+
+    main.publish_feed([item], [], settings, outbox)
+    main.publish_feed([item], [], settings, outbox)
+
+    assert publish_calls == [[item.url], []]
+    assert len(JsonDeliveryHistory(history_path).load()) == 1
+
+
 def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch):
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
     sentinel_outbox = object()
