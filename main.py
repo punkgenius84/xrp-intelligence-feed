@@ -738,7 +738,11 @@ def publish_feed(
                 set(report.posted_keys),
             )
         except DeliveryHistoryError as exc:
-            print(f"WARNING: Discord delivery history could not be saved: {exc}")
+            print(f"::error::Discord delivery history could not be saved: {exc}")
+            raise SystemExit(
+                "Discord delivery stopped after a successful post but delivery history "
+                "could not be persisted; recovery outbox entries were retained"
+            ) from exc
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
 
