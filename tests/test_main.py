@@ -411,3 +411,15 @@ def test_score_feed_shows_fresh_candidates_below_intelligence_minimum(monkeypatc
     assert "no high-value entity match" in output
     assert "context keyword only" in output
 
+
+
+def test_partial_source_errors_are_labeled_as_warnings(capsys):
+    main._print_source_failures(
+        ["coinbase-blog: one official article lacks a reliable date", "sec-edgar: HTTP 500"],
+        {"coinbase-blog"},
+    )
+
+    output = capsys.readouterr().out
+    assert "Source warning (partial): coinbase-blog:" in output
+    assert "Source failed: sec-edgar: HTTP 500" in output
+    assert "Source failed: coinbase-blog:" not in output
