@@ -721,12 +721,12 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     )
     script_date_tokens = sum(len(_DATE_RE.findall(match.group("body"))) for match in script_blocks)
     script_bytes = sum(len(match.group("body").encode("utf-8")) for match in script_blocks)
-    json_key_names = {
+    json_key_names = (
         "datePublished", "dateCreated", "publishedAt", "published_at", "createdAt",
         "created_at", "publicationDate", "publication_date", "published", "date",
         "title", "headline", "name", "slug", "url", "href", "link", "canonicalUrl",
         "canonical_url", "article",
-    }
+    )
     json_key_counts = {key: 0 for key in json_key_names}
     script_iso_date_strings = 0
     iso_date_pattern = re.compile(r"^20\d{2}-\d{2}-\d{2}(?:T[^\s]+)?$")
