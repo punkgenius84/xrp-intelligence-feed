@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -51,6 +54,24 @@ def test_preview_reports_queued_event_evidence_without_mutating_state(tmp_path):
     assert "Second queued intelligence summary" not in output
     assert "Read-only preview" in output
     assert path.read_bytes() == before
+
+
+def test_preview_cli_runs_from_outside_repository_root(tmp_path):
+    path = tmp_path / "intelligence_outbox.json"
+    JsonIntelligenceOutboxState(path).enqueue(
+        [_event("evt-cli", "CLI preview summary")], queued_at=STAMP
+    )
+    script = Path(__file__).resolve().parents[1] / "scripts" / "preview_intelligence_outbox.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--path", str(path), "--limit", "1"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "CLI preview summary" in result.stdout
+    assert "Read-only preview" in result.stdout
 
 
 @pytest.mark.parametrize("limit", [0, -1, 101, True, 1.5])
