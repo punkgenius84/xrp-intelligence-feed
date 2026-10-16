@@ -364,7 +364,7 @@
       ],
       "article_path_regex": "(?:/newsroom/[^/?#]+|/NewsPrinter\\.page)",
       "native_id_query_param": "newsId",
-      "detail_fallback_limit": 3
+      "detail_fallback_limit": 5
     },
     {
       "source_id": "imf-blogs",
