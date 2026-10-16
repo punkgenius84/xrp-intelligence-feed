@@ -1028,9 +1028,10 @@ def test_coinbase_dates_follow_slug_matched_headings_when_links_are_image_only()
         + "<span>September 29, 2026</span>"
     ).encode()
 
-    rows, complete = _parse_page(coinbase_blog, html)
+    diagnostics = {}
+    rows, complete = _parse_page(coinbase_blog, html, diagnostics)
 
-    assert complete is True
+    assert complete is True, {"rows": rows, "diagnostics": diagnostics}
     assert {row["native_id"] for row in rows} == {
         "/blog/alpha-release-announcement", "/blog/beta-release-announcement"
     }
