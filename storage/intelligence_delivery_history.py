@@ -105,7 +105,7 @@ class JsonIntelligenceDeliveryHistory:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix(self.path.suffix + ".tmp")
         try:
-            temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+            temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             os.replace(temporary, self.path)
         except OSError as exc:
             raise IntelligenceDeliveryHistoryError(
