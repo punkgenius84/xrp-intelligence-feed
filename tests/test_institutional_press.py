@@ -1213,7 +1213,7 @@ def test_detail_fallback_resolves_conflicting_duplicate_article_rows():
     assert http.calls[1][0] == article_url
 
 
-def test_partial_index_recovers_one_missing_official_card_without_claiming_full_health():
+def test_partial_index_recovers_one_missing_official_card_without_claiming_full_health(capsys):
     index_url = "https://www.circle.com/pressroom"
     known_url = "https://www.circle.com/pressroom/known-good-release"
     missing_url = "https://www.circle.com/pressroom/missing-date-release"
@@ -1252,6 +1252,10 @@ def test_partial_index_recovers_one_missing_official_card_without_claiming_full_
     assert "recovered_unparsed_routes=1" in diagnostic
     assert "unresolved_after_fallback=1" in diagnostic
     assert "second-missing-date-release" in diagnostic
+    captured = capsys.readouterr().out
+    assert "Source index diagnostics: circle-pressroom" in captured
+    assert "official_links_in_article_blocks=" in captured
+    assert "script_date_tokens=" in captured
 
 
 
