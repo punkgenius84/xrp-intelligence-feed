@@ -294,6 +294,9 @@ def _parse_page(
     for candidate in date_candidates:
         unique_dates.setdefault(candidate, candidate)
     dates_by_native_id: dict[str, list[tuple[int, datetime]]] = {}
+    nearest_date_gap_by_native_id: dict[str, int] = {}
+    unique_nearest_date_tokens_by_native_id: dict[str, int] = {}
+    tied_nearest_date_tokens_by_native_id: dict[str, int] = {}
     for date_start, date_end, parsed in unique_dates.values():
         distances: list[tuple[int, int, str]] = []
         for link_index, link_match in enumerate(matches):
@@ -306,15 +309,28 @@ def _parse_page(
                 distance = date_start - link_match.end()
             else:
                 distance = 0
-            if distance <= 2500:
-                distances.append((distance, link_index, safe_link[1]))
+            distances.append((distance, link_index, safe_link[1]))
+            prior_gap = nearest_date_gap_by_native_id.get(safe_link[1])
+            if prior_gap is None or distance < prior_gap:
+                nearest_date_gap_by_native_id[safe_link[1]] = distance
         if not distances:
             continue
         nearest_distance = min(value[0] for value in distances)
         nearest = [value for value in distances if value[0] == nearest_distance]
-        if len({value[2] for value in nearest}) != 1:
+        nearest_ids = {value[2] for value in nearest}
+        if len(nearest_ids) == 1:
+            nearest_id = next(iter(nearest_ids))
+            unique_nearest_date_tokens_by_native_id[nearest_id] = (
+                unique_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
+            )
+        else:
+            for nearest_id in nearest_ids:
+                tied_nearest_date_tokens_by_native_id[nearest_id] = (
+                    tied_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
+                )
+        if nearest_distance > 2500 or len(nearest_ids) != 1:
             continue
-        _, _, native_id = nearest[0]
+        native_id = next(iter(nearest_ids))
         dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
 
     heading_candidates_by_native_id: dict[str, list[tuple[float, int, int, str]]] = {}
@@ -537,6 +553,15 @@ def _parse_page(
         diagnostics["incomplete_reasons"] = {
             native_id: sorted(incomplete_reasons.get(native_id, set()))
             for native_id in sorted(unresolved_incomplete_ids)
+        }
+        diagnostics["incomplete_date_proximity"] = {
+            native_id: {
+                "nearest_gap": nearest_date_gap_by_native_id.get(native_id),
+                "uniquely_nearest_date_tokens": unique_nearest_date_tokens_by_native_id.get(native_id, 0),
+                "tied_nearest_date_tokens": tied_nearest_date_tokens_by_native_id.get(native_id, 0),
+            }
+            for native_id in sorted(unresolved_incomplete_ids)
+            if "date" in incomplete_reasons.get(native_id, set())
         }
         diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
     if unresolved_incomplete_ids:
@@ -1022,6 +1047,7 @@ class InstitutionalPressDiscovery:
                     f"unresolved_after_fallback={len(unparsed_ids - recovered_unparsed_ids)} "
                     f"sample={sorted(unparsed_ids - recovered_unparsed_ids)[:3]}, "
                     f"incomplete_reasons={ {key: incomplete_reasons.get(key, []) for key in sorted(unparsed_ids)[:3]} }, "
+                    f"date_proximity={ {key: parse_diagnostics.get('incomplete_date_proximity', {}).get(key) for key in sorted(unparsed_ids)[:3] if key in parse_diagnostics.get('incomplete_date_proximity', {})} }, "
                     f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
                 )
             if not unparsed_ids and not unresolved_conflicts and not errors:
