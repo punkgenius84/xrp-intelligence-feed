@@ -297,43 +297,9 @@ def _parse_page(
     nearest_date_gap_by_native_id: dict[str, int] = {}
     unique_nearest_date_tokens_by_native_id: dict[str, int] = {}
     tied_nearest_date_tokens_by_native_id: dict[str, int] = {}
-    for date_start, date_end, parsed in unique_dates.values():
-        distances: list[tuple[int, int, str]] = []
-        for link_index, link_match in enumerate(matches):
-            safe_link = safe_by_index[link_index]
-            if safe_link is None:
-                continue
-            if date_end <= link_match.start():
-                distance = link_match.start() - date_end
-            elif date_start >= link_match.end():
-                distance = date_start - link_match.end()
-            else:
-                distance = 0
-            distances.append((distance, link_index, safe_link[1]))
-            prior_gap = nearest_date_gap_by_native_id.get(safe_link[1])
-            if prior_gap is None or distance < prior_gap:
-                nearest_date_gap_by_native_id[safe_link[1]] = distance
-        if not distances:
-            continue
-        nearest_distance = min(value[0] for value in distances)
-        nearest = [value for value in distances if value[0] == nearest_distance]
-        nearest_ids = {value[2] for value in nearest}
-        if len(nearest_ids) == 1:
-            nearest_id = next(iter(nearest_ids))
-            unique_nearest_date_tokens_by_native_id[nearest_id] = (
-                unique_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
-            )
-        else:
-            for nearest_id in nearest_ids:
-                tied_nearest_date_tokens_by_native_id[nearest_id] = (
-                    tied_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
-                )
-        if nearest_distance > 2500 or len(nearest_ids) != 1:
-            continue
-        native_id = next(iter(nearest_ids))
-        dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
 
     heading_candidates_by_native_id: dict[str, list[tuple[float, int, int, str]]] = {}
+    heading_positions_by_native_id: dict[str, list[tuple[int, int, int, str]]] = {}
     generic_heading_labels = {"news", "press release", "press releases", "blog", "article", "read more", "learn more"}
     stop_words = {"a", "an", "and", "for", "in", "of", "on", "the", "to", "with"}
     safe_url_by_id = {
@@ -379,6 +345,9 @@ def _parse_page(
         heading_candidates_by_native_id.setdefault(native_id, []).append(
             (coverage, len(shared_tokens), nearest_distance, heading_title)
         )
+        heading_positions_by_native_id.setdefault(native_id, []).append(
+            (heading.start(), heading.end(), nearest_distance, heading_title)
+        )
     heading_title_by_native_id = {
         native_id: max(
             candidates,
@@ -386,6 +355,80 @@ def _parse_page(
         )[3]
         for native_id, candidates in heading_candidates_by_native_id.items()
     }
+
+    # When article links are image-only and titles live in separate headings,
+    # a date can be closer to the heading than to the anchor. Prefer that
+    # association only when the heading is confidently matched to an official
+    # route and is materially closer than that route's link.
+    for date_start, date_end, parsed in unique_dates.values():
+        link_distances: list[tuple[int, int, str]] = []
+        for link_index, link_match in enumerate(matches):
+            safe_link = safe_by_index[link_index]
+            if safe_link is None:
+                continue
+            if date_end <= link_match.start():
+                distance = link_match.start() - date_end
+            elif date_start >= link_match.end():
+                distance = date_start - link_match.end()
+            else:
+                distance = 0
+            link_distances.append((distance, link_index, safe_link[1]))
+            prior_gap = nearest_date_gap_by_native_id.get(safe_link[1])
+            if prior_gap is None or distance < prior_gap:
+                nearest_date_gap_by_native_id[safe_link[1]] = distance
+        if not link_distances:
+            continue
+        nearest_link_distance = min(value[0] for value in link_distances)
+        nearest_links = [value for value in link_distances if value[0] == nearest_link_distance]
+        nearest_link_ids = {value[2] for value in nearest_links}
+        link_assignment = next(iter(nearest_link_ids)) if len(nearest_link_ids) == 1 and nearest_link_distance <= 2500 else None
+        if len(nearest_link_ids) == 1:
+            nearest_id = next(iter(nearest_link_ids))
+            unique_nearest_date_tokens_by_native_id[nearest_id] = (
+                unique_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
+            )
+        else:
+            for nearest_id in nearest_link_ids:
+                tied_nearest_date_tokens_by_native_id[nearest_id] = (
+                    tied_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
+                )
+
+        link_gap_by_id: dict[str, int] = {}
+        for distance, _, native_id in link_distances:
+            prior_gap = link_gap_by_id.get(native_id)
+            if prior_gap is None or distance < prior_gap:
+                link_gap_by_id[native_id] = distance
+
+        heading_distances: list[tuple[int, str]] = []
+        for native_id, headings in heading_positions_by_native_id.items():
+            for heading_start, heading_end, _, _ in headings:
+                if date_end <= heading_start:
+                    distance = heading_start - date_end
+                elif date_start >= heading_end:
+                    distance = date_start - heading_end
+                else:
+                    distance = 0
+                # A heading is a safer date anchor only when this date is
+                # materially closer to it than to that heading's own official link.
+                if (
+                    distance <= 2500
+                    and native_id in link_gap_by_id
+                    and distance + 200 < link_gap_by_id[native_id]
+                ):
+                    heading_distances.append((distance, native_id))
+        heading_assignment = None
+        if heading_distances:
+            nearest_heading_distance = min(value[0] for value in heading_distances)
+            nearest_heading_ids = {
+                native_id for distance, native_id in heading_distances
+                if distance == nearest_heading_distance
+            }
+            if len(nearest_heading_ids) == 1:
+                heading_assignment = next(iter(nearest_heading_ids))
+
+        assigned_id = heading_assignment or link_assignment
+        if assigned_id is not None:
+            dates_by_native_id.setdefault(assigned_id, []).append((date_start, date_end, parsed))
 
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()

@@ -1009,6 +1009,37 @@ def test_coinbase_article_shell_can_fall_back_to_nearby_outside_date():
     assert rows[0]["date"] == datetime(2026, 10, 8, tzinfo=timezone.utc)
 
 
+def test_coinbase_dates_follow_slug_matched_headings_when_links_are_image_only():
+    coinbase_blog = coinbase_html_source()
+    alpha_url = "https://www.coinbase.com/blog/alpha-release-announcement"
+    beta_url = "https://www.coinbase.com/blog/beta-release-announcement"
+    filler_before_heading = " summary detail " * 80
+    filler_before_date = " additional product context " * 50
+    html = (
+        f'<a href="{alpha_url}"><img alt="Alpha release"></a>'
+        + filler_before_heading
+        + "<h2>Alpha Release Announcement</h2>"
+        + filler_before_date
+        + "<span>September 30, 2026</span>"
+        + f'<a href="{beta_url}"><img alt="Beta release"></a>'
+        + filler_before_heading
+        + "<h2>Beta Release Announcement</h2>"
+        + filler_before_date
+        + "<span>September 29, 2026</span>"
+    ).encode()
+
+    diagnostics = {}
+    rows, complete = _parse_page(coinbase_blog, html, diagnostics)
+
+    assert complete is True, {"rows": rows, "diagnostics": diagnostics}
+    assert {row["native_id"] for row in rows} == {
+        "/blog/alpha-release-announcement", "/blog/beta-release-announcement"
+    }
+    by_id = {row["native_id"]: row for row in rows}
+    assert by_id["/blog/alpha-release-announcement"]["date"] == datetime(2026, 9, 30, tzinfo=timezone.utc)
+    assert by_id["/blog/beta-release-announcement"]["date"] == datetime(2026, 9, 29, tzinfo=timezone.utc)
+
+
 def test_coinbase_blog_rejects_landing_index_as_article_route():
     coinbase_blog = coinbase_html_source()
     assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing") is None
