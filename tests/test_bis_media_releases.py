@@ -150,7 +150,7 @@ def test_feed_is_fetched_with_saved_validators_and_saved_after_success():
 def test_not_modified_makes_no_candidates_and_keeps_validators():
     state = {"sources": {SOURCE_ID: {"requests": {"media_releases": {"etag": 'W/"old"'}}}}}
     result, _ = run([response(status=304, headers={})], state=state)
-    assert result.status == "empty"
+    assert result.status == "not_modified"
     assert result.candidates == []
     assert result.state_updates == {"media_releases": {"etag": 'W/"old"'}}
 
