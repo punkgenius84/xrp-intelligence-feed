@@ -72,6 +72,7 @@ jobs:
           import json
           import os
           from pathlib import Path
+          from datetime import datetime, timedelta, timezone
 
           print(f"Persistent state cache exact hit: {os.environ.get('STATE_CACHE_HIT', 'unknown')}")
           for name in (
@@ -98,7 +99,55 @@ jobs:
                       detail = f"{len(value)} entries"
                   else:
                       detail = f"type={type(value).__name__}"
-                  # Log shape/count metadata only, never event contents, titles, or URLs.
+                  if name == "state/intelligence_outbox.json" and isinstance(value, dict):
+                      queue_ages = []
+                      latest_evidence_dates = []
+                      missing_evidence_dates = 0
+                      invalid_queue_dates = 0
+                      now = datetime.now(timezone.utc)
+                      for queued in value.get("items", []):
+                          if not isinstance(queued, dict):
+                              invalid_queue_dates += 1
+                              continue
+                          try:
+                              queued_at = datetime.fromisoformat(str(queued["queued_at"]).replace("Z", "+00:00"))
+                              if queued_at.tzinfo is None:
+                                  queued_at = queued_at.replace(tzinfo=timezone.utc)
+                              queue_ages.append(queued_at.astimezone(timezone.utc))
+                          except (KeyError, TypeError, ValueError):
+                              invalid_queue_dates += 1
+                          event = queued.get("event", {})
+                          evidence_dates = []
+                          if isinstance(event, dict) and isinstance(event.get("evidence"), list):
+                              for evidence in event["evidence"]:
+                                  if not isinstance(evidence, dict):
+                                      continue
+                                  stamp = evidence.get("published_at")
+                                  if not isinstance(stamp, str) or not stamp.strip():
+                                      continue
+                                  try:
+                                      parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                                      if parsed.tzinfo is None:
+                                          parsed = parsed.replace(tzinfo=timezone.utc)
+                                      evidence_dates.append(parsed.astimezone(timezone.utc))
+                                  except ValueError:
+                                      continue
+                          if evidence_dates:
+                              latest_evidence_dates.append(max(evidence_dates))
+                          else:
+                              missing_evidence_dates += 1
+                      if queue_ages:
+                          oldest_days = max(0, int((now - min(queue_ages)).total_seconds() // 86400))
+                          newest_days = max(0, int((now - max(queue_ages)).total_seconds() // 86400))
+                          old_evidence = sum(stamp < now - timedelta(days=30) for stamp in latest_evidence_dates)
+                          detail += (
+                              f" oldest_queued_days={oldest_days} newest_queued_days={newest_days}"
+                              f" events_with_dates={len(latest_evidence_dates)}"
+                              f" evidence_older_30d={old_evidence}"
+                              f" events_missing_dates={missing_evidence_dates}"
+                              f" invalid_queue_dates={invalid_queue_dates}"
+                          )
+                      # Log shape, counts, and age bands only, never event contents, titles, or URLs.
                   print(f"State: {name}: present ({detail})")
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
