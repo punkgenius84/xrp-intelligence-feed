@@ -393,6 +393,12 @@ def _parse_page(
                     tied_nearest_date_tokens_by_native_id.get(nearest_id, 0) + 1
                 )
 
+        link_gap_by_id: dict[str, int] = {}
+        for distance, _, native_id in link_distances:
+            prior_gap = link_gap_by_id.get(native_id)
+            if prior_gap is None or distance < prior_gap:
+                link_gap_by_id[native_id] = distance
+
         heading_distances: list[tuple[int, str]] = []
         for native_id, headings in heading_positions_by_native_id.items():
             for heading_start, heading_end, _, _ in headings:
@@ -402,28 +408,25 @@ def _parse_page(
                     distance = date_start - heading_end
                 else:
                     distance = 0
-                if distance <= 2500:
+                # A heading is a safer date anchor only when this date is
+                # materially closer to it than to that heading's own official link.
+                if (
+                    distance <= 2500
+                    and native_id in link_gap_by_id
+                    and distance + 200 < link_gap_by_id[native_id]
+                ):
                     heading_distances.append((distance, native_id))
         heading_assignment = None
-        heading_distance = None
         if heading_distances:
-            heading_distance = min(value[0] for value in heading_distances)
+            nearest_heading_distance = min(value[0] for value in heading_distances)
             nearest_heading_ids = {
                 native_id for distance, native_id in heading_distances
-                if distance == heading_distance
+                if distance == nearest_heading_distance
             }
             if len(nearest_heading_ids) == 1:
                 heading_assignment = next(iter(nearest_heading_ids))
 
-        assigned_id = link_assignment
-        if heading_assignment is not None:
-            route_link_gap = nearest_date_gap_by_native_id.get(heading_assignment, nearest_link_distance)
-            if (
-                link_assignment is None
-                or heading_assignment == link_assignment
-                or (heading_distance is not None and heading_distance + 200 < route_link_gap)
-            ):
-                assigned_id = heading_assignment
+        assigned_id = heading_assignment or link_assignment
         if assigned_id is not None:
             dates_by_native_id.setdefault(assigned_id, []).append((date_start, date_end, parsed))
 
