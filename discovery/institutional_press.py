@@ -729,12 +729,12 @@ def _index_diagnostics(source: dict[str, Any], content: bytes, response: object)
     }
     json_key_counts = {key: 0 for key in json_key_names}
     script_iso_date_strings = 0
-    iso_date_pattern = re.compile(r"^20\\d{2}-\\d{2}-\\d{2}(?:T[^\\s]+)?$")
+    iso_date_pattern = re.compile(r"^20\d{2}-\d{2}-\d{2}(?:T[^\s]+)?$")
     inspected_json_scripts = 0
     for match in script_blocks:
         attrs = match.group("attrs")
         is_json_data = bool(re.search(
-            r"\\btype\\s*=\\s*(?:\\\"application/json\\\"|'application/json'|application/json(?:\\s|/|>))|\\bid\\s*=\\s*(?:\\\"__NEXT_DATA__\\\"|'__NEXT_DATA__')",
+            r"\btype\s*=\s*(?:\"application/json\"|'application/json'|application/json(?:\s|/|>))|\bid\s*=\s*(?:\"__NEXT_DATA__\"|'__NEXT_DATA__')",
             attrs, re.IGNORECASE,
         ))
         if not is_json_data or inspected_json_scripts >= 3 or len(match.group("body")) > 300000:
