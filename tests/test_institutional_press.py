@@ -139,8 +139,8 @@ def test_registered_institutional_sources_are_bounded():
     assert mastercard["detail_fallback_limit"] == 1
     assert dbs["detail_fallback_limit"] == 5
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
-    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog/rss.xml"
-    assert coinbase_blog["discovery_method"] == "coinbase_blog_rss"
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
+    assert coinbase_blog["discovery_method"] == METHOD
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
