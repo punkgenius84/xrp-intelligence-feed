@@ -6,6 +6,7 @@ from typing import Any
 
 from discovery.base import DiscoveryResult, DiscoveryStrategy
 from discovery.bny_rss import BNYRSSDiscovery, validate_bny_source
+from discovery.coinbase_blog_rss import CoinbaseBlogRSSDiscovery, validate_coinbase_blog_rss_source
 from discovery.bis_media_releases import BISMediaReleasesDiscovery, validate_bis_source
 from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.institutional_press import InstitutionalPressDiscovery, validate_institutional_source
@@ -50,6 +51,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
         validator = {
             "institutional_press_html": validate_institutional_source,
             "bny_rss": validate_bny_source,
+            "coinbase_blog_rss": validate_coinbase_blog_rss_source,
             "sec_submissions": validate_sec_source,
             "sec_press_releases_rss": validate_sec_press_source,
             "federal_register_api": validate_federal_register_source,
@@ -94,6 +96,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return InstitutionalPressDiscovery(source, **kwargs)
     if method == "bny_rss":
         return BNYRSSDiscovery(source, **kwargs)
+    if method == "coinbase_blog_rss":
+        return CoinbaseBlogRSSDiscovery(source, **kwargs)
     if method == "sec_submissions":
         return SECEdgarDiscovery(source, **kwargs)
     if method == "sec_press_releases_rss":
