@@ -249,6 +249,32 @@ def _route_month_is_before_cutoff(native_id: str, cutoff: datetime) -> bool:
     return next_month <= cutoff.astimezone(timezone.utc)
 
 
+def _semantic_container_ranges(text: str, *, max_chars: int = 10000) -> list[tuple[int, int]]:
+    """Return bounded div/li/section/article ranges while ignoring script contents."""
+    masked = re.sub(
+        r"<(script|style)\b[^>]*>.*?</\1\s*>",
+        lambda match: " " * len(match.group(0)),
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    tag_pattern = re.compile(r"<(?P<close>/)?(?P<tag>div|li|section|article)\b[^>]*>", re.IGNORECASE)
+    stack: list[tuple[str, int]] = []
+    ranges: list[tuple[int, int]] = []
+    for match in tag_pattern.finditer(masked):
+        tag = match.group("tag").casefold()
+        if match.group("close"):
+            for index in range(len(stack) - 1, -1, -1):
+                if stack[index][0] == tag:
+                    start = stack[index][1]
+                    del stack[index:]
+                    if match.end() - start <= max_chars:
+                        ranges.append((start, match.end()))
+                    break
+        elif not re.search(r"/\s*>$", match.group(0)):
+            stack.append((tag, match.start()))
+    return ranges
+
+
 def _parse_page(
     source: dict[str, Any], content: bytes, diagnostics: dict[str, Any] | None = None,
     *, lookback_cutoff: datetime | None = None,
@@ -295,6 +321,7 @@ def _parse_page(
         unique_dates.setdefault(candidate, candidate)
     dates_by_native_id: dict[str, list[tuple[int, datetime]]] = {}
     assigned_date_spans: set[tuple[int, int, datetime]] = set()
+    link_assignment_by_date: dict[tuple[int, int, datetime], str] = {}
     nearest_date_gap_by_native_id: dict[str, int] = {}
     unique_nearest_date_tokens_by_native_id: dict[str, int] = {}
     tied_nearest_date_tokens_by_native_id: dict[str, int] = {}
@@ -328,7 +355,9 @@ def _parse_page(
         if nearest_distance <= 2500 and len(nearest_ids) == 1:
             native_id = next(iter(nearest_ids))
             dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
-            assigned_date_spans.add((date_start, date_end, parsed))
+            date_span = (date_start, date_end, parsed)
+            assigned_date_spans.add(date_span)
+            link_assignment_by_date[date_span] = native_id
 
     heading_candidates_by_native_id: dict[str, list[tuple[float, int, int, str]]] = {}
     heading_positions_by_native_id: dict[str, list[tuple[int, int, int, str]]] = {}
@@ -387,6 +416,64 @@ def _parse_page(
         )[3]
         for native_id, candidates in heading_candidates_by_native_id.items()
     }
+
+    # Coinbase card containers are more reliable than global nearest-link distance
+    # when a date is physically inside one card but closer to the next card's image link.
+    if source.get("source_id") == "coinbase-blog":
+        container_owners: dict[tuple[int, int, datetime], tuple[int, str]] = {}
+        ambiguous_container_dates: set[tuple[int, int, datetime]] = set()
+        for container_start, container_end in _semantic_container_ranges(text):
+            container_links = [
+                (index, safe)
+                for index, safe in safe_by_index.items()
+                if safe is not None
+                and container_start <= matches[index].start()
+                and matches[index].end() <= container_end
+            ]
+            route_ids = {safe[1] for _, safe in container_links}
+            if len(route_ids) != 1:
+                continue
+            container_dates = [
+                date for date in unique_dates.values()
+                if container_start <= date[0] and date[1] <= container_end
+            ]
+            if not container_dates or len({date[2] for date in container_dates}) != 1:
+                continue
+            native_id = next(iter(route_ids))
+            link_matches = [matches[index] for index, _ in container_links]
+            def date_distance(date: tuple[int, int, datetime], link: re.Match[str]) -> int:
+                if date[1] <= link.start():
+                    return link.start() - date[1]
+                if date[0] >= link.end():
+                    return date[0] - link.end()
+                return 0
+            chosen_date = min(
+                container_dates,
+                key=lambda date: min(date_distance(date, link) for link in link_matches),
+            )
+            span_length = container_end - container_start
+            previous = container_owners.get(chosen_date)
+            if previous is None or span_length < previous[0]:
+                container_owners[chosen_date] = (span_length, native_id)
+                ambiguous_container_dates.discard(chosen_date)
+            elif span_length == previous[0] and native_id != previous[1]:
+                ambiguous_container_dates.add(chosen_date)
+
+        if container_owners:
+            rebuilt_dates: dict[str, list[tuple[int, int, datetime]]] = {}
+            rebuilt_spans: set[tuple[int, int, datetime]] = set()
+            for date_span in unique_dates.values():
+                if date_span in ambiguous_container_dates:
+                    assigned_id = link_assignment_by_date.get(date_span)
+                elif date_span in container_owners:
+                    assigned_id = container_owners[date_span][1]
+                else:
+                    assigned_id = link_assignment_by_date.get(date_span)
+                if assigned_id is not None:
+                    rebuilt_dates.setdefault(assigned_id, []).append(date_span)
+                    rebuilt_spans.add(date_span)
+            dates_by_native_id = rebuilt_dates
+            assigned_date_spans = rebuilt_spans
 
     # Coinbase's image-only index can place a date near a slug-matched heading
     # but too far from its link. Only use this fallback for dates not already
