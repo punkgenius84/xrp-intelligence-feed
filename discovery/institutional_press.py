@@ -1034,23 +1034,33 @@ class InstitutionalPressDiscovery:
                             f"{len(resolved_conflicts)} conflicting duplicate article(s) from official detail pages"
                         )
                     if additional_rows:
-                        errors.append(
-                            f"{self.source['name']}: bounded detail fallback recovered "
-                            f"{len(additional_rows)} additional official article(s); source remains partial"
-                        )
+                        unresolved_after_fallback = unparsed_ids - recovered_unparsed_ids
+                        unresolved_conflicts_after_fallback = conflicting_ids - resolved_conflicts
+                        if unresolved_after_fallback or unresolved_conflicts_after_fallback:
+                            errors.append(
+                                f"{self.source['name']}: bounded detail fallback recovered "
+                                f"{len(additional_rows)} additional official article(s); source remains partial"
+                            )
+                        else:
+                            print(
+                                f"Source recovery: {self.source['source_id']} recovered "
+                                f"{len(additional_rows)} incomplete official article(s); "
+                                "all known index gaps resolved"
+                            )
             unresolved_conflicts = conflicting_ids - resolved_conflicts
-            if unparsed_ids or unresolved_conflicts:
+            unresolved_unparsed_ids = unparsed_ids - recovered_unparsed_ids
+            if unresolved_unparsed_ids or unresolved_conflicts:
                 errors.append(
                     f"{self.source['name']}: malformed article on official index "
                     f"(index_unparsed_routes={len(unparsed_ids)} sample={sorted(unparsed_ids)[:3]}, "
                     f"recovered_unparsed_routes={len(recovered_unparsed_ids)}, "
-                    f"unresolved_after_fallback={len(unparsed_ids - recovered_unparsed_ids)} "
-                    f"sample={sorted(unparsed_ids - recovered_unparsed_ids)[:3]}, "
+                    f"unresolved_after_fallback={len(unresolved_unparsed_ids)} "
+                    f"sample={sorted(unresolved_unparsed_ids)[:3]}, "
                     f"incomplete_reasons={ {key: incomplete_reasons.get(key, []) for key in sorted(unparsed_ids)[:3]} }, "
                     f"date_proximity={ {key: parse_diagnostics.get('incomplete_date_proximity', {}).get(key) for key in sorted(unparsed_ids)[:3] if key in parse_diagnostics.get('incomplete_date_proximity', {})} }, "
                     f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
                 )
-            if not unparsed_ids and not unresolved_conflicts and not errors:
+            if not unresolved_unparsed_ids and not unresolved_conflicts and not errors:
                 updates[index_request_id] = {
                     key: response.headers[key]
                     for key in ("etag", "last_modified") if response.headers.get(key)
