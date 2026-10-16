@@ -459,7 +459,11 @@ class FDICPressReleasesDiscovery:
             progress["boundary_id"] = ordered_new[-1]["native_id"]
             progress["deep_page_hint"] = boundary_page + 1
         progress["frontier_status"] = "active"
-        status = "success" if candidates else "empty"
+        # Reaching this point proves the official listing parsed and the saved
+        # frontier was located. Zero candidates means there were no newer releases,
+        # not that the source is empty or unhealthy; report a healthy poll so source
+        # health monitoring does not raise a false prolonged-empty warning.
+        status = "success"
         return DiscoveryResult(self.source_id, self.discovery_method, status,
                                list(candidates.values()), fetched_at, [], request_updates,
                                {"page_fetches": page_fetches, "fdic_pages_probed": list(pages_probed), "fdic_press_releases": progress})
