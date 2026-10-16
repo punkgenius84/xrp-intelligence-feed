@@ -37,6 +37,16 @@ def source(**changes):
     return value
 
 
+def coinbase_html_source():
+    return source(
+        source_id="coinbase-blog",
+        name="Coinbase",
+        source_url="https://www.coinbase.com/blog",
+        allowed_hosts=["www.coinbase.com", "coinbase.com"],
+        article_path_regex=r"(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+",
+    )
+
+
 class FakeHttp:
     def __init__(self, response):
         self.response = response
@@ -129,7 +139,8 @@ def test_registered_institutional_sources_are_bounded():
     assert mastercard["detail_fallback_limit"] == 1
     assert dbs["detail_fallback_limit"] == 5
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
-    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
+    assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog/rss.xml"
+    assert coinbase_blog["discovery_method"] == "coinbase_blog_rss"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
@@ -823,9 +834,7 @@ def test_official_article_preserves_file_extension_routes_and_is_idempotent():
 
 
 def test_coinbase_uses_route_matching_aria_label_for_empty_anchor():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/coinbase-is-building-the-most-complete-trading-platform"
     title = "Coinbase Is Building the Most Complete Trading Platform"
     html = (
@@ -840,9 +849,7 @@ def test_coinbase_uses_route_matching_aria_label_for_empty_anchor():
 
 
 def test_coinbase_rejects_unrelated_aria_label_as_article_title():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/coinbase-is-building-the-most-complete-trading-platform"
     html = (
         f'<span>September 29, 2026</span><a href="{article_url}" aria-label="Read our blog"></a>'
@@ -862,9 +869,7 @@ def test_coinbase_rejects_unrelated_aria_label_as_article_title():
 
 
 def test_coinbase_uses_image_alt_when_it_matches_the_official_route_slug():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = (
         "https://www.coinbase.com/en-us/blog/"
         "coinbase-is-building-the-most-complete-trading-platform"
@@ -884,9 +889,7 @@ def test_coinbase_uses_image_alt_when_it_matches_the_official_route_slug():
 
 
 def test_coinbase_rejects_unrelated_image_alt_as_article_title():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/coinbase-is-building-the-most-complete-trading-platform"
     html = (
         f'<span>September 29, 2026</span><a href="{article_url}">'
@@ -907,9 +910,7 @@ def test_coinbase_rejects_unrelated_image_alt_as_article_title():
 
 
 def test_coinbase_heading_selection_is_consistent_across_duplicate_image_links():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/system-update-take-control-of-your-money-with-coinbase"
     html = (
         '<html><body><span>Oct 8, 2026</span>'
@@ -929,9 +930,7 @@ def test_coinbase_heading_selection_is_consistent_across_duplicate_image_links()
 
 
 def test_coinbase_recovers_title_from_nearby_heading_when_link_is_empty():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
     html = (
         '<html><body><span>Oct 8, 2026</span>'
@@ -975,9 +974,7 @@ def test_article_date_association_allows_bounded_generic_card_spacing():
 
 
 def test_date_nearest_to_generic_duplicate_link_is_shared_by_same_article_title_link():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
     html = (
         '<html><body><span>Oct 8, 2026</span>'
@@ -996,9 +993,7 @@ def test_date_nearest_to_generic_duplicate_link_is_shared_by_same_article_title_
 
 
 def test_coinbase_article_shell_can_fall_back_to_nearby_outside_date():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     article_url = "https://www.coinbase.com/en-us/blog/example-official-post"
     html = (
         '<html><body><span>Oct 8, 2026</span>'
@@ -1016,9 +1011,7 @@ def test_coinbase_article_shell_can_fall_back_to_nearby_outside_date():
 
 
 def test_coinbase_blog_rejects_landing_index_as_article_route():
-    coinbase_blog = next(
-        item for item in load_discovery_sources() if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing") is None
     assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing/") is None
     assert _official_article(
