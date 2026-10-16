@@ -204,3 +204,71 @@ def test_invalid_intelligence_event_does_not_poison_valid_queue_entries(tmp_path
     remaining = store.load()
     assert [item.event.event_id for item in remaining] == ["evt-invalid"]
     assert "evt-invalid" in capsys.readouterr().out
+
+
+def test_intelligence_delivery_history_prevents_reposting_same_event_across_runs(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(history_path),
+    )
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    queued_event = event(event_id="evt-repeat")
+
+    assert main.publish_intelligence_events(
+        [queued_event], settings, publish_enabled=True, outbox_store=store
+    ) == 1
+    assert store.load() == []
+    assert main.publish_intelligence_events(
+        [queued_event], settings, publish_enabled=True, outbox_store=store
+    ) == 0
+    assert len(sent) == 1
+    assert JsonIntelligenceDeliveryHistory(history_path).load() == {"evt-repeat"}
+
+
+def test_intelligence_delivery_history_reconciles_stale_outbox_after_remove_failure(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    history = JsonIntelligenceDeliveryHistory(history_path)
+    queued = store.enqueue([event(event_id="evt-already-sent")])
+    history.record({"evt-already-sent"})
+    monkeypatch.setattr(main, "JsonIntelligenceDeliveryHistory", lambda: history)
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    assert main.publish_intelligence_events(
+        [], settings, publish_enabled=True, outbox_store=store
+    ) == 0
+    assert sent == []
+    assert store.load() == []
