@@ -2,7 +2,7 @@ import html
 import re
 import unicodedata
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
@@ -585,6 +585,7 @@ def publish_intelligence_events(
     publish_enabled: bool,
     out=print,
     outbox_store=None,
+    stale_after_days: int = 30,
 ) -> int:
     if not events and outbox_store is None:
         return 0
@@ -618,6 +619,48 @@ def publish_intelligence_events(
     if new_events:
         queue.enqueue(new_events)
     pending = queue.load()
+    if not pending:
+        return 0
+
+    # The outbox may contain events generated during a long shadow-mode period.
+    # When publication is explicitly enabled, discard only events whose newest
+    # evidence is outside the configured freshness window. Unknown dates are held.
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=stale_after_days)
+    stale_keys: set[str] = set()
+    undated_keys: set[str] = set()
+    for item in pending:
+        if not item.event.evidence:
+            continue  # Existing evidence-URL validation below handles this case.
+        evidence_dates = []
+        for evidence in item.event.evidence:
+            stamp = evidence.published_at
+            if not isinstance(stamp, str) or not stamp.strip():
+                continue
+            try:
+                parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                evidence_dates.append(parsed.astimezone(timezone.utc))
+            except ValueError:
+                continue
+        if not evidence_dates:
+            undated_keys.add(item.key)
+        elif max(evidence_dates) < cutoff:
+            stale_keys.add(item.key)
+
+    if stale_keys:
+        queue.remove(stale_keys)
+        out(
+            f"Intelligence: dropped {len(stale_keys)} queued event(s) with latest evidence "
+            f"older than {stale_after_days} days"
+        )
+    if undated_keys:
+        out(
+            f"::warning::Intelligence: held {len(undated_keys)} queued event(s) "
+            "because evidence timestamps are missing or invalid"
+        )
+    pending = [item for item in pending if item.key not in stale_keys | undated_keys]
     if not pending:
         return 0
 
@@ -752,6 +795,7 @@ def publish_feed(
         discord_settings,
         publish_enabled=intelligence_config.enabled and intelligence_config.publish_enabled,
         outbox_store=intelligence_outbox_store,
+        stale_after_days=intelligence_config.stale_after_days,
     )
 
 
