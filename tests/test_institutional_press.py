@@ -131,7 +131,9 @@ def test_registered_institutional_sources_are_bounded():
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
     imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
     assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"}
-    assert all(item["enabled"] is False for item in imf_sources.values())  # Runner receives 403/202 from official web endpoints.
+    assert imf_sources["imf-blogs"]["enabled"] is False
+    assert imf_sources["imf-global-financial-stability-report"]["enabled"] is False
+    assert imf_sources["imf-media-center-news"]["enabled"] is True  # Testing the official category-filtered listing route.
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
     mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
@@ -1450,7 +1452,7 @@ def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
         if item["source_id"] == "imf-media-center-news"
     )
     assert imf_source["enabled"] is False
-    assert imf_source["source_url"] == "https://mediacenter.imf.org/newslisting"
+    assert imf_source["source_url"] == "https://mediacenter.imf.org/newslisting?category=news"
     article_url = (
         "https://mediacenter.imf.org/news/"
         "imf---global-financial-stability-report-annual-meetings--2026/"
