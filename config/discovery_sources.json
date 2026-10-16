@@ -269,7 +269,8 @@
         "www.coinbase.com",
         "coinbase.com"
       ],
-      "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
+      "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+",
+      "detail_fallback_limit": 3
     },
     {
       "source_id": "coinbase-investor-news",
