@@ -422,7 +422,12 @@ def _parse_page(
     if source.get("source_id") == "coinbase-blog":
         container_owners: dict[tuple[int, int, datetime], tuple[int, str]] = {}
         ambiguous_container_dates: set[tuple[int, int, datetime]] = set()
-        for container_start, container_end in _semantic_container_ranges(text):
+        container_ranges = _semantic_container_ranges(text)
+        container_stats = {
+            "ranges": len(container_ranges), "single_route": 0,
+            "single_date": 0, "multiple_dates": 0,
+        }
+        for container_start, container_end in container_ranges:
             container_links = [
                 (index, safe)
                 for index, safe in safe_by_index.items()
@@ -433,12 +438,17 @@ def _parse_page(
             route_ids = {safe[1] for _, safe in container_links}
             if len(route_ids) != 1:
                 continue
+            container_stats["single_route"] += 1
             container_dates = [
                 date for date in unique_dates.values()
                 if container_start <= date[0] and date[1] <= container_end
             ]
-            if not container_dates or len({date[2] for date in container_dates}) != 1:
+            if not container_dates:
                 continue
+            if len({date[2] for date in container_dates}) != 1:
+                container_stats["multiple_dates"] += 1
+                continue
+            container_stats["single_date"] += 1
             native_id = next(iter(route_ids))
             link_matches = [matches[index] for index, _ in container_links]
             def date_distance(date: tuple[int, int, datetime], link: re.Match[str]) -> int:
@@ -459,6 +469,10 @@ def _parse_page(
             elif span_length == previous[0] and native_id != previous[1]:
                 ambiguous_container_dates.add(chosen_date)
 
+        container_stats["owned_date_spans"] = len(container_owners)
+        container_stats["ambiguous_date_spans"] = len(ambiguous_container_dates)
+        if diagnostics is not None:
+            diagnostics["coinbase_container_diagnostics"] = container_stats
         if container_owners:
             rebuilt_dates: dict[str, list[tuple[int, int, datetime]]] = {}
             rebuilt_spans: set[tuple[int, int, datetime]] = set()
@@ -1181,6 +1195,10 @@ class InstitutionalPressDiscovery:
                 print(
                     f"Source index diagnostics: {self.source['source_id']} "
                     f"{_index_diagnostics(self.source, response.content, response)}"
+                    + (
+                        f" coinbase_container_diagnostics={parse_diagnostics.get('coinbase_container_diagnostics', {})}"
+                        if self.source.get("source_id") == "coinbase-blog" else ""
+                    )
                 )
             unparsed_ids = set(parse_diagnostics.get("incomplete_native_ids", []))
             incomplete_reasons = parse_diagnostics.get("incomplete_reasons", {})
