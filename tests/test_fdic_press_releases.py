@@ -213,7 +213,8 @@ def test_frontier_position_diagnostic_reports_boundary_index(capsys):
     )
     result = adapter(FakeHttp([response(html)])).collect(state(boundary=boundary, hint=1))
 
-    assert result.status == "empty"
+    assert result.status == "success"
+    assert result.candidates == []
     output = capsys.readouterr().out
     assert "FDIC frontier position: page=0 boundary_index=0 page_rows=2" in output
     assert "first_is_boundary=True" in output
