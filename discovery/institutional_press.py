@@ -169,9 +169,9 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         raise ValueError("numeric_date_order must be mdy or dmy")
     if "detail_fallback_limit" in source and (
         type(source["detail_fallback_limit"]) is not int
-        or not 1 <= source["detail_fallback_limit"] <= 3
+        or not 1 <= source["detail_fallback_limit"] <= 5
     ):
-        raise ValueError("detail_fallback_limit must be an integer from 1 to 3")
+        raise ValueError("detail_fallback_limit must be an integer from 1 to 5")
     return source
 
 
