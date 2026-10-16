@@ -93,6 +93,7 @@ def test_intelligence_publish_requires_evidence_url(tmp_path, monkeypatch):
     from intelligence.events import IntelligenceEvent
     from types import SimpleNamespace
     from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    from storage.intelligence_outbox import JsonIntelligenceOutboxState
     monkeypatch.setattr(
         main, "JsonIntelligenceDeliveryHistory",
         lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
@@ -106,7 +107,10 @@ def test_intelligence_publish_requires_evidence_url(tmp_path, monkeypatch):
     )
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
     with pytest.raises(SystemExit, match="evidence URL"):
-        main.publish_intelligence_events([event], settings, publish_enabled=True)
+        main.publish_intelligence_events(
+            [event], settings, publish_enabled=True,
+            outbox_store=JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json"),
+        )
 
 
 def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
@@ -145,7 +149,11 @@ def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
-    assert main.publish_intelligence_events([event], settings, publish_enabled=True) == 1
+    from storage.intelligence_outbox import JsonIntelligenceOutboxState
+    assert main.publish_intelligence_events(
+        [event], settings, publish_enabled=True,
+        outbox_store=JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json"),
+    ) == 1
     assert sent
     assert "https://example.com/source" in sent[0]
 
