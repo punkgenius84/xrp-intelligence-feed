@@ -217,6 +217,7 @@ def test_frontier_position_diagnostic_reports_boundary_index(capsys):
     output = capsys.readouterr().out
     assert "FDIC frontier position: page=0 boundary_index=0 page_rows=2" in output
     assert "first_is_boundary=True" in output
+    assert "saved boundary is the newest row on the current listing; no newer releases were found" in output
 
 
 def test_boundary_on_page_zero_emits_only_newer_prefix_and_advances_frontier():
