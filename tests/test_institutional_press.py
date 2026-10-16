@@ -127,7 +127,7 @@ def test_registered_institutional_sources_are_bounded():
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
     assert circle["detail_fallback_limit"] == 1
     assert mastercard["detail_fallback_limit"] == 1
-    assert dbs["detail_fallback_limit"] == 3
+    assert dbs["detail_fallback_limit"] == 5
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["article_path_regex"] == r"(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
@@ -593,7 +593,7 @@ def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
 
 def test_institutional_detail_fallback_limit_is_bounded():
     base = source()
-    for value in (0, 4, True, "1", None):
+    for value in (0, 6, True, "1", None):
         try:
             validate_institutional_source({**base, "detail_fallback_limit": value})
         except ValueError as exc:
