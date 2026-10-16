@@ -179,6 +179,21 @@ def test_lookback_and_item_processing_are_bounded():
                for item in result.candidates)
 
 
+def test_one_failed_feed_and_other_unchanged_feeds_are_reported_partial():
+    from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
+
+    http = FakeHttp([response(status=404, body=b"")] + [
+        response(status=304, body=b"") for _ in range(5)
+    ])
+    result = FederalReserveRSSDiscovery(source(), http=http, now=lambda: STAMP).collect({})
+
+    assert result.status == "partial"
+    assert result.candidates == []
+    assert len(result.errors) == 1
+    assert "All Press Releases: unexpected HTTP status 404" in result.errors[0]
+    assert set(result.state_updates) == {"bcreg", "enforcement", "monetary", "orders", "other"}
+
+
 def test_all_unchanged_feeds_are_not_reported_as_empty():
     from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
 
