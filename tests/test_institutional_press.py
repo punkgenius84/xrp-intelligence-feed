@@ -1020,10 +1020,7 @@ def test_coinbase_blog_rejects_landing_index_as_article_route():
 
 
 def test_coinbase_blog_accepts_current_localized_article_route():
-    coinbase_blog = next(
-        item for item in load_discovery_sources()
-        if item["source_id"] == "coinbase-blog"
-    )
+    coinbase_blog = coinbase_html_source()
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
 
     html = b"""<html><body>
