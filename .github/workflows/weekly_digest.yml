@@ -31,6 +31,7 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
+            state/intelligence_delivery_history.json
           # Deliberately never an exact hit: the prefix picks the newest immutable state cache.
           key: xrp-state-${{ github.ref_name }}-v1-restore
           restore-keys: |

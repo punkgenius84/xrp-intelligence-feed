@@ -27,6 +27,7 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
         assert "state/discovery.json" in block
         assert "state/correlation.json" in block
         assert "state/intelligence_outbox.json" in block
+        assert "state/intelligence_delivery_history.json" in block
 
 
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
@@ -40,7 +41,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "Never use a permanent bootstrap key" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert re.search(r"actions/cache/save@[0-9a-f]{40}", save)
-    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
+    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json', 'state/intelligence_delivery_history.json') }}" in save
     assert "github.run_id" not in contents
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
