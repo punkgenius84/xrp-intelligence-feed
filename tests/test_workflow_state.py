@@ -27,7 +27,6 @@ def test_workflow_restores_and_saves_both_persistent_state_files():
         assert "state/discovery.json" in block
         assert "state/correlation.json" in block
         assert "state/intelligence_outbox.json" in block
-        assert "state/intelligence_delivery_history.json" in block
 
 
 def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
@@ -41,8 +40,8 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "Never use a permanent bootstrap key" in restore
     assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert re.search(r"actions/cache/save@[0-9a-f]{40}", save)
-    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json', 'state/intelligence_delivery_history.json') }}" in save
-    assert "github.run_id" not in contents
+    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
+    assert "github.run_id" not in save
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
@@ -162,3 +161,18 @@ def test_weekly_digest_restores_with_the_same_paths_and_key_pattern_as_the_feed(
     assert "-bootstrap" not in digest
     assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in digest
     assert "xrp-state-${{ github.ref_name }}-v1-\n" in digest
+
+
+def test_intelligence_delivery_history_uses_separate_cache_without_invalidating_shared_state():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    shared_restore = _step_block(contents, "name: Restore persistent state")
+    shared_save = _step_block(contents, "name: Save persistent state")
+    ledger_restore = _step_block(contents, "name: Restore intelligence delivery history")
+    ledger_save = _step_block(contents, "name: Save intelligence delivery history")
+
+    assert "state/intelligence_delivery_history.json" not in shared_restore
+    assert "state/intelligence_delivery_history.json" not in shared_save
+    assert "state/intelligence_delivery_history.json" in ledger_restore
+    assert "state/intelligence_delivery_history.json" in ledger_save
+    assert "xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-restore" in ledger_restore
+    assert "xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-" in ledger_save

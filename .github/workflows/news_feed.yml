@@ -50,13 +50,19 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-            state/intelligence_delivery_history.json
           # Never use a permanent bootstrap key: it can mask newer state caches.
           # This intentionally misses exact-match restore so the prefix selects the
           # newest immutable state cache saved by a prior successful run.
           key: xrp-state-${{ github.ref_name }}-v1-restore
           restore-keys: |
             xrp-state-${{ github.ref_name }}-v1-
+      - name: Restore intelligence delivery history
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-
       - name: Report restored state
         if: always()
         env:
@@ -218,4 +224,19 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json', 'state/intelligence_delivery_history.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+      - name: Check intelligence delivery history
+        id: intelligence_delivery_history
+        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+        run: |
+          if [ -f state/intelligence_delivery_history.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Save intelligence delivery history
+        if: steps.intelligence_delivery_history.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
