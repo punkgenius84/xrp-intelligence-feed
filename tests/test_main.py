@@ -89,9 +89,15 @@ def test_source_health_warning_ignores_recent_or_healthy_sources(capsys):
     assert capsys.readouterr().out == ""
 
 
-def test_intelligence_publish_requires_evidence_url():
+def test_intelligence_publish_requires_evidence_url(tmp_path, monkeypatch):
     from intelligence.events import IntelligenceEvent
     from types import SimpleNamespace
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    from storage.intelligence_outbox import JsonIntelligenceOutboxState
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
     event = IntelligenceEvent(
         event_id="evt-1",
         event_type="announcement",
@@ -101,13 +107,21 @@ def test_intelligence_publish_requires_evidence_url():
     )
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
     with pytest.raises(SystemExit, match="evidence URL"):
-        main.publish_intelligence_events([event], settings, publish_enabled=True)
+        main.publish_intelligence_events(
+            [event], settings, publish_enabled=True,
+            outbox_store=JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json"),
+        )
 
 
-def test_intelligence_publish_posts_to_existing_channel(monkeypatch):
+def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
     from intelligence.events import IntelligenceEvent
     from intelligence.evidence import Evidence
     from types import SimpleNamespace
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
 
     sent = []
 
@@ -135,7 +149,11 @@ def test_intelligence_publish_posts_to_existing_channel(monkeypatch):
     )
     monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
     settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
-    assert main.publish_intelligence_events([event], settings, publish_enabled=True) == 1
+    from storage.intelligence_outbox import JsonIntelligenceOutboxState
+    assert main.publish_intelligence_events(
+        [event], settings, publish_enabled=True,
+        outbox_store=JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json"),
+    ) == 1
     assert sent
     assert "https://example.com/source" in sent[0]
 
