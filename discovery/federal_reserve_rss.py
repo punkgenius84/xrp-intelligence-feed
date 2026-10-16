@@ -18,11 +18,6 @@ FED_SOURCE_ID = "federal-reserve-board-rss"
 FED_METHOD = "federal_reserve_rss"
 FED_HOSTS = {"www.federalreserve.gov", "federalreserve.gov"}
 FED_FEEDS = {
-    "all": {
-        "name": "All Press Releases",
-        "category": "all",
-        "url": "https://www.federalreserve.gov/feeds/press_all.xml",
-    },
     "bcreg": {
         "name": "Banking and Consumer Regulatory Policy",
         "category": "banking_consumer_regulatory_policy",
