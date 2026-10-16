@@ -186,7 +186,7 @@ class BISMediaReleasesDiscovery:
                 for key in ("etag", "last_modified")
                 if response.headers.get(key, validators.get(key, ""))
             }
-            return DiscoveryResult(self.source_id, self.discovery_method, "empty",
+            return DiscoveryResult(self.source_id, self.discovery_method, "not_modified",
                                    fetched_at=fetched_at, state_updates={BIS_FEED_ID: kept})
         if response.status_code != 200:
             errors.append(f"BIS media releases: unexpected HTTP status {response.status_code}")
