@@ -27,7 +27,7 @@ def event(event_id="evt-1", summary="Summary"):
                 source_id="source-1",
                 source="Official source",
                 url="https://example.com/source",
-                published_at="2026-10-01T12:00:00+00:00",
+                published_at=datetime.now(timezone.utc).isoformat(),
                 title="Source title",
                 source_quality="primary",
             )
