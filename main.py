@@ -795,7 +795,7 @@ def publish_feed(
         discord_settings,
         publish_enabled=intelligence_config.enabled and intelligence_config.publish_enabled,
         outbox_store=intelligence_outbox_store,
-        stale_after_days=intelligence_config.stale_after_days,
+        stale_after_days=getattr(intelligence_config, "stale_after_days", 30),
     )
 
 
