@@ -1432,8 +1432,10 @@ def test_enabled_imf_sources_parse_official_dated_article_routes(source_id, arti
     assert rows[0]["date"] == date
 
 
-def test_imf_blogs_and_gfsr_remain_parked_without_network_requests():
-    source_ids = {"imf-blogs", "imf-global-financial-stability-report"}
+def test_imf_sources_are_parked_without_network_requests():
+    source_ids = {
+        "imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"
+    }
     for imf_source in load_discovery_sources():
         if imf_source["source_id"] not in source_ids:
             continue
@@ -1449,8 +1451,8 @@ def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
         item for item in load_discovery_sources()
         if item["source_id"] == "imf-media-center-news"
     )
-    assert imf_source["enabled"] is True
-    assert imf_source["source_url"] == "https://mediacenter.imf.org/newslisting?category=news"
+    assert imf_source["enabled"] is False
+    assert imf_source["source_url"] == "https://mediacenter.imf.org/newslisting"
     article_url = (
         "https://mediacenter.imf.org/news/"
         "imf---global-financial-stability-report-annual-meetings--2026/"
