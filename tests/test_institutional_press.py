@@ -44,7 +44,6 @@ def coinbase_html_source():
         source_url="https://www.coinbase.com/blog",
         allowed_hosts=["www.coinbase.com", "coinbase.com"],
         article_path_regex=r"(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+",
-        detail_fallback_limit=1,
     )
 
 
@@ -142,7 +141,7 @@ def test_registered_institutional_sources_are_bounded():
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["discovery_method"] == METHOD
-    assert coinbase_blog["detail_fallback_limit"] == 1
+    assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
@@ -1473,33 +1472,3 @@ def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
 
 
 
-def test_coinbase_recovers_one_official_route_missing_a_nearby_date():
-    index_url = "https://www.coinbase.com/blog"
-    known_url = "https://www.coinbase.com/blog/known-official-article/"
-    missing_url = (
-        "https://www.coinbase.com/blog/"
-        "coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery/"
-    )
-    index = HttpResponse(
-        200, {"content-type": "text/html", "etag": '"coinbase-index-v1"'},
-        (
-            f'<span>September 28, 2026</span><a href="{known_url}">Known Official Article</a>'
-            + (" " * 3000)
-            + f'<a href="{missing_url}">Read More</a>'
-        ).encode(), index_url,
-    )
-    detail = HttpResponse(
-        200, {"content-type": "text/html"},
-        b'<html><body><h1>Coinbase Opens Stock Trading to Everyone in the US, Partners With Yahoo Finance to Power Discovery</h1>'
-        b'<time datetime="2026-10-15T12:00:00Z">October 15, 2026</time></body></html>',
-        missing_url,
-    )
-    http = SequenceHttp([index, detail])
-    result = InstitutionalPressDiscovery(coinbase_html_source(), http=http, now=lambda: STAMP).collect()
-    assert result.status == "success"
-    assert len(result.candidates) == 2
-    recovered = next(item for item in result.candidates if "yahoo-finance-to-power-discovery" in item.url)
-    assert recovered.published_at == datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
-    assert recovered.title.startswith("Coinbase Opens Stock Trading")
-    assert len(http.calls) == 2
-    assert http.calls[1][0] == missing_url
