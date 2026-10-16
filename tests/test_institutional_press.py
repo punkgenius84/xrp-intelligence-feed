@@ -1256,6 +1256,8 @@ def test_partial_index_recovers_one_missing_official_card_without_claiming_full_
     assert "Source index diagnostics: circle-pressroom" in captured
     assert "official_links_in_article_blocks=" in captured
     assert "script_date_tokens=" in captured
+    assert "script_iso_date_strings=" in captured
+    assert "json_data_key_counts=" in captured
 
 
 
