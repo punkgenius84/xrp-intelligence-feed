@@ -322,6 +322,7 @@ def _parse_page(
     dates_by_native_id: dict[str, list[tuple[int, datetime]]] = {}
     assigned_date_spans: set[tuple[int, int, datetime]] = set()
     link_assignment_by_date: dict[tuple[int, int, datetime], str] = {}
+    container_owner_by_date: dict[tuple[int, int, datetime], str] = {}
     nearest_date_gap_by_native_id: dict[str, int] = {}
     unique_nearest_date_tokens_by_native_id: dict[str, int] = {}
     tied_nearest_date_tokens_by_native_id: dict[str, int] = {}
@@ -471,6 +472,11 @@ def _parse_page(
 
         container_stats["owned_date_spans"] = len(container_owners)
         container_stats["ambiguous_date_spans"] = len(ambiguous_container_dates)
+        container_owner_by_date = {
+            date_span: owner[1]
+            for date_span, owner in container_owners.items()
+            if date_span not in ambiguous_container_dates
+        }
         if diagnostics is not None:
             diagnostics["coinbase_container_diagnostics"] = container_stats
         if container_owners:
@@ -712,6 +718,49 @@ def _parse_page(
             for native_id in sorted(unresolved_incomplete_ids)
             if "date" in incomplete_reasons.get(native_id, set())
         }
+        # Show the owner of the nearest date token for unresolved routes. This is
+        # diagnostic only: it never changes the parser's conservative assignments.
+        assignment_context: dict[str, dict[str, object]] = {}
+        for native_id in sorted(unresolved_incomplete_ids):
+            if "date" not in incomplete_reasons.get(native_id, set()):
+                continue
+            route_links = [
+                matches[index] for index, safe in safe_by_index.items()
+                if safe is not None and safe[1] == native_id
+            ]
+            if not route_links or not unique_dates:
+                continue
+            date_gaps: list[tuple[int, tuple[int, int, datetime]]] = []
+            for date_span in unique_dates.values():
+                date_start, date_end, _ = date_span
+                gap = min(
+                    (link.start() - date_end if date_end <= link.start()
+                     else date_start - link.end() if date_start >= link.end()
+                     else 0)
+                    for link in route_links
+                )
+                date_gaps.append((gap, date_span))
+            nearest_gap = min(gap for gap, _ in date_gaps)
+            nearest_spans = [span for gap, span in date_gaps if gap == nearest_gap]
+            owners = {link_assignment_by_date.get(span) for span in nearest_spans}
+            card_owners = {container_owner_by_date.get(span) for span in nearest_spans}
+            heading_ranges = heading_positions_by_native_id.get(native_id, [])
+            heading_gaps = [
+                min(
+                    (heading_start - span[1] if span[1] <= heading_start
+                     else span[0] - heading_end if span[0] >= heading_end
+                     else 0)
+                    for heading_start, heading_end, _, _ in heading_ranges
+                )
+                for span in nearest_spans
+            ] if heading_ranges else []
+            assignment_context[native_id] = {
+                "nearest_gap": nearest_gap,
+                "global_date_owners": sorted(owner for owner in owners if owner is not None),
+                "card_date_owners": sorted(owner for owner in card_owners if owner is not None),
+                "nearest_heading_gap": min(heading_gaps) if heading_gaps else None,
+            }
+        diagnostics["incomplete_date_assignment_context"] = assignment_context
         diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
     if unresolved_incomplete_ids:
         complete = False
@@ -1255,6 +1304,7 @@ class InstitutionalPressDiscovery:
                     f"sample={sorted(unresolved_unparsed_ids)[:3]}, "
                     f"incomplete_reasons={ {key: incomplete_reasons.get(key, []) for key in sorted(unparsed_ids)[:3]} }, "
                     f"date_proximity={ {key: parse_diagnostics.get('incomplete_date_proximity', {}).get(key) for key in sorted(unparsed_ids)[:3] if key in parse_diagnostics.get('incomplete_date_proximity', {})} }, "
+                    f"date_assignment_context={ {key: parse_diagnostics.get('incomplete_date_assignment_context', {}).get(key) for key in sorted(unparsed_ids)[:3] if key in parse_diagnostics.get('incomplete_date_assignment_context', {})} }, "
                     f"conflicting_duplicate_routes={len(unresolved_conflicts)} sample={sorted(unresolved_conflicts)[:3]})"
                 )
             if not unresolved_unparsed_ids and not unresolved_conflicts and not errors:
