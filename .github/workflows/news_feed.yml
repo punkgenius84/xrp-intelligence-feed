@@ -90,8 +90,16 @@ jobs:
                   continue
               try:
                   value = json.loads(path.read_text(encoding="utf-8"))
-                  size = len(value) if hasattr(value, "__len__") else "n/a"
-                  print(f"State: {name}: present ({size} top-level entries)")
+                  if isinstance(value, dict) and isinstance(value.get("items"), list):
+                      detail = f"schema={value.get('schema_version', 'unknown')} items={len(value['items'])}"
+                  elif isinstance(value, dict):
+                      detail = f"{len(value)} top-level entries"
+                  elif isinstance(value, list):
+                      detail = f"{len(value)} entries"
+                  else:
+                      detail = f"type={type(value).__name__}"
+                  # Log shape/count metadata only, never event contents, titles, or URLs.
+                  print(f"State: {name}: present ({detail})")
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
           PY
