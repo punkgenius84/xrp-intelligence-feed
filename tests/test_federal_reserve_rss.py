@@ -189,14 +189,14 @@ def test_one_failed_feed_and_other_unchanged_feeds_are_reported_partial():
     assert result.status == "partial"
     assert result.candidates == []
     assert len(result.errors) == 1
-    assert "Banking and Consumer Regulatory Policy: http_error (HTTP 404)" in result.errors[0]
+    assert "Banking and Consumer Regulatory Policy: unexpected HTTP status 404" in result.errors[0]
     assert set(result.state_updates) == {"enforcement", "monetary", "orders", "other"}
 
 
 def test_all_unchanged_feeds_are_not_reported_as_empty():
     from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
 
-    http = FakeHttp([response(status=304, body=b"") for _ in range(4)])
+    http = FakeHttp([response(status=304, body=b"") for _ in range(5)])
     result = FederalReserveRSSDiscovery(source(), http=http, now=lambda: STAMP).collect({})
 
     assert result.status == "not_modified"
