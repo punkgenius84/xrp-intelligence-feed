@@ -77,16 +77,15 @@ def test_registry_rejects_invalid_federal_reserve_configuration(changes):
         validate_discovery_sources({"schema_version": 1, "sources": [source(**changes)]})
 
 
-def test_all_six_official_federal_reserve_press_feeds_are_polled():
+def test_five_official_federal_reserve_category_feeds_are_polled():
     configured = load_discovery_sources()
     fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
     fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
-    http = FakeHttp([response(fixture) for _ in range(6)])
+    http = FakeHttp([response(fixture) for _ in range(5)])
     result = collect_source(fed, http=http, now=lambda: STAMP)
     assert result.status == "success"
-    assert len(http.calls) == 6
+    assert len(http.calls) == 5
     assert {call[0] for call in http.calls} == {
-        "https://www.federalreserve.gov/feeds/press_all.xml",
         "https://www.federalreserve.gov/feeds/press_bcreg.xml",
         "https://www.federalreserve.gov/feeds/press_enforcement.xml",
         "https://www.federalreserve.gov/feeds/press_monetary.xml",
@@ -97,7 +96,7 @@ def test_all_six_official_federal_reserve_press_feeds_are_polled():
 
 def test_same_release_seen_in_multiple_fed_feeds_is_deduplicated_with_provenance():
     fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
-    http = FakeHttp([response(fixture) for _ in range(6)])
+    http = FakeHttp([response(fixture) for _ in range(5)])
     configured = load_discovery_sources()
     fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
     result = collect_source(fed, http=http, now=lambda: STAMP)
@@ -105,15 +104,15 @@ def test_same_release_seen_in_multiple_fed_feeds_is_deduplicated_with_provenance
     assert len(candidates) == 1
     candidate = candidates[0]
     assert candidate.candidate_id == f"{SOURCE_ID}:bcreg20260924a"
-    assert len(candidate.provenance) == 7
+    assert len(candidate.provenance) == 6
     assert candidate.source_native_metadata["feed_ids"] == (
-        "all,bcreg,enforcement,monetary,orders,other"
+        "bcreg,enforcement,monetary,orders,other"
     )
 
 
 def test_federal_reserve_release_identity_and_date_are_preserved_without_article_fetch():
     fixture = (FIXTURES / "federal_reserve_press.xml").read_bytes()
-    http = FakeHttp([response(fixture) for _ in range(6)])
+    http = FakeHttp([response(fixture) for _ in range(5)])
     configured = load_discovery_sources()
     fed = next(row for row in configured if row["source_id"] == SOURCE_ID)
     result = collect_source(fed, http=http, now=lambda: STAMP)
@@ -122,7 +121,7 @@ def test_federal_reserve_release_identity_and_date_are_preserved_without_article
     assert candidate.published_at == datetime(2026, 9, 24, 16, 0, tzinfo=timezone.utc)
     assert candidate.url == "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm"
     assert candidate.document_type == "Federal Reserve Board Press Release"
-    assert len(http.calls) == 6
+    assert len(http.calls) == 5
 
 
 def test_utf8_payload_with_stale_ascii_declaration_is_parsed():
@@ -183,27 +182,27 @@ def test_one_failed_feed_and_other_unchanged_feeds_are_reported_partial():
     from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
 
     http = FakeHttp([response(status=404, body=b"")] + [
-        response(status=304, body=b"") for _ in range(5)
+        response(status=304, body=b"") for _ in range(4)
     ])
     result = FederalReserveRSSDiscovery(source(), http=http, now=lambda: STAMP).collect({})
 
     assert result.status == "partial"
     assert result.candidates == []
     assert len(result.errors) == 1
-    assert "All Press Releases: unexpected HTTP status 404" in result.errors[0]
-    assert set(result.state_updates) == {"bcreg", "enforcement", "monetary", "orders", "other"}
+    assert "Banking and Consumer Regulatory Policy: unexpected HTTP status 404" in result.errors[0]
+    assert set(result.state_updates) == {"enforcement", "monetary", "orders", "other"}
 
 
 def test_all_unchanged_feeds_are_not_reported_as_empty():
     from discovery.federal_reserve_rss import FederalReserveRSSDiscovery
 
-    http = FakeHttp([response(status=304, body=b"") for _ in range(6)])
+    http = FakeHttp([response(status=304, body=b"") for _ in range(5)])
     result = FederalReserveRSSDiscovery(source(), http=http, now=lambda: STAMP).collect({})
 
     assert result.status == "not_modified"
     assert result.candidates == []
-    assert len(http.calls) == 6
-    assert len(result.state_updates) == 6
+    assert len(http.calls) == 5
+    assert len(result.state_updates) == 5
 
 
 def test_disabled_federal_reserve_source_makes_no_requests():
