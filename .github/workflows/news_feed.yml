@@ -50,6 +50,7 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
+            state/intelligence_delivery_history.json
           # Never use a permanent bootstrap key: it can mask newer state caches.
           # This intentionally misses exact-match restore so the prefix selects the
           # newest immutable state cache saved by a prior successful run.
@@ -75,6 +76,7 @@ jobs:
               "state/intelligence_outbox.json",
               "state/outbox.json",
               "state/delivery_history.json",
+              "state/intelligence_delivery_history.json",
           ):
               path = Path(name)
               if not path.exists():
@@ -216,4 +218,4 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json', 'state/intelligence_delivery_history.json') }}
