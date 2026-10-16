@@ -1031,6 +1031,35 @@ def test_coinbase_date_uses_slug_matched_heading_only_when_link_association_is_u
 
 
 
+def test_coinbase_card_container_assigns_date_to_its_single_official_route():
+    coinbase_blog = coinbase_html_source()
+    alpha_url = "https://www.coinbase.com/blog/alpha-release-announcement"
+    beta_url = "https://www.coinbase.com/blog/beta-release-announcement"
+    filler_before_heading = " summary detail " * 80
+    filler_before_date = " additional product context " * 50
+    alpha_card = (
+        f'<div class="card"><a href="{alpha_url}"><img alt="Alpha release"></a>'
+        + filler_before_heading
+        + "<h2>Alpha Release Announcement</h2>"
+        + filler_before_date
+        + "<span>September 30, 2026</span></div>"
+    )
+    beta_card = (
+        f'<div class="card"><a href="{beta_url}"><img alt="Beta release"></a>'
+        + filler_before_heading
+        + "<h2>Beta Release Announcement</h2>"
+        + filler_before_date
+        + "<span>September 29, 2026</span></div>"
+    )
+    rows, complete = _parse_page(coinbase_blog, ("<html><body>" + alpha_card + beta_card + "</body></html>").encode())
+
+    assert complete is True
+    by_id = {row["native_id"]: row for row in rows}
+    assert set(by_id) == {"/blog/alpha-release-announcement", "/blog/beta-release-announcement"}
+    assert by_id["/blog/alpha-release-announcement"]["date"] == datetime(2026, 9, 30, tzinfo=timezone.utc)
+    assert by_id["/blog/beta-release-announcement"]["date"] == datetime(2026, 9, 29, tzinfo=timezone.utc)
+
+
 def test_coinbase_blog_rejects_landing_index_as_article_route():
     coinbase_blog = coinbase_html_source()
     assert _official_article(coinbase_blog, "https://www.coinbase.com/blog/landing") is None
