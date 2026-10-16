@@ -439,6 +439,11 @@ class FDICPressReleasesDiscovery:
             f"page={boundary_page} boundary_index={boundary_index} page_rows={len(rows)} "
             f"first_is_boundary={boundary_index == 0} last_is_boundary={boundary_index == len(rows) - 1}"
         )
+        if boundary_index == 0:
+            print(
+                "FDIC frontier result: saved boundary is the newest row on the current listing; "
+                "no newer releases were found"
+            )
         ordered_new.extend(rows[:boundary_index])
         # Every fetched page before the boundary is newer than it. Page 0 is
         # included explicitly because it is always the first shallow page.
