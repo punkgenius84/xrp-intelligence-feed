@@ -133,7 +133,7 @@ def test_registered_institutional_sources_are_bounded():
     assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"}
     assert imf_sources["imf-blogs"]["enabled"] is False
     assert imf_sources["imf-global-financial-stability-report"]["enabled"] is False
-    assert imf_sources["imf-media-center-news"]["enabled"] is True  # Testing the official category-filtered listing route.
+    assert imf_sources["imf-media-center-news"]["enabled"] is False  # Runner receives HTTP 202 from the official listing.
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")
     mastercard = next(item for item in sources if item["source_id"] == "mastercard-press-releases")
     dbs = next(item for item in sources if item["source_id"] == "dbs-newsroom")
