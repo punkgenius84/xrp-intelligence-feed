@@ -307,10 +307,11 @@ def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch)
         lambda: SimpleNamespace(enabled=True, publish_enabled=True),
     )
 
-    def capture(events, settings, *, publish_enabled, outbox_store=None):
+    def capture(events, settings, *, publish_enabled, outbox_store=None, stale_after_days=30):
         captured["events"] = events
         captured["publish_enabled"] = publish_enabled
         captured["outbox_store"] = outbox_store
+        captured["stale_after_days"] = stale_after_days
         return 0
 
     monkeypatch.setattr(main, "publish_intelligence_events", capture)
@@ -320,6 +321,7 @@ def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch)
         "events": [],
         "publish_enabled": True,
         "outbox_store": sentinel_outbox,
+        "stale_after_days": 30,
     }
 
 
