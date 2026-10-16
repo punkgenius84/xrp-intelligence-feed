@@ -1003,6 +1003,11 @@ class InstitutionalPressDiscovery:
                                        fetched_at=fetched_at, errors=errors)
 
         if not complete:
+            if parse_diagnostics.get("incomplete_native_ids") or parse_diagnostics.get("conflicting_native_ids"):
+                print(
+                    f"Source index diagnostics: {self.source['source_id']} "
+                    f"{_index_diagnostics(self.source, response.content, response)}"
+                )
             unparsed_ids = set(parse_diagnostics.get("incomplete_native_ids", []))
             incomplete_reasons = parse_diagnostics.get("incomplete_reasons", {})
             conflicting_ids = set(parse_diagnostics.get("conflicting_native_ids", []))
