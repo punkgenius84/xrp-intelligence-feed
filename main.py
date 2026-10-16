@@ -456,6 +456,16 @@ def print_source_health_warnings(result: PipelineResult, *, now: datetime | None
             print(f"  Last error: {error}")
 
 
+def _print_source_failures(failures: list[str], partial_source_ids: set[str]) -> None:
+    """Distinguish recoverable partial-source warnings from complete source failures."""
+    for failure in failures:
+        source_id = failure.partition(":")[0].strip()
+        if source_id in partial_source_ids:
+            print(f"Source warning (partial): {failure}")
+        else:
+            print(f"Source failed: {failure}")
+
+
 def score_feed(result: PipelineResult) -> list:
     """Select and report publishable scored items without changing scoring behavior."""
     from intelligence.configuration import read_object, validate_thresholds
@@ -530,8 +540,11 @@ def score_feed(result: PipelineResult) -> list:
             print(f"  - {reason}")
     for failure in result.intelligence_failures:
         print(f"Intelligence failed: {failure}")
-    for failure in result.failures:
-        print(f"Source failed: {failure}")
+    partial_source_ids = {
+        item.source_id for item in result.discovery_results
+        if getattr(item, "status", "") == "partial"
+    }
+    _print_source_failures(result.failures, partial_source_ids)
     for report in result.reports:
         if report is not None:
             print(
