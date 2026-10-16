@@ -292,8 +292,11 @@ class FederalReserveRSSDiscovery:
             reverse=True,
         )
         all_feeds_unchanged = not_modified_count == len(FED_FEEDS)
+        # A feed can fail while the other feeds are confirmed unchanged (HTTP 304).
+        # That is a partial source poll, not a total failure: the 304 responses
+        # prove those feeds were reachable, while the failed feed remains uncovered.
         status = (
-            "partial" if errors and ordered
+            "partial" if errors and (ordered or not_modified_count)
             else "failed" if errors
             else "not_modified" if not ordered and all_feeds_unchanged
             else "empty" if not ordered
