@@ -1013,8 +1013,8 @@ def test_coinbase_dates_follow_slug_matched_headings_when_links_are_image_only()
     coinbase_blog = coinbase_html_source()
     alpha_url = "https://www.coinbase.com/blog/alpha-release-announcement"
     beta_url = "https://www.coinbase.com/blog/beta-release-announcement"
-    filler_before_heading = " summary detail " * 60
-    filler_before_date = " additional product context " * 90
+    filler_before_heading = " summary detail " * 80
+    filler_before_date = " additional product context " * 50
     html = (
         f'<a href="{alpha_url}"><img alt="Alpha release"></a>'
         + filler_before_heading
