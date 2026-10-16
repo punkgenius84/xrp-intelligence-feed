@@ -19,6 +19,10 @@ on:
         description: "Dry run: print what would be posted to Discord, post nothing, save no state"
         type: boolean
         default: true
+      preview_intelligence:
+        description: "Preview queued intelligence summaries and evidence in logs (read-only; requires dry_run=true)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -152,6 +156,10 @@ jobs:
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
           PY
+      - name: Preview queued intelligence events (read-only)
+        if: github.event_name == 'workflow_dispatch' && inputs.preview_intelligence && inputs.dry_run
+        run: python scripts/preview_intelligence_outbox.py --limit 20
+
       - name: Restore intelligence model cache
         if: github.event_name != 'push'
         id: ollama_cache
