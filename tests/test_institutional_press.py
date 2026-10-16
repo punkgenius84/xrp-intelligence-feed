@@ -1472,3 +1472,25 @@ def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
 
 
 
+
+
+def test_coinbase_unresolved_date_diagnostic_reports_date_owner_without_mutating_parse():
+    coinbase_blog = coinbase_html_source()
+    known_url = "https://www.coinbase.com/blog/known-official-article"
+    unresolved_url = "https://www.coinbase.com/blog/coinbase-opens-stock-trading-to-everyone-in-the-us"
+    html = (
+        f'<div class="card"><span>October 15, 2026</span><a href="{known_url}">Known Official Article</a></div>'
+        + (" " * 300)
+        + '<h2>Coinbase Opens Stock Trading to Everyone in the US</h2>'
+        + f'<div class="card"><a href="{unresolved_url}">Read More</a></div>'
+    ).encode()
+    diagnostics = {}
+    rows, complete = _parse_page(coinbase_blog, html, diagnostics)
+    assert complete is False
+    assert any(row["native_id"] == "/blog/known-official-article" for row in rows)
+    unresolved_id = "/blog/coinbase-opens-stock-trading-to-everyone-in-the-us"
+    assert unresolved_id in diagnostics["incomplete_date_assignment_context"]
+    context = diagnostics["incomplete_date_assignment_context"][unresolved_id]
+    assert context["global_date_owners"] == [unresolved_id] or context["global_date_owners"] == ["/blog/known-official-article"]
+    assert "card_date_owners" in context
+    assert "nearest_heading_gap" in context
