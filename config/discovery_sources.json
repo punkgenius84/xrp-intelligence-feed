@@ -403,8 +403,8 @@
       "authority_tier": 1,
       "category": "institutional",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://mediacenter.imf.org/newslisting",
-      "enabled": false,
+      "source_url": "https://mediacenter.imf.org/newslisting?category=news",
+      "enabled": true,
       "lookback_days": 365,
       "max_items": 50,
       "allowed_hosts": [
