@@ -131,6 +131,11 @@ def test_score_feed_respects_explicit_empty_publishable(monkeypatch):
 
 
 def test_intelligence_publish_uses_outbox_and_removes_successful(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
     queued_event = event()
     store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
     settings = SimpleNamespace(
@@ -174,6 +179,11 @@ def test_intelligence_outbox_accepts_exact_capacity(tmp_path):
 
 
 def test_invalid_intelligence_event_does_not_poison_valid_queue_entries(tmp_path, monkeypatch, capsys):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
     invalid = event(event_id="evt-invalid")
     invalid.evidence = []
     valid = event(event_id="evt-valid")
