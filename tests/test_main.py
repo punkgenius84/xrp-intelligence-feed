@@ -441,3 +441,56 @@ def test_partial_source_errors_are_labeled_as_warnings(capsys):
     assert "Source warning (partial): coinbase-blog:" in output
     assert "Source failed: sec-edgar: HTTP 500" in output
     assert "Source failed: coinbase-blog:" not in output
+
+def test_publish_feed_retains_outbox_if_delivery_history_cannot_be_saved(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    import pytest
+    from storage.delivery_history import DeliveryHistoryError
+    from storage.outbox import JsonOutboxState, QueuedPublication
+
+    stamp = datetime.now(timezone.utc)
+    item = QueuedPublication(
+        key="discord|candidate-ledger-failure|hash-ledger-failure",
+        candidate_id="candidate-ledger-failure",
+        content_hash="hash-ledger-failure",
+        title="Delivery ledger failure regression",
+        url="https://example.test/ledger-failure",
+        source="Example",
+        published_at=stamp,
+        collected_at=stamp,
+        relevance_score=55,
+        detected_entities=["Ripple"],
+        score_reasons=["official source"],
+    )
+    outbox = JsonOutboxState(tmp_path / "outbox.json")
+    outbox.enqueue([item])
+
+    class BrokenHistory:
+        def load(self):
+            return []
+
+        def record(self, items, posted_keys):
+            raise DeliveryHistoryError("simulated disk write failure")
+
+    monkeypatch.setattr(main, "JsonDeliveryHistory", BrokenHistory)
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False, publish_enabled=False),
+    )
+    monkeypatch.setattr(
+        main,
+        "publish",
+        lambda items, settings: SimpleNamespace(posted_keys={item.key for item in items}),
+    )
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_age_days=14,
+    )
+
+    with pytest.raises(SystemExit, match="recovery outbox entries were retained"):
+        main.publish_feed([item], [], settings, outbox)
+
+    assert [queued.key for queued in outbox.load()] == [item.key]
+
