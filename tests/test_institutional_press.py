@@ -143,7 +143,7 @@ def test_registered_institutional_sources_are_bounded():
     coinbase_blog = next(item for item in sources if item["source_id"] == "coinbase-blog")
     assert coinbase_blog["source_url"] == "https://www.coinbase.com/blog"
     assert coinbase_blog["discovery_method"] == METHOD
-    assert "detail_fallback_limit" not in coinbase_blog
+    assert coinbase_blog["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
@@ -1474,6 +1474,44 @@ def test_imf_media_center_gfsr_source_uses_official_dated_news_routes():
 
 
 
+
+
+def test_coinbase_bounded_detail_fallback_recovers_official_article_missing_index_date():
+    coinbase = coinbase_html_source() | {"detail_fallback_limit": 1}
+    known_url = "https://www.coinbase.com/blog/known-official-article"
+    missing_url = (
+        "https://www.coinbase.com/blog/"
+        "coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
+    )
+    index = HttpResponse(
+        200, {"content-type": "text/html", "etag": '"coinbase-index-v1"'},
+        (
+            f'<article><time datetime="2026-10-15">October 15, 2026</time>'
+            f'<a href="{known_url}">Known Official Article</a></article>'
+            f'<article><a href="{missing_url}">Read more</a></article>'
+        ).encode(),
+        "https://www.coinbase.com/blog",
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'<html><body><h1>Coinbase Opens Stock Trading to Everyone in the US Partners with Yahoo Finance to Power Discovery</h1><time datetime="2026-10-14">October 14, 2026</time></body></html>',
+        missing_url + "/",
+    )
+    http = SequenceHttp([index, detail])
+
+    result = InstitutionalPressDiscovery(coinbase, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "success"
+    assert {item.source_native_id for item in result.candidates} == {
+        "/blog/known-official-article",
+        "/blog/coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery",
+    }
+    recovered = next(item for item in result.candidates if item.source_native_id.endswith("yahoo-finance-to-power-discovery"))
+    assert recovered.title.startswith("Coinbase Opens Stock Trading")
+    assert recovered.published_at.isoformat().startswith("2026-10-14")
+    assert len(http.calls) == 2
+    assert http.calls[1][0] == missing_url + "/"
+    assert result.errors == []
 
 
 def test_coinbase_unresolved_date_diagnostic_reports_date_owner_without_mutating_parse():
