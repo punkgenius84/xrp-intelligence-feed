@@ -33,6 +33,7 @@ from storage.outbox import JsonOutboxState, OutboxError, publication_key
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
 from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
+from storage.intelligence_delivery_history import IntelligenceDeliveryHistoryError, JsonIntelligenceDeliveryHistory
 from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
 
@@ -596,8 +597,26 @@ def publish_intelligence_events(
         raise SystemExit("Intelligence publish refused: DISCORD_WEBHOOK_URL is not set")
 
     queue = outbox_store or JsonIntelligenceOutboxState()
-    if events:
-        queue.enqueue(events)
+    history = JsonIntelligenceDeliveryHistory()
+    try:
+        delivered_event_ids = history.load()
+        queued_before = queue.load()
+    except (IntelligenceDeliveryHistoryError, IntelligenceOutboxError) as exc:
+        raise SystemExit(f"Intelligence publish refused: delivery state is unreadable: {exc}") from exc
+
+    # A prior send can succeed even if removing the outbox entry fails. Reconcile
+    # the durable delivery ledger before enqueueing newly generated events so a
+    # replayed candidate cannot repost an already-delivered intelligence event.
+    already_delivered_keys = {
+        item.key for item in queued_before if item.event.event_id in delivered_event_ids
+    }
+    if already_delivered_keys:
+        queue.remove(already_delivered_keys)
+        out(f"Intelligence: removed {len(already_delivered_keys)} already-delivered event(s) from outbox")
+
+    new_events = [event for event in events if event.event_id not in delivered_event_ids]
+    if new_events:
+        queue.enqueue(new_events)
     pending = queue.load()
     if not pending:
         return 0
@@ -624,6 +643,7 @@ def publish_intelligence_events(
     selected = publishable_pending[:limit]
     hook = DiscordWebhook(discord_settings.webhook_url)
     posted_keys: set[str] = set()
+    posted_event_ids: set[str] = set()
     for item in selected:
         try:
             hook.send(format_intelligence_event(item.event))
@@ -631,12 +651,22 @@ def publish_intelligence_events(
             out(f"::warning::Intelligence post failed for {item.event.event_id}: {exc}")
             continue
         posted_keys.add(item.key)
+        posted_event_ids.add(item.event.event_id)
 
-    if posted_keys:
+    if posted_event_ids:
+        # Record success before removing the outbox entry. If the outbox write
+        # fails after this point, the next run can reconcile against this ledger.
+        try:
+            history.record(posted_event_ids)
+        except IntelligenceDeliveryHistoryError as exc:
+            out(f"::error::Intelligence delivery history could not be saved: {exc}")
+            raise SystemExit(
+                "Intelligence publish stopped after Discord accepted a post but "
+                "delivery history could not be persisted; outbox entries were retained"
+            ) from exc
         queue.remove(posted_keys)
-    out(f"Intelligence: posted {len(posted_keys)} of {len(selected)} queued events")
-    return len(posted_keys)
-
+    out(f"Intelligence: posted {len(posted_event_ids)} of {len(selected)} queued events")
+    return len(posted_event_ids)
 
 def publish_feed(
     relevant,
