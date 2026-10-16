@@ -89,9 +89,14 @@ def test_source_health_warning_ignores_recent_or_healthy_sources(capsys):
     assert capsys.readouterr().out == ""
 
 
-def test_intelligence_publish_requires_evidence_url():
+def test_intelligence_publish_requires_evidence_url(tmp_path, monkeypatch):
     from intelligence.events import IntelligenceEvent
     from types import SimpleNamespace
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
     event = IntelligenceEvent(
         event_id="evt-1",
         event_type="announcement",
@@ -104,10 +109,15 @@ def test_intelligence_publish_requires_evidence_url():
         main.publish_intelligence_events([event], settings, publish_enabled=True)
 
 
-def test_intelligence_publish_posts_to_existing_channel(monkeypatch):
+def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
     from intelligence.events import IntelligenceEvent
     from intelligence.evidence import Evidence
     from types import SimpleNamespace
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
 
     sent = []
 
