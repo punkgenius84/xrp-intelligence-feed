@@ -61,6 +61,47 @@ def response(payload):
     return HttpResponse(200, {"content-type": "text/html"}, payload, "https://www.circle.com/pressroom")
 
 
+def test_future_dated_official_card_is_not_published_or_marked_fresh():
+    html = b'''<html><body>
+      <article><time datetime="2026-09-29T12:00:00Z">September 29, 2026</time>
+        <a href="/pressroom/current-release">Current Official Release</a></article>
+      <article><time datetime="2026-11-04T12:00:00Z">November 4, 2026</time>
+        <a href="/pressroom/future-release">Future Official Release</a></article>
+    </body></html>'''
+    http = FakeHttp(response(html))
+
+    result = InstitutionalPressDiscovery(source(), http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert [item.title for item in result.candidates] == ["Current Official Release"]
+    assert all(item.source_native_id != "/pressroom/future-release" for item in result.candidates)
+    assert any("future-dated official article route" in error for error in result.errors)
+    # Do not save index validators while a future-dated route remains unresolved;
+    # the source must be retried instead of being treated as fully healthy.
+    assert result.state_updates == {}
+
+
+def test_date_inside_release_headline_is_not_mistaken_for_publication_date():
+    article_url = (
+        "https://www.circle.com/pressroom/"
+        "circle-to-announce-q3-2026-financial-results-on-november-4-2026"
+    )
+    html = f'''<html><head>
+      <script type="application/ld+json">{{"@context":"https://schema.org","@type":"NewsArticle",
+        "headline":"Circle to Announce Q3 2026 Financial Results on November 4, 2026",
+        "url":"{article_url}","datePublished":"2026-10-07T12:00:00Z"}}</script>
+      </head><body><div class="card"><span>October 7, 2026</span>
+        <a href="{article_url}">Circle to Announce Q3 2026 Financial Results on November 4, 2026</a>
+      </div></body></html>'''.encode()
+
+    rows, complete = _parse_page(source(), html)
+
+    assert complete is True
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Circle to Announce Q3 2026 Financial Results on November 4, 2026"
+    assert rows[0]["date"] == datetime(2026, 10, 7, tzinfo=timezone.utc)
+
+
 def test_unchanged_index_is_not_reported_as_empty():
     unchanged = HttpResponse(
         304,
@@ -1522,7 +1563,7 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
     ])
 
     result = InstitutionalPressDiscovery(
-        coinbase_blog, http=http, now=lambda: STAMP
+        coinbase_blog, http=http, now=lambda: datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
     ).collect()
 
     assert result.status == "partial"

@@ -312,10 +312,25 @@ def _parse_page(
         parsed = _parse_date(date_match.group("date"), source.get("numeric_date_order", "mdy"))
         if parsed is not None:
             date_candidates.append((date_match.start(), date_match.end(), parsed))
+    # Dates embedded in a linked headline (for example, "earnings on November 4")
+    # and in JSON-LD headlines are not publication dates. JSON-LD publication metadata
+    # is parsed separately above; keep those script tokens out of proximity assignment.
+    json_ld_script_ranges = [
+        (script.start(), script.end())
+        for script in re.finditer(
+            r"""<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>.*?</script\s*>""",
+            text, re.IGNORECASE | re.DOTALL,
+        )
+    ]
     for date_match in _DATE_RE.finditer(text):
+        start, end = date_match.start(), date_match.end()
+        if any(link.start() <= start and end <= link.end() for link in matches):
+            continue
+        if any(script_start <= start and end <= script_end for script_start, script_end in json_ld_script_ranges):
+            continue
         parsed = _parse_date(date_match.group(0), source.get("numeric_date_order", "mdy"))
         if parsed is not None:
-            date_candidates.append((date_match.start(), date_match.end(), parsed))
+            date_candidates.append((start, end, parsed))
     unique_dates: dict[tuple[int, int, datetime], tuple[int, int, datetime]] = {}
     for candidate in date_candidates:
         unique_dates.setdefault(candidate, candidate)
@@ -566,7 +581,13 @@ def _parse_page(
                 r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
                 block_text, re.IGNORECASE | re.DOTALL,
             ))
-            date_matches = list(_DATE_RE.finditer(block_text))
+            date_matches = [
+                item for item in _DATE_RE.finditer(block_text)
+                if not (
+                    block_start + item.start() >= match.start()
+                    and block_start + item.end() <= match.end()
+                )
+            ]
             if date_attrs:
                 published = _parse_date(
                     min(date_attrs, key=lambda item: abs(block_start + item.start() - match.start())).group("date"),
@@ -1239,6 +1260,29 @@ class InstitutionalPressDiscovery:
                 return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                        fetched_at=fetched_at, errors=errors)
 
+        # Public indexes occasionally place an event or unrelated future date beside a release card.
+        # Never publish a row whose purported publication date is implausibly ahead of collection time.
+        # A 24-hour tolerance accommodates timezone/date-only representation differences; unresolved
+        # routes remain partial and are retried rather than having their validators advanced.
+        future_cutoff = fetched_at.astimezone(timezone.utc) + timedelta(days=1)
+        future_ids = {
+            row["native_id"] for row in rows
+            if row["date"].astimezone(timezone.utc) > future_cutoff
+        }
+        if future_ids:
+            rows = [row for row in rows if row["native_id"] not in future_ids]
+            complete = False
+            parse_diagnostics["future_dated_native_ids"] = sorted(future_ids)
+            incomplete_ids = set(parse_diagnostics.get("incomplete_native_ids", [])) | future_ids
+            parse_diagnostics["incomplete_native_ids"] = sorted(incomplete_ids)
+            reasons_by_id = parse_diagnostics.setdefault("incomplete_reasons", {})
+            for native_id in future_ids:
+                reasons_by_id[native_id] = sorted(set(reasons_by_id.get(native_id, [])) | {"future_date"})
+            errors.append(
+                f"{self.source['name']}: rejected {len(future_ids)} future-dated official article route(s) "
+                "more than 24 hours ahead of collection time"
+            )
+
         if not complete:
             if parse_diagnostics.get("incomplete_native_ids") or parse_diagnostics.get("conflicting_native_ids"):
                 print(
@@ -1261,7 +1305,7 @@ class InstitutionalPressDiscovery:
                 }
                 recovered = self._detail_fallback(
                     response.content, errors, exclude_ids=known_ids,
-                    preferred_ids=conflicting_ids,
+                    preferred_ids=conflicting_ids | future_ids,
                 )
                 if recovered:
                     recovered_ids = {row["native_id"] for row in recovered}
@@ -1317,6 +1361,19 @@ class InstitutionalPressDiscovery:
                 key: response.headers[key]
                 for key in ("etag", "last_modified") if response.headers.get(key)
             }
+
+        # Detail fallback is also untrusted until its date passes the same future-date guard.
+        remaining_future_ids = {
+            row["native_id"] for row in rows
+            if row["date"].astimezone(timezone.utc) > future_cutoff
+        }
+        if remaining_future_ids:
+            rows = [row for row in rows if row["native_id"] not in remaining_future_ids]
+            if not future_ids:
+                errors.append(
+                    f"{self.source['name']}: rejected {len(remaining_future_ids)} future-dated official detail route(s) "
+                    "more than 24 hours ahead of collection time"
+                )
 
         for row in rows:
             if row["date"] < cutoff:
