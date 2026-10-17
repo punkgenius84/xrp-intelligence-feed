@@ -318,7 +318,7 @@ def _parse_page(
     json_ld_script_ranges = [
         (script.start(), script.end())
         for script in re.finditer(
-            r'<script\\b(?=[^>]*\\btype\\s*=\\s*(?:"application/ld\\+json"|\\'application/ld\\+json\\'|application/ld\\+json(?:\\s|/|>)))[^>]*>.*?</script\\s*>',
+            r"""<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>.*?</script\s*>""",
             text, re.IGNORECASE | re.DOTALL,
         )
     ]
