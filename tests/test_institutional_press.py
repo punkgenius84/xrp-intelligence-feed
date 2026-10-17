@@ -61,6 +61,26 @@ def response(payload):
     return HttpResponse(200, {"content-type": "text/html"}, payload, "https://www.circle.com/pressroom")
 
 
+def test_future_dated_official_card_is_not_published_or_marked_fresh():
+    html = b'''<html><body>
+      <article><time datetime="2026-09-29T12:00:00Z">September 29, 2026</time>
+        <a href="/pressroom/current-release">Current Official Release</a></article>
+      <article><time datetime="2026-11-04T12:00:00Z">November 4, 2026</time>
+        <a href="/pressroom/future-release">Future Official Release</a></article>
+    </body></html>'''
+    http = FakeHttp(response(html))
+
+    result = InstitutionalPressDiscovery(source(), http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "partial"
+    assert [item.title for item in result.candidates] == ["Current Official Release"]
+    assert all(item.source_native_id != "/pressroom/future-release" for item in result.candidates)
+    assert any("future-dated official article route" in error for error in result.errors)
+    # Do not save index validators while a future-dated route remains unresolved;
+    # the source must be retried instead of being treated as fully healthy.
+    assert result.state_updates == {}
+
+
 def test_unchanged_index_is_not_reported_as_empty():
     unchanged = HttpResponse(
         304,
