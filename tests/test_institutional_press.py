@@ -1497,3 +1497,37 @@ def test_coinbase_unresolved_date_diagnostic_reports_date_owner_without_mutating
     assert context["global_date_owners"] == [unresolved_id] or context["global_date_owners"] == ["/blog/known-official-article"]
     assert "card_date_owners" in context
     assert "nearest_heading_gap" in context
+
+
+def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request():
+    coinbase_blog = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-blog"
+    )
+    index_url = "https://www.coinbase.com/blog"
+    known_url = "https://www.coinbase.com/blog/known-official-article"
+    unresolved_url = (
+        "https://www.coinbase.com/blog/"
+        "coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
+    )
+    html = (
+        f'<div class="card"><span>October 15, 2026</span>'
+        f'<a href="{known_url}">Known Official Article</a></div>'
+        + (" " * 300)
+        + '<h2>Coinbase Opens Stock Trading to Everyone in the US Partners with Yahoo Finance to Power Discovery</h2>'
+        + f'<div class="card"><a href="{unresolved_url}">Read More</a></div>'
+    ).encode()
+    http = SequenceHttp([
+        HttpResponse(200, {"content-type": "text/html"}, html, index_url),
+    ])
+
+    result = InstitutionalPressDiscovery(
+        coinbase_blog, http=http, now=lambda: STAMP
+    ).collect()
+
+    assert result.status == "partial"
+    assert any(item.url == "https://www.coinbase.com/blog/known-official-article/" for item in result.candidates)
+    assert len(http.calls) == 1
+    assert http.calls[0][0] == index_url
+    assert any("malformed article on official index" in error for error in result.errors)
+
