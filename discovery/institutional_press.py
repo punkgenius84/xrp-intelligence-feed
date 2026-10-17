@@ -1284,7 +1284,7 @@ class InstitutionalPressDiscovery:
                 }
                 recovered = self._detail_fallback(
                     response.content, errors, exclude_ids=known_ids,
-                    preferred_ids=conflicting_ids,
+                    preferred_ids=conflicting_ids | future_ids,
                 )
                 if recovered:
                     recovered_ids = {row["native_id"] for row in recovered}
