@@ -1239,6 +1239,29 @@ class InstitutionalPressDiscovery:
                 return DiscoveryResult(self.source["source_id"], METHOD, "failed",
                                        fetched_at=fetched_at, errors=errors)
 
+        # Public indexes occasionally place an event or unrelated future date beside a release card.
+        # Never publish a row whose purported publication date is implausibly ahead of collection time.
+        # A 24-hour tolerance accommodates timezone/date-only representation differences; unresolved
+        # routes remain partial and are retried rather than having their validators advanced.
+        future_cutoff = fetched_at.astimezone(timezone.utc) + timedelta(days=1)
+        future_ids = {
+            row["native_id"] for row in rows
+            if row["date"].astimezone(timezone.utc) > future_cutoff
+        }
+        if future_ids:
+            rows = [row for row in rows if row["native_id"] not in future_ids]
+            complete = False
+            parse_diagnostics["future_dated_native_ids"] = sorted(future_ids)
+            incomplete_ids = set(parse_diagnostics.get("incomplete_native_ids", [])) | future_ids
+            parse_diagnostics["incomplete_native_ids"] = sorted(incomplete_ids)
+            reasons_by_id = parse_diagnostics.setdefault("incomplete_reasons", {})
+            for native_id in future_ids:
+                reasons_by_id[native_id] = sorted(set(reasons_by_id.get(native_id, [])) | {"future_date"})
+            errors.append(
+                f"{self.source['name']}: rejected {len(future_ids)} future-dated official article route(s) "
+                "more than 24 hours ahead of collection time"
+            )
+
         if not complete:
             if parse_diagnostics.get("incomplete_native_ids") or parse_diagnostics.get("conflicting_native_ids"):
                 print(
@@ -1317,6 +1340,19 @@ class InstitutionalPressDiscovery:
                 key: response.headers[key]
                 for key in ("etag", "last_modified") if response.headers.get(key)
             }
+
+        # Detail fallback is also untrusted until its date passes the same future-date guard.
+        remaining_future_ids = {
+            row["native_id"] for row in rows
+            if row["date"].astimezone(timezone.utc) > future_cutoff
+        }
+        if remaining_future_ids:
+            rows = [row for row in rows if row["native_id"] not in remaining_future_ids]
+            if not future_ids:
+                errors.append(
+                    f"{self.source['name']}: rejected {len(remaining_future_ids)} future-dated official detail route(s) "
+                    "more than 24 hours ahead of collection time"
+                )
 
         for row in rows:
             if row["date"] < cutoff:
