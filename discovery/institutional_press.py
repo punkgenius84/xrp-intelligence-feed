@@ -332,8 +332,8 @@ def _parse_page(
     for date_match in _DATE_RE.finditer(text):
         start, end = date_match.start(), date_match.end()
         if any(
-            heading.start() <= start and end <= heading.end()
-            for heading in headline_ranges
+            heading_start <= start and end <= heading_end
+            for heading_start, heading_end in headline_ranges
         ):
             continue
         if any(script_start <= start and end <= script_end for script_start, script_end in json_ld_script_ranges):
