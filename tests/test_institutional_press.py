@@ -81,6 +81,41 @@ def test_future_dated_official_card_is_not_published_or_marked_fresh():
     assert result.state_updates == {}
 
 
+def test_official_detail_fallback_can_correct_a_future_index_date():
+    source_url = "https://www.circle.com/pressroom"
+    article_url = "https://www.circle.com/pressroom/current-release"
+    index = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'''<html><body><article>
+          <time datetime="2026-11-04T12:00:00Z">November 4, 2026</time>
+          <a href="/pressroom/current-release">Current Official Release</a>
+        </article></body></html>''',
+        source_url,
+    )
+    detail = HttpResponse(
+        200, {"content-type": "text/html"},
+        b'''<html><head><script type="application/ld+json">
+        {"@context":"https://schema.org","@type":"NewsArticle",
+         "headline":"Current Official Release",
+         "url":"https://www.circle.com/pressroom/current-release",
+         "datePublished":"2026-09-29T12:00:00Z"}
+        </script></head><body><h1>Current Official Release</h1></body></html>''',
+        article_url,
+    )
+    http = SequenceHttp([index, detail])
+
+    result = InstitutionalPressDiscovery(
+        source(detail_fallback_limit=1), http=http, now=lambda: STAMP
+    ).collect()
+
+    assert result.status == "partial"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == "Current Official Release"
+    assert result.candidates[0].published_at == datetime(2026, 9, 29, 12, tzinfo=timezone.utc)
+    assert len(http.calls) == 2
+    assert result.state_updates == {}
+
+
 def test_future_dated_detail_fallback_is_not_published():
     source_url = "https://www.circle.com/pressroom"
     article_url = "https://www.circle.com/pressroom/future-release"
