@@ -315,6 +315,13 @@ def _parse_page(
     # Dates embedded in a linked headline (for example, "earnings on November 4")
     # and in JSON-LD headlines are not publication dates. JSON-LD publication metadata
     # is parsed separately above; keep those script tokens out of proximity assignment.
+    headline_ranges = [
+        (headline.start(), headline.end())
+        for headline in re.finditer(
+                    r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>",
+            text, re.IGNORECASE | re.DOTALL,
+        )
+    ]
     json_ld_script_ranges = [
         (script.start(), script.end())
         for script in re.finditer(
@@ -324,7 +331,10 @@ def _parse_page(
     ]
     for date_match in _DATE_RE.finditer(text):
         start, end = date_match.start(), date_match.end()
-        if any(link.start() <= start and end <= link.end() for link in matches):
+        if any(
+            heading_start <= start and end <= heading_end
+            for heading_start, heading_end in headline_ranges
+        ):
             continue
         if any(script_start <= start and end <= script_end for script_start, script_end in json_ld_script_ranges):
             continue
@@ -581,11 +591,18 @@ def _parse_page(
                 r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
                 block_text, re.IGNORECASE | re.DOTALL,
             ))
+            block_headline_ranges = [
+                (headline.start(), headline.end())
+                for headline in re.finditer(
+                    r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>",
+                    block_text, re.IGNORECASE | re.DOTALL,
+                )
+            ]
             date_matches = [
                 item for item in _DATE_RE.finditer(block_text)
-                if not (
-                    block_start + item.start() >= match.start()
-                    and block_start + item.end() <= match.end()
+                if not any(
+                    heading_start <= item.start() and item.end() <= heading_end
+                    for heading_start, heading_end in block_headline_ranges
                 )
             ]
             if date_attrs:
@@ -617,7 +634,14 @@ def _parse_page(
 
             nearest_assigned = min(assigned_dates, key=distance_to_link) if assigned_dates else None
             published = nearest_assigned[2] if nearest_assigned is not None else None
-        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        anchor_title_markup = match.group("title")
+        nested_heading = re.search(
+            r"<h[1-6]\b[^>]*>(?P<title>.*?)</h[1-6]\s*>",
+            anchor_title_markup, re.IGNORECASE | re.DOTALL,
+        )
+        if nested_heading is not None:
+            anchor_title_markup = nested_heading.group("title")
+        title = _clean(re.sub(r"<[^>]+>", " ", anchor_title_markup))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles:
             opening_tag = match.group(0).split(">", 1)[0] + ">"
