@@ -12,7 +12,8 @@ from discovery.dispatch import (DiscoveryDispatchError, DiscoveryRegistryError,
                                 collect_source, load_discovery_sources)
 from discovery.models import DiscoveryCandidate
 from discovery.normalization import normalize_candidate
-from discord.publisher import DEFAULT_MAX_AGE_DAYS, publish, settings_from_env, split_stale
+from discord.publisher import (DEFAULT_MAX_AGE_DAYS, publish, settings_from_env,
+                               split_future_dated, split_stale)
 from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
@@ -721,6 +722,12 @@ def publish_feed(
     """Publish normal and intelligence items through durable delivery paths."""
     max_age_days = getattr(discord_settings, "max_age_days", DEFAULT_MAX_AGE_DAYS)
     if discord_settings.dry_run:
+        relevant, future_relevant = split_future_dated(relevant)
+        if future_relevant:
+            print(
+                f"Discord: {len(future_relevant)} relevant item(s) with publication dates "
+                "more than 24 hours in the future would be skipped"
+            )
         relevant, too_old = split_stale(relevant, max_age_days)
         if too_old:
             print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
@@ -729,6 +736,23 @@ def publish_feed(
         return
 
     pending = outbox_store.load() if outbox_store is not None else relevant
+    pending, future_pending = split_future_dated(pending)
+    future_pending_keys = {
+        item.key if hasattr(item, "key") else publication_key(item)
+        for item in future_pending
+    }
+    if future_pending:
+        if outbox_store is not None:
+            outbox_store.remove(future_pending_keys)
+            print(
+                f"Discord: dropped {len(future_pending)} queued item(s) with publication dates "
+                "more than 24 hours in the future"
+            )
+        else:
+            print(
+                f"Discord: skipped {len(future_pending)} item(s) with publication dates "
+                "more than 24 hours in the future"
+            )
     pending, stale_pending = split_stale(pending, max_age_days)
     queue_count_after_stale_filter = len(pending)
     already_delivered_count = 0
@@ -773,11 +797,23 @@ def publish_feed(
         if not pending:
             # Do not reintroduce a just-reconciled item from this run's fresh
             # candidate list when the seen-state cache was the part that failed.
-            pending, _ = split_stale([
+            fallback_candidates = [
                 item for item in relevant
                 if publication_key(item) not in delivered_keys
                 and getattr(item, "url", "").strip().rstrip("/") not in delivered_urls
-            ], max_age_days)
+            ]
+            fallback_candidates, future_fallback = split_future_dated(fallback_candidates)
+            unreported_future = [
+                item for item in future_fallback
+                if (item.key if hasattr(item, "key") else publication_key(item))
+                not in future_pending_keys
+            ]
+            if unreported_future:
+                print(
+                    f"Discord: skipped {len(unreported_future)} future-dated fresh item(s) "
+                    "instead of reintroducing them from the current run"
+                )
+            pending, _ = split_stale(fallback_candidates, max_age_days)
     if outbox_store is not None:
         print(
             "Discord delivery state: "
