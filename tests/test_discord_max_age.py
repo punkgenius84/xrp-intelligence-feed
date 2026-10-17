@@ -5,7 +5,7 @@ import pytest
 
 import main
 from discord.publisher import (DEFAULT_MAX_AGE_DAYS, DiscordSettings, format_message,
-                               settings_from_env, split_stale)
+                               settings_from_env, split_future_dated, split_stale)
 from models import NewsItem
 from storage.outbox import JsonOutboxState, QueuedPublication
 
