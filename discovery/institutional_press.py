@@ -634,7 +634,14 @@ def _parse_page(
 
             nearest_assigned = min(assigned_dates, key=distance_to_link) if assigned_dates else None
             published = nearest_assigned[2] if nearest_assigned is not None else None
-        title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
+        anchor_title_markup = match.group("title")
+        nested_heading = re.search(
+            r"<h[1-6]\\b[^>]*>(?P<title>.*?)</h[1-6]\\s*>",
+            anchor_title_markup, re.IGNORECASE | re.DOTALL,
+        )
+        if nested_heading is not None:
+            anchor_title_markup = nested_heading.group("title")
+        title = _clean(re.sub(r"<[^>]+>", " ", anchor_title_markup))
         normalized_title = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
         if not title or normalized_title in generic_titles:
             opening_tag = match.group(0).split(">", 1)[0] + ">"
