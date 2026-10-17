@@ -730,6 +730,9 @@ def publish_feed(
 
     pending = outbox_store.load() if outbox_store is not None else relevant
     pending, stale_pending = split_stale(pending, max_age_days)
+    queue_count_after_stale_filter = len(pending)
+    already_delivered_count = 0
+    delivery_history_count = 0
     if stale_pending:
         # Too old to be news. Drop them from the queue permanently instead of letting them
         # block or crowd out fresh items.
@@ -745,6 +748,7 @@ def publish_feed(
         # evidence that prevents that recovery path from posting the same item again.
         delivery_history = JsonDeliveryHistory()
         delivered_items = delivery_history.load()
+        delivery_history_count = len(delivered_items)
         delivered_keys = {item.key for item in delivered_items}
         delivered_urls = {
             item.url.strip().rstrip("/")
@@ -759,6 +763,7 @@ def publish_feed(
                 or (getattr(item, "url", "").strip().rstrip("/") in delivered_urls)
             }
             if already_delivered:
+                already_delivered_count = len(already_delivered)
                 outbox_store.remove(already_delivered)
                 pending = [item for item in pending if item.key not in already_delivered]
                 print(
@@ -773,6 +778,14 @@ def publish_feed(
                 if publication_key(item) not in delivered_keys
                 and getattr(item, "url", "").strip().rstrip("/") not in delivered_urls
             ], max_age_days)
+    if outbox_store is not None:
+        print(
+            "Discord delivery state: "
+            f"queued_after_stale_filter={queue_count_after_stale_filter} "
+            f"history_entries={delivery_history_count} "
+            f"already_delivered_removed={already_delivered_count} "
+            f"pending_after_reconciliation={len(pending)}"
+        )
     report = publish(pending, discord_settings)
     if report is not None and report.posted_keys:
         try:
@@ -788,6 +801,13 @@ def publish_feed(
             ) from exc
     if outbox_store is not None and report is not None and report.posted_keys:
         outbox_store.remove(set(report.posted_keys))
+    if outbox_store is not None:
+        remaining_count = len(outbox_store.load())
+        posted_count = len(report.posted_keys) if report is not None else 0
+        print(
+            "Discord delivery result: "
+            f"posted_this_run={posted_count} queue_remaining={remaining_count}"
+        )
 
     intelligence_config = load_intelligence_config()
     publish_intelligence_events(
