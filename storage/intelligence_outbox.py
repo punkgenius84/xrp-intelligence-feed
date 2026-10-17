@@ -133,7 +133,14 @@ class JsonIntelligenceOutboxState:
         current = {item.key: item for item in self.load()}
         for event in events:
             key = intelligence_publication_key(event)
-            current[key] = QueuedIntelligence(key=key, event=event, queued_at=now)
+            # Updating an event's content must not make an old queue entry look new.
+            # Preserve its first-seen queue timestamp while refreshing the event body.
+            original = current.get(key)
+            current[key] = QueuedIntelligence(
+                key=key,
+                event=event,
+                queued_at=original.queued_at if original is not None else now,
+            )
         result = list(current.values())
         self.save(result)
         return result
