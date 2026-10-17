@@ -318,7 +318,7 @@ def _parse_page(
     headline_ranges = [
         (headline.start(), headline.end())
         for headline in re.finditer(
-            r"<h[1-6]\\b[^>]*>.*?</h[1-6]\\s*>",
+                    r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>",
             text, re.IGNORECASE | re.DOTALL,
         )
     ]
@@ -594,7 +594,7 @@ def _parse_page(
             block_headline_ranges = [
                 (headline.start(), headline.end())
                 for headline in re.finditer(
-                    r"<h[1-6]\\b[^>]*>.*?</h[1-6]\\s*>",
+                    r"<h[1-6]\b[^>]*>.*?</h[1-6]\s*>",
                     block_text, re.IGNORECASE | re.DOTALL,
                 )
             ]
