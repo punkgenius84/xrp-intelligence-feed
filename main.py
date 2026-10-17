@@ -211,6 +211,15 @@ def run_pipeline(
         normalize_candidate(item) if isinstance(item, DiscoveryCandidate) else normalize_item(item)
         for item in collected
     ]
+    # Reject implausibly future-dated candidates before deduplication. Otherwise a
+    # bad source date can poison seen.json and prevent the corrected item from ever
+    # being reconsidered after its publication date is fixed.
+    normalized, future_dated = split_future_dated(normalized)
+    if future_dated:
+        print(
+            f"Discovery: ignored {len(future_dated)} candidate(s) with publication dates "
+            "more than 24 hours in the future before deduplication"
+        )
     fresh, seen = deduplicate(normalized, seen)
     for item in fresh:
         detect_entities(item)
