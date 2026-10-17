@@ -312,10 +312,25 @@ def _parse_page(
         parsed = _parse_date(date_match.group("date"), source.get("numeric_date_order", "mdy"))
         if parsed is not None:
             date_candidates.append((date_match.start(), date_match.end(), parsed))
+    # Dates embedded in a linked headline (for example, "earnings on November 4")
+    # and in JSON-LD headlines are not publication dates. JSON-LD publication metadata
+    # is parsed separately above; keep those script tokens out of proximity assignment.
+    json_ld_script_ranges = [
+        (script.start(), script.end())
+        for script in re.finditer(
+            r'<script\\b(?=[^>]*\\btype\\s*=\\s*(?:"application/ld\\+json"|\\'application/ld\\+json\\'|application/ld\\+json(?:\\s|/|>)))[^>]*>.*?</script\\s*>',
+            text, re.IGNORECASE | re.DOTALL,
+        )
+    ]
     for date_match in _DATE_RE.finditer(text):
+        start, end = date_match.start(), date_match.end()
+        if any(link.start() <= start and end <= link.end() for link in matches):
+            continue
+        if any(script_start <= start and end <= script_end for script_start, script_end in json_ld_script_ranges):
+            continue
         parsed = _parse_date(date_match.group(0), source.get("numeric_date_order", "mdy"))
         if parsed is not None:
-            date_candidates.append((date_match.start(), date_match.end(), parsed))
+            date_candidates.append((start, end, parsed))
     unique_dates: dict[tuple[int, int, datetime], tuple[int, int, datetime]] = {}
     for candidate in date_candidates:
         unique_dates.setdefault(candidate, candidate)
@@ -566,7 +581,13 @@ def _parse_page(
                 r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
                 block_text, re.IGNORECASE | re.DOTALL,
             ))
-            date_matches = list(_DATE_RE.finditer(block_text))
+            date_matches = [
+                item for item in _DATE_RE.finditer(block_text)
+                if not (
+                    block_start + item.start() >= match.start()
+                    and block_start + item.end() <= match.end()
+                )
+            ]
             if date_attrs:
                 published = _parse_date(
                     min(date_attrs, key=lambda item: abs(block_start + item.start() - match.start())).group("date"),
