@@ -90,8 +90,10 @@ def test_date_inside_release_headline_is_not_mistaken_for_publication_date():
       <script type="application/ld+json">{{"@context":"https://schema.org","@type":"NewsArticle",
         "headline":"Circle to Announce Q3 2026 Financial Results on November 4, 2026",
         "url":"{article_url}","datePublished":"2026-10-07T12:00:00Z"}}</script>
-      </head><body><div class="card"><span>October 7, 2026</span>
-        <a href="{article_url}">Circle to Announce Q3 2026 Financial Results on November 4, 2026</a>
+      </head><body><div class="card">
+        <a href="{article_url}"><span>October 7, 2026</span>
+          <h3>Circle to Announce Q3 2026 Financial Results on November 4, 2026</h3>
+        </a>
       </div></body></html>'''.encode()
 
     rows, complete = _parse_page(source(), html)
