@@ -103,6 +103,36 @@ def _when(item: Any) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
+MAX_FUTURE_DATE_SKEW = timedelta(days=1)
+
+
+def split_future_dated(
+    items: list[Any],
+    *,
+    now: datetime | None = None,
+) -> tuple[list[Any], list[Any]]:
+    """Split items into (date-safe, future-dated) using publication/collection time.
+
+    A timestamp more than 24 hours ahead of collection time is not a credible
+    publication date. Keep undated items for the existing fail-open timestamp policy.
+    """
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    future_cutoff = current.astimezone(timezone.utc) + MAX_FUTURE_DATE_SKEW
+    safe: list[Any] = []
+    future: list[Any] = []
+    for item in items:
+        value = getattr(item, "published_at", None) or getattr(item, "collected_at", None)
+        if value is None:
+            safe.append(item)
+            continue
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        (future if value.astimezone(timezone.utc) > future_cutoff else safe).append(item)
+    return safe, future
+
+
 def split_stale(items: list[Any], max_age_days: int,
                 now: datetime | None = None) -> tuple[list[Any], list[Any]]:
     """Split items into (postable, stale) by publication age. max_age_days=0 disables the check."""
