@@ -35,6 +35,22 @@ def test_default_and_env_parsing():
             settings_from_env({"DISCORD_MAX_AGE_DAYS": bad})
 
 
+def test_split_future_dated_rejects_implausible_publication_dates():
+    soon = news("future-within-tolerance", -1)
+    too_far = news("future-too-far", -2)
+    fresh, future = split_future_dated(
+        [news("fresh", 1), soon, too_far],
+        now=NOW,
+    )
+    assert [item.title for item in fresh] == ["fresh", "future-within-tolerance"]
+    assert [item.title for item in future] == ["future-too-far"]
+
+
+def test_split_future_dated_preserves_undated_items():
+    bare = SimpleNamespace(title="no times")
+    assert split_future_dated([bare], now=NOW) == ([bare], [])
+
+
 def test_split_stale_boundaries_and_disabled():
     fresh, old = split_stale([news("new", 1), news("edge", 13), news("old", 15)], 14, now=NOW)
     assert [i.title for i in fresh] == ["new", "edge"]
@@ -85,6 +101,48 @@ def test_publish_feed_drops_stale_queue_entries_and_posts_only_fresh(monkeypatch
 
     assert [i.title for i in posted] == ["fresh"]
     assert outbox.load() == []  # stale entries dropped for good, fresh one delivered
+
+
+def test_publish_feed_drops_future_dated_queue_entries(monkeypatch, tmp_path):
+    monkeypatch.setattr(main, "JsonDeliveryHistory",
+                        lambda: __import__("storage.delivery_history", fromlist=["x"])
+                        .JsonDeliveryHistory(tmp_path / "history.json"))
+    monkeypatch.setattr(main, "load_intelligence_config",
+                        lambda: SimpleNamespace(enabled=False, publish_enabled=False))
+    outbox = JsonOutboxState(tmp_path / "outbox.json")
+    outbox.save([queued("fresh", 2), queued("future", -3)])
+
+    posted = []
+    monkeypatch.setattr(main, "publish", lambda items, settings: (
+        posted.extend(items), SimpleNamespace(posted_keys=[i.key for i in items]))[1])
+    real_split = main.split_stale
+    monkeypatch.setattr(main, "split_stale",
+                        lambda items, days, now=None: real_split(items, days, now=NOW))
+    real_future_split = main.split_future_dated
+    monkeypatch.setattr(main, "split_future_dated",
+                        lambda items, now=None: real_future_split(items, now=NOW))
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/1/t",
+                               max_age_days=14)
+
+    main.publish_feed([], [], settings, outbox)
+
+    assert [item.title for item in posted] == ["fresh"]
+    assert outbox.load() == []
+
+
+def test_dry_run_does_not_preview_future_dated_items(monkeypatch):
+    future = news("future", -3)
+    fresh = news("fresh", 1)
+    captured = []
+    monkeypatch.setattr(main, "publish", lambda items, settings: captured.extend(items))
+    real_future_split = main.split_future_dated
+    monkeypatch.setattr(main, "split_future_dated",
+                        lambda items, now=None: real_future_split(items, now=NOW))
+    settings = SimpleNamespace(dry_run=True, max_age_days=0)
+
+    main.publish_feed([fresh, future], [], settings, None)
+
+    assert [item.title for item in captured] == ["fresh"]
 
 
 def test_stale_items_are_not_enqueued(monkeypatch):
