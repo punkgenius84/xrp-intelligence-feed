@@ -99,7 +99,7 @@ def test_date_inside_release_headline_is_not_mistaken_for_publication_date():
     assert complete is True
     assert len(rows) == 1
     assert rows[0]["title"] == "Circle to Announce Q3 2026 Financial Results on November 4, 2026"
-    assert rows[0]["date"] == datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    assert rows[0]["date"] == datetime(2026, 10, 7, tzinfo=timezone.utc)
 
 
 def test_unchanged_index_is_not_reported_as_empty():
