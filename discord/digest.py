@@ -43,10 +43,15 @@ def format_weekly_digest(
 
     lines.append("**What posted:**")
     for item in weekly[:MAX_ITEMS]:
-        date = (item.published_at or item.posted_at).astimezone(timezone.utc).strftime("%Y-%m-%d")
+        if item.published_at is not None:
+            date = item.published_at.astimezone(timezone.utc).strftime("%Y-%m-%d")
+            date_label = f"Published {date}"
+        else:
+            date = item.posted_at.astimezone(timezone.utc).strftime("%Y-%m-%d")
+            date_label = f"Posted {date}"
         reason = f" — Why: {item.score_reason}" if item.score_reason else ""
         lines.append(
-            f"• {date} · {item.source} — {item.title}{reason}\n  {item.url}"
+            f"• {date_label} · {item.source} — {item.title}{reason}\n  {item.url}"
         )
 
     if len(weekly) > MAX_ITEMS:
