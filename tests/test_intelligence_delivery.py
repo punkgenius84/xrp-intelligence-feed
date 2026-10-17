@@ -45,11 +45,14 @@ def test_intelligence_outbox_round_trip_and_deterministic_key(tmp_path):
 
 def test_intelligence_outbox_updates_queued_event_without_duplicate(tmp_path):
     store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
-    store.enqueue([event(summary="old")])
-    store.enqueue([event(summary="new")])
+    first_queued_at = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    refreshed_at = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    store.enqueue([event(summary="old")], queued_at=first_queued_at)
+    store.enqueue([event(summary="new")], queued_at=refreshed_at)
     loaded = store.load()
     assert len(loaded) == 1
     assert loaded[0].event.summary == "new"
+    assert loaded[0].queued_at == first_queued_at
 
 
 def test_intelligence_outbox_remove_is_idempotent(tmp_path):
