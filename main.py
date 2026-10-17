@@ -744,10 +744,15 @@ def publish_feed(
     if future_pending:
         if outbox_store is not None:
             outbox_store.remove(future_pending_keys)
-        print(
-            f"Discord: dropped {len(future_pending)} queued item(s) with publication dates "
-            "more than 24 hours in the future"
-        )
+            print(
+                f"Discord: dropped {len(future_pending)} queued item(s) with publication dates "
+                "more than 24 hours in the future"
+            )
+        else:
+            print(
+                f"Discord: skipped {len(future_pending)} item(s) with publication dates "
+                "more than 24 hours in the future"
+            )
     pending, stale_pending = split_stale(pending, max_age_days)
     queue_count_after_stale_filter = len(pending)
     already_delivered_count = 0
