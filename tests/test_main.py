@@ -248,7 +248,7 @@ def test_publish_feed_reconciles_recovery_outbox_with_delivery_history(monkeypat
     assert outbox.load() == []
     assert published == []
 
-def test_publish_feed_does_not_replay_successfully_delivered_item_on_next_run(monkeypatch, tmp_path):
+def test_publish_feed_does_not_replay_successfully_delivered_item_on_next_run(monkeypatch, tmp_path, capsys):
     from datetime import datetime, timezone
     from storage.delivery_history import JsonDeliveryHistory
     from storage.outbox import JsonOutboxState, QueuedPublication
@@ -293,6 +293,11 @@ def test_publish_feed_does_not_replay_successfully_delivered_item_on_next_run(mo
 
     assert publish_calls == [[item.url], []]
     assert len(JsonDeliveryHistory(history_path).load()) == 1
+    output = capsys.readouterr().out
+    assert "Discord delivery state: queued_after_stale_filter=1 history_entries=0 already_delivered_removed=0 pending_after_reconciliation=1" in output
+    assert "Discord delivery result: posted_this_run=1 queue_remaining=0" in output
+    assert "Discord delivery state: queued_after_stale_filter=0 history_entries=1 already_delivered_removed=0 pending_after_reconciliation=0" in output
+    assert "Discord delivery result: posted_this_run=0 queue_remaining=0" in output
 
 
 def test_publish_feed_passes_intelligence_outbox_for_retry_delivery(monkeypatch):
