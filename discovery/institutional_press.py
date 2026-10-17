@@ -636,7 +636,7 @@ def _parse_page(
             published = nearest_assigned[2] if nearest_assigned is not None else None
         anchor_title_markup = match.group("title")
         nested_heading = re.search(
-            r"<h[1-6]\\b[^>]*>(?P<title>.*?)</h[1-6]\\s*>",
+            r"<h[1-6]\b[^>]*>(?P<title>.*?)</h[1-6]\s*>",
             anchor_title_markup, re.IGNORECASE | re.DOTALL,
         )
         if nested_heading is not None:
