@@ -37,6 +37,7 @@ from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
 from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
 from storage.intelligence_delivery_history import IntelligenceDeliveryHistoryError, JsonIntelligenceDeliveryHistory
+from storage.intelligence_quarantine import IntelligenceQuarantineError, JsonIntelligenceQuarantineState
 from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
 
@@ -599,6 +600,7 @@ def publish_intelligence_events(
     outbox_store=None,
     stale_after_days: int = 30,
     allowed_event_ids: set[str] | None = None,
+    quarantine_store=None,
 ) -> int:
     if not events and outbox_store is None:
         return 0
@@ -677,10 +679,25 @@ def publish_intelligence_events(
             stale_keys.add(item.key)
 
     if stale_keys:
+        stale_items = [item for item in pending if item.key in stale_keys]
+        quarantine = quarantine_store or JsonIntelligenceQuarantineState()
+        try:
+            # Persist the full event and evidence before removing it from the active queue.
+            # If quarantine storage fails, leave the outbox untouched and fail closed.
+            quarantine.quarantine(
+                stale_items,
+                reason=f"latest evidence older than {stale_after_days} days",
+                quarantined_at=now,
+            )
+        except IntelligenceQuarantineError as exc:
+            raise SystemExit(
+                "Intelligence publish refused: stale events could not be safely quarantined; "
+                "active outbox was not changed"
+            ) from exc
         queue.remove(stale_keys)
         out(
-            f"Intelligence: dropped {len(stale_keys)} queued event(s) with latest evidence "
-            f"older than {stale_after_days} days"
+            f"Intelligence: quarantined {len(stale_keys)} stale event(s) with latest evidence "
+            f"older than {stale_after_days} days; full records preserved for review"
         )
     if undated_keys:
         out(
