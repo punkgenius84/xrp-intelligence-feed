@@ -227,6 +227,14 @@ def test_index_validators_are_not_reused_after_source_url_changes():
     assert http.calls[0][1]["last_modified"] == ""
 
 
+def test_undated_observation_tracking_flag_must_be_boolean():
+    base = coinbase_html_source()
+    assert validate_institutional_source({**base, "track_undated_observations": True})
+    for invalid in (0, "true", None):
+        with pytest.raises(ValueError, match="track_undated_observations must be boolean"):
+            validate_institutional_source({**base, "track_undated_observations": invalid})
+
+
 def test_registered_institutional_sources_are_bounded():
     sources = load_discovery_sources()
     ids = {item["source_id"] for item in sources}
@@ -239,6 +247,7 @@ def test_registered_institutional_sources_are_bounded():
     imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
     assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"}
     assert imf_sources["imf-blogs"]["enabled"] is False
+    assert next(item for item in sources if item["source_id"] == "coinbase-blog")["track_undated_observations"] is True
     assert imf_sources["imf-global-financial-stability-report"]["enabled"] is False
     assert imf_sources["imf-media-center-news"]["enabled"] is False  # Runner receives HTTP 202 from the official listing.
     circle = next(item for item in sources if item["source_id"] == "circle-pressroom")

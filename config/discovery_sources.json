@@ -269,6 +269,7 @@
         "www.coinbase.com",
         "coinbase.com"
       ],
+      "track_undated_observations": true,
       "article_path_regex": "(?:/[a-z]{2}-[a-z]{2})?/blog/(?!landing/?$)[^/?#]+"
     },
     {

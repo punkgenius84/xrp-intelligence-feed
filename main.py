@@ -371,6 +371,14 @@ def run_pipeline(
                     discovery_state_value, candidate.candidate_id,
                     candidate.content_hash, result.fetched_at,
                 )
+        # Observation tracking is opt-in per source. Clear transient records from any
+        # source that is not explicitly opted in, including records from pre-opt-in runs.
+        for configured_source in discovery_sources:
+            if configured_source.get("track_undated_observations") is True:
+                continue
+            source_state = discovery_state_value["sources"].get(configured_source.get("source_id", ""))
+            if isinstance(source_state, dict):
+                source_state.pop("observations", None)
         discovery_store.save(discovery_state_value)
 
     # Discovery validators/candidate state and correlation memory must persist before
