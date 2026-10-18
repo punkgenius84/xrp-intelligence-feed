@@ -298,8 +298,9 @@ def test_intelligence_delivery_history_prevents_reposting_same_event_across_runs
     assert JsonIntelligenceDeliveryHistory(history_path).load() == {"evt-repeat"}
 
 
-def test_stale_queued_intelligence_events_are_dropped_before_publication(tmp_path, monkeypatch, capsys):
+def test_stale_queued_intelligence_events_are_quarantined_before_publication(tmp_path, monkeypatch, capsys):
     from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    from storage.intelligence_quarantine import JsonIntelligenceQuarantineState
 
     monkeypatch.setattr(
         main, "JsonIntelligenceDeliveryHistory",
@@ -313,6 +314,7 @@ def test_stale_queued_intelligence_events_are_dropped_before_publication(tmp_pat
     )]
     fresh = event(event_id="evt-fresh")
     store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    quarantine = JsonIntelligenceQuarantineState(tmp_path / "intelligence_quarantine.json")
     store.enqueue([stale, fresh])
     settings = SimpleNamespace(
         dry_run=False,
@@ -330,11 +332,42 @@ def test_stale_queued_intelligence_events_are_dropped_before_publication(tmp_pat
 
     monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
     assert main.publish_intelligence_events(
-        [], settings, publish_enabled=True, outbox_store=store, stale_after_days=30
+        [], settings, publish_enabled=True, outbox_store=store, stale_after_days=30,
+        quarantine_store=quarantine,
     ) == 1
     assert len(sent) == 1
     assert store.load() == []
-    assert "dropped 1 queued event(s)" in capsys.readouterr().out
+    held = quarantine.load()
+    assert [item.event.event_id for item in held] == ["evt-stale"]
+    assert held[0].event.evidence[0].url == "https://example.com/old"
+    assert held[0].reason == "latest evidence older than 30 days"
+    assert "quarantined 1 stale event(s)" in capsys.readouterr().out
+
+
+
+def test_stale_event_is_not_removed_if_quarantine_save_fails(tmp_path):
+    from storage.intelligence_quarantine import IntelligenceQuarantineError
+
+    stale = event(event_id="evt-stale-quarantine-failure")
+    stale.evidence = [Evidence(
+        source_id="source-old", source="Official source",
+        url="https://example.com/old", published_at="2026-08-01T12:00:00+00:00",
+        title="Old source title", source_quality="primary",
+    )]
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([stale])
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token", max_posts=5)
+
+    class BrokenQuarantine:
+        def quarantine(self, items, *, reason, quarantined_at=None):
+            raise IntelligenceQuarantineError("disk unavailable")
+
+    with pytest.raises(SystemExit, match="active outbox was not changed"):
+        main.publish_intelligence_events(
+            [], settings, publish_enabled=True, outbox_store=store,
+            stale_after_days=30, quarantine_store=BrokenQuarantine(),
+        )
+    assert [item.event.event_id for item in store.load()] == ["evt-stale-quarantine-failure"]
 
 
 def test_undated_queued_intelligence_event_is_held_not_published(tmp_path, monkeypatch, capsys):
