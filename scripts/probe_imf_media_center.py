@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
+
+# Running a script by path puts scripts/ at sys.path[0], not the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from discovery.institutional_press import InstitutionalPressDiscovery
 
