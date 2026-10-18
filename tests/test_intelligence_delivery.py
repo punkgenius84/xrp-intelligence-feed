@@ -420,3 +420,144 @@ def test_intelligence_delivery_history_reconciles_stale_outbox_after_remove_fail
     ) == 0
     assert sent == []
     assert store.load() == []
+
+
+
+def test_allowed_event_ids_publish_only_selected_event_and_preserve_other_queue_entries(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(history_path),
+    )
+    target = event(event_id="evt-selected", summary="Selected test event")
+    unrelated = event(event_id="evt-unrelated", summary="Must remain queued")
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([target, unrelated])
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=1,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    assert main.publish_intelligence_events(
+        [], settings, publish_enabled=True, outbox_store=store,
+        allowed_event_ids={"evt-selected"},
+    ) == 1
+    assert len(sent) == 1
+    assert "Selected test event" in sent[0]
+    assert [item.event.event_id for item in store.load()] == ["evt-unrelated"]
+    assert JsonIntelligenceDeliveryHistory(history_path).load() == {"evt-selected"}
+
+
+def test_one_event_test_requires_normal_feed_dry_run(tmp_path):
+    from discord.publisher import DiscordSettings
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([event(event_id="evt-target")])
+    settings = DiscordSettings(
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        dry_run=False,
+    )
+    with pytest.raises(SystemExit, match="DISCORD_DRY_RUN must remain true"):
+        main.publish_one_intelligence_test_event(
+            "evt-target", settings, outbox_store=store,
+            history_store=JsonIntelligenceDeliveryHistory(
+                tmp_path / "intelligence_delivery_history.json"
+            ),
+        )
+    assert len(store.load()) == 1
+
+
+def test_one_event_test_refuses_missing_or_already_delivered_target(tmp_path):
+    from discord.publisher import DiscordSettings
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    history = JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json")
+    settings = DiscordSettings(
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        dry_run=True,
+    )
+    with pytest.raises(SystemExit, match="must match one queued event"):
+        main.publish_one_intelligence_test_event(
+            "evt-missing", settings, outbox_store=store, history_store=history
+        )
+
+    store.enqueue([event(event_id="evt-target")])
+    history.record({"evt-target"})
+    with pytest.raises(SystemExit, match="already in delivery history"):
+        main.publish_one_intelligence_test_event(
+            "evt-target", settings, outbox_store=store, history_store=history
+        )
+    assert len(store.load()) == 1
+
+
+def test_one_event_test_refuses_bad_evidence_url_or_stale_date(tmp_path):
+    from discord.publisher import DiscordSettings
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    target = event(event_id="evt-bad-evidence")
+    target.evidence = [Evidence(
+        source_id="source-bad", source="Official source",
+        url="javascript:alert(1)",
+        published_at=datetime.now(timezone.utc).isoformat(),
+        title="Source title", source_quality="primary",
+    )]
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([target])
+    settings = DiscordSettings(
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        dry_run=True,
+    )
+    with pytest.raises(SystemExit, match="valid HTTP"):
+        main.publish_one_intelligence_test_event(
+            "evt-bad-evidence", settings,
+            outbox_store=store,
+            history_store=JsonIntelligenceDeliveryHistory(
+                tmp_path / "intelligence_delivery_history.json"
+            ),
+        )
+    assert [item.event.event_id for item in store.load()] == ["evt-bad-evidence"]
+
+
+def test_main_one_event_test_skips_normal_feed_publisher(monkeypatch):
+    from discord.publisher import DiscordSettings
+
+    calls = []
+    settings = DiscordSettings(
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        dry_run=True,
+    )
+    monkeypatch.setenv("INTELLIGENCE_TEST_ONLY", "true")
+    monkeypatch.setenv("INTELLIGENCE_TEST_EVENT_ID", "evt-target")
+    monkeypatch.setattr(main, "settings_from_env", lambda: settings)
+    monkeypatch.setattr(
+        main, "collect_feed",
+        lambda configured: (main.PipelineResult(), None, None),
+    )
+    monkeypatch.setattr(main, "score_feed", lambda result: [])
+    monkeypatch.setattr(
+        main, "publish_one_intelligence_test_event",
+        lambda event_id, configured: calls.append((event_id, configured)),
+    )
+    monkeypatch.setattr(
+        main, "publish_feed",
+        lambda *args, **kwargs: pytest.fail("normal feed publisher must not run in test-only mode"),
+    )
+
+    main.main()
+    assert len(calls) == 1
+    assert calls[0][0] == "evt-target"
+    assert calls[0][1] is settings

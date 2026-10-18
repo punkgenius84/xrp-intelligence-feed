@@ -2,8 +2,10 @@ import html
 import re
 import unicodedata
 import time
+import os
+from urllib.parse import urlsplit
 from datetime import datetime, timedelta, timezone
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from html.parser import HTMLParser
 
 from collectors.rss import FeedCollectionError, RSSCollector
@@ -596,6 +598,7 @@ def publish_intelligence_events(
     out=print,
     outbox_store=None,
     stale_after_days: int = 30,
+    allowed_event_ids: set[str] | None = None,
 ) -> int:
     if not events and outbox_store is None:
         return 0
@@ -612,6 +615,11 @@ def publish_intelligence_events(
     try:
         delivered_event_ids = history.load()
         queued_before = queue.load()
+        if allowed_event_ids is not None:
+            queued_before = [
+                item for item in queued_before
+                if item.event.event_id in allowed_event_ids
+            ]
     except (IntelligenceDeliveryHistoryError, IntelligenceOutboxError) as exc:
         raise SystemExit(f"Intelligence publish refused: delivery state is unreadable: {exc}") from exc
 
@@ -625,10 +633,19 @@ def publish_intelligence_events(
         queue.remove(already_delivered_keys)
         out(f"Intelligence: removed {len(already_delivered_keys)} already-delivered event(s) from outbox")
 
-    new_events = [event for event in events if event.event_id not in delivered_event_ids]
+    new_events = [
+        event for event in events
+        if event.event_id not in delivered_event_ids
+        and (allowed_event_ids is None or event.event_id in allowed_event_ids)
+    ]
     if new_events:
         queue.enqueue(new_events)
     pending = queue.load()
+    if allowed_event_ids is not None:
+        pending = [
+            item for item in pending
+            if item.event.event_id in allowed_event_ids
+        ]
     if not pending:
         return 0
 
@@ -740,6 +757,95 @@ def publish_intelligence_events(
         queue.remove(posted_keys)
     out(f"Intelligence: posted {len(posted_event_ids)} of {len(selected)} queued events")
     return len(posted_event_ids)
+
+
+def publish_one_intelligence_test_event(
+    event_id: str,
+    discord_settings,
+    *,
+    out=print,
+    outbox_store=None,
+    history_store=None,
+) -> int:
+    """Publish one explicitly selected queued intelligence event; never publish the normal feed."""
+    if not discord_settings.dry_run:
+        raise SystemExit(
+            "Intelligence test refused: DISCORD_DRY_RUN must remain true for the normal feed"
+        )
+    if not isinstance(event_id, str) or not event_id.strip():
+        raise SystemExit("Intelligence test refused: an exact queued event ID is required")
+    if not discord_settings.webhook_url:
+        raise SystemExit("Intelligence test refused: DISCORD_WEBHOOK_URL is not set")
+
+    queue = outbox_store or JsonIntelligenceOutboxState()
+    history = history_store or JsonIntelligenceDeliveryHistory()
+    try:
+        delivered_ids = history.load()
+        queued = queue.load()
+    except (IntelligenceDeliveryHistoryError, IntelligenceOutboxError) as exc:
+        raise SystemExit(
+            f"Intelligence test refused: delivery state is unreadable: {exc}"
+        ) from exc
+
+    matches = [item for item in queued if item.event.event_id == event_id]
+    if len(matches) != 1:
+        raise SystemExit(
+            "Intelligence test refused: the exact event ID must match one queued event; "
+            f"matches={len(matches)}"
+        )
+    if event_id in delivered_ids:
+        raise SystemExit(
+            "Intelligence test refused: this event is already in delivery history"
+        )
+
+    # Require at least one real HTTP(S) evidence URL with a valid, recent timestamp.
+    # Unknown, stale, malformed, or future-dated evidence must not be used for a test post.
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=30)
+    future_cutoff = now + timedelta(days=1)
+    valid_evidence = []
+    for evidence in matches[0].event.evidence:
+        try:
+            parsed_url = urlsplit(str(evidence.url or "").strip())
+            if parsed_url.scheme not in {"http", "https"} or not parsed_url.hostname:
+                continue
+            stamp = evidence.published_at
+            if not isinstance(stamp, str) or not stamp.strip():
+                continue
+            published_at = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+            if published_at.tzinfo is None:
+                published_at = published_at.replace(tzinfo=timezone.utc)
+            published_at = published_at.astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        if cutoff <= published_at <= future_cutoff:
+            valid_evidence.append(evidence)
+    if not valid_evidence:
+        raise SystemExit(
+            "Intelligence test refused: target needs at least one valid HTTP(S) evidence URL "
+            "with a valid timestamp inside the 30-day freshness window"
+        )
+
+    # The overall feed settings stay dry-run. Only this explicitly selected
+    # intelligence event receives a one-post, non-dry-run settings copy.
+    test_settings = replace(discord_settings, dry_run=False, max_posts=1)
+    posted = publish_intelligence_events(
+        [],
+        test_settings,
+        publish_enabled=True,
+        out=out,
+        outbox_store=queue,
+        stale_after_days=30,
+        allowed_event_ids={event_id},
+    )
+    if posted != 1:
+        raise SystemExit(
+            "Intelligence test did not deliver exactly one event; inspect the run log. "
+            "No other queued event was eligible for this test."
+        )
+    out(f"Intelligence one-event test completed: delivered_event_id={event_id}")
+    return posted
+
 
 def publish_feed(
     relevant,
@@ -894,6 +1000,19 @@ def main() -> None:
     # collect -> score/report -> publish. Each stage can now be tested/replaced independently.
     result, outbox_store, intelligence_outbox_store = collect_feed(discord_settings)
     relevant = score_feed(result)
+
+    test_only = os.environ.get("INTELLIGENCE_TEST_ONLY", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+    if test_only:
+        if not discord_settings.dry_run:
+            raise SystemExit(
+                "Intelligence test refused: set dry_run=true so normal feed publishing stays disabled"
+            )
+        target_event_id = os.environ.get("INTELLIGENCE_TEST_EVENT_ID", "").strip()
+        publish_one_intelligence_test_event(target_event_id, discord_settings)
+        return
+
     publish_feed(
         relevant,
         result.intelligence_events,

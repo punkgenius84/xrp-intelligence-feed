@@ -23,6 +23,14 @@ on:
         description: "Preview queued intelligence summaries and evidence in logs (read-only; requires dry_run=true)"
         type: boolean
         default: false
+      publish_intelligence_test:
+        description: "Publish exactly one explicitly selected queued intelligence event; normal feed remains dry-run"
+        type: boolean
+        default: false
+      intelligence_test_event_id:
+        description: "Exact queued event ID for the isolated one-event test"
+        type: string
+        default: "evt-605fe5788f248b06e06fcb7f"
 
 permissions:
   contents: read
@@ -267,7 +275,10 @@ jobs:
           # Push-triggered runs are dry-run source diagnostics; the separate smoke test above validates inference.
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
-          INTELLIGENCE_PUBLISH: "false"
+          # Publishing is off except for an explicit manual one-event test.
+          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && 'true' || 'false' }}
+          INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && 'true' || 'false' }}
+          INTELLIGENCE_TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
           INTELLIGENCE_MIN_SCORE: "35"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
@@ -280,7 +291,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Save persistent state
-        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -294,7 +305,7 @@ jobs:
           key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
       - name: Check intelligence delivery history
         id: intelligence_delivery_history
-        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
         run: |
           if [ -f state/intelligence_delivery_history.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
