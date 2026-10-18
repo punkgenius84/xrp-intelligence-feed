@@ -138,7 +138,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit"}
+    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit", "track_undated_observations"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
         raise ValueError(f"Institutional source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
@@ -167,6 +167,8 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         or source["numeric_date_order"] not in {"mdy", "dmy"}
     ):
         raise ValueError("numeric_date_order must be mdy or dmy")
+    if "track_undated_observations" in source and type(source["track_undated_observations"]) is not bool:
+        raise ValueError("track_undated_observations must be boolean when provided")
     if "detail_fallback_limit" in source and (
         type(source["detail_fallback_limit"]) is not int
         or not 1 <= source["detail_fallback_limit"] <= 5
@@ -688,7 +690,7 @@ def _parse_page(
             if missing_date:
                 reasons.add("date")
                 # Keep an official title/route for change detection, not publication.
-                if not missing_title:
+                if not missing_title and source.get("track_undated_observations") is True:
                     undated_observations.append({
                         "native_id": safe[1], "url": safe[0], "title": title[:300],
                     })
