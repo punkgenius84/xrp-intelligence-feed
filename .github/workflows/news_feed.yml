@@ -54,6 +54,9 @@ jobs:
       - name: Probe Coinbase official RSS (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_blog_rss.py
+      - name: Probe Coinbase official dated index (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_coinbase_landing_index.py
       - name: Restore persistent state
         id: state_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
