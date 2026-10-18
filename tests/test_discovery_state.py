@@ -34,7 +34,6 @@ def test_valid_state_round_trips_validators_watermark_and_seen_times(tmp_path):
     assert loaded["candidates"]["sec:acc"]["first_seen_time"] == STAMP.isoformat()
 
 
-@pytest.mark.parametrize("content", ["{bad", "[]", '{"schema_version":1,"sources":[],"candidates":[]}'])
 def test_undated_observations_track_first_seen_and_title_changes_without_publication_date(tmp_path):
     store = JsonDiscoveryState(tmp_path / "discovery.json")
     state = store.load()
@@ -68,6 +67,7 @@ def test_undated_observations_track_first_seen_and_title_changes_without_publica
     assert record["last_seen_time"] == changed_at.isoformat()
 
 
+@pytest.mark.parametrize("content", ["{bad", "[]", '{"schema_version":1,"sources":[],"candidates":[]}'])
 def test_corrupt_state_fails_closed_and_save_does_not_replace_it(tmp_path, content):
     path = tmp_path / "discovery.json"
     path.write_text(content, encoding="utf-8")
