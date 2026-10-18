@@ -56,7 +56,7 @@ def main() -> int:
         "lookback_days": 365,
         "max_items": 50,
         "allowed_hosts": ["www.imf.org", "imf.org"],
-        "article_path_regex": r"/en/news/articles/\\d{4}/\\d{2}/\\d{2}/[^/?#]+",
+        "article_path_regex": r"/en/news/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
     }
     report_probe("official public IMF News index", public_news)
 
