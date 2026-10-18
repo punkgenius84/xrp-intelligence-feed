@@ -17,6 +17,8 @@ class DiscoveryResult:
     errors: list[str] = field(default_factory=list)
     state_updates: dict[str, dict[str, str]] = field(default_factory=dict)
     pagination: dict[str, Any] = field(default_factory=dict)
+    # Undated official routes are tracked for change detection only, never published.
+    observations: list[dict[str, str]] = field(default_factory=list)
 
 
 class DiscoveryStrategy(Protocol):
