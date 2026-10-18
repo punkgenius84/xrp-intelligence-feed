@@ -30,7 +30,7 @@ def main() -> int:
     result = InstitutionalPressDiscovery(source).collect(source_state=None)
 
     print(f"IMF Media Center runner probe: status={result.status}")
-    print(f"source_id={result.source_id} method={result.method}")
+    print(f"source_id={result.source_id} method={result.discovery_method}")
     print(f"candidate_count={len(result.candidates)}")
     for candidate in result.candidates[:5]:
         published = candidate.published_at.isoformat() if candidate.published_at else "undated"
