@@ -1,0 +1,38 @@
+name: Coinbase Official Feed Runner Probe
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/coinbase_feed_probe.yml"
+      - "scripts/probe_coinbase_feed.py"
+      - "tests/test_probe_coinbase_feed.py"
+      - "discovery/http.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/coinbase_feed_probe.yml"
+      - "scripts/probe_coinbase_feed.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coinbase-official-feed-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run probe contract tests
+        run: python -m pytest -q tests/test_probe_coinbase_feed.py
+      - name: Probe official Coinbase blog feed routes (read-only)
+        run: python scripts/probe_coinbase_feed.py
