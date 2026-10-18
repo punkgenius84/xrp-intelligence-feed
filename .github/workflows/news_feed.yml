@@ -157,7 +157,9 @@ jobs:
                   print(f"State: {name}: unreadable ({exc})")
           PY
       - name: Preview queued intelligence events (read-only)
-        if: github.event_name == 'workflow_dispatch' && inputs.preview_intelligence && inputs.dry_run
+        # Push runs are diagnostic dry runs: they never publish or save persistent state.
+        # Preview there so queue review does not depend on remembering a manual checkbox.
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.preview_intelligence && inputs.dry_run)
         run: python scripts/preview_intelligence_outbox.py --limit 20
 
       - name: Restore intelligence model cache
