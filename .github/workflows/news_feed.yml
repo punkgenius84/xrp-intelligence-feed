@@ -60,6 +60,7 @@ jobs:
             state/correlation.json
             state/intelligence.json
             state/intelligence_outbox.json
+            state/intelligence_quarantine.json
             state/outbox.json
             state/delivery_history.json
           # Never use a permanent bootstrap key: it can mask newer state caches.
@@ -93,6 +94,7 @@ jobs:
               "state/correlation.json",
               "state/intelligence.json",
               "state/intelligence_outbox.json",
+              "state/intelligence_quarantine.json",
               "state/outbox.json",
               "state/delivery_history.json",
               "state/intelligence_delivery_history.json",
@@ -302,7 +304,7 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/intelligence_quarantine.json', 'state/outbox.json', 'state/delivery_history.json') }}
       - name: Check intelligence delivery history
         id: intelligence_delivery_history
         if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
