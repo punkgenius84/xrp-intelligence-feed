@@ -1636,5 +1636,12 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
     assert any(item.url == "https://www.coinbase.com/blog/known-official-article/" for item in result.candidates)
     assert len(http.calls) == 1
     assert http.calls[0][0] == index_url
+    unresolved_id = (
+        "/blog/coinbase-opens-stock-trading-to-everyone-in-the-us-"
+        "partners-with-yahoo-finance-to-power-discovery"
+    )
+    assert all(item.source_native_id != unresolved_id for item in result.candidates)
+    # A partial index must not advance validators: retry the unresolved route next run.
+    assert result.state_updates == {}
     assert any("malformed article on official index" in error for error in result.errors)
 
