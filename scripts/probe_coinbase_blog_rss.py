@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import urlsplit
+import sys
 import time
 
 import feedparser
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 
