@@ -689,9 +689,9 @@ def publish_intelligence_events(
             for evidence in item.event.evidence
         )
     ]
+    url_valid_pending = [item for item in pending if item not in invalid_pending]
     publishable_pending = [
-        item for item in pending
-        if item not in invalid_pending and item not in generic_title_pending
+        item for item in url_valid_pending if item not in generic_title_pending
     ]
     if invalid_pending:
         for item in invalid_pending:
@@ -699,7 +699,7 @@ def publish_intelligence_events(
                 f"::warning::Intelligence event held from publication for missing evidence URL: "
                 f"{item.event.event_id}"
             )
-        if not publishable_pending and not generic_title_pending:
+        if not url_valid_pending:
             raise SystemExit(
                 "Intelligence publish refused: every pending event lacks an evidence URL"
             )
