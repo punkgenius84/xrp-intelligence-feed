@@ -166,6 +166,48 @@ def test_intelligence_publish_uses_outbox_and_removes_successful(tmp_path, monke
     assert store.load() == []
 
 
+def test_generic_evidence_title_is_held_without_blocking_valid_events(tmp_path, monkeypatch, capsys):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
+    generic = event(event_id="evt-generic-title")
+    generic.evidence = [Evidence(
+        source_id="source-navigation",
+        source="XRP Ledger Community",
+        url="https://example.com/article",
+        published_at=datetime.now(timezone.utc).isoformat(),
+        title="Read More",
+        source_quality="primary",
+    )]
+    valid = event(event_id="evt-valid-title")
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([generic, valid])
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    assert main.publish_intelligence_events(
+        [], settings, publish_enabled=True, outbox_store=store
+    ) == 1
+    assert len(sent) == 1
+    assert [item.event.event_id for item in store.load()] == ["evt-generic-title"]
+    assert "all evidence titles are empty or generic navigation text" in capsys.readouterr().out
+
+
 def test_intelligence_outbox_capacity_overflow_refuses_to_drop(tmp_path):
     store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
     events = [event(event_id=f"evt-{index}") for index in range(MAX_INTELLIGENCE_OUTBOX_ENTRIES + 1)]
