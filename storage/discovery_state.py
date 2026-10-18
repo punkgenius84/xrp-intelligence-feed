@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -51,7 +52,7 @@ class JsonDiscoveryState:
         for source_id, source in value["sources"].items():
             if not isinstance(source_id, str) or not source_id or not isinstance(source, dict):
                 raise DiscoveryStateError("Discovery state sources must map IDs to objects")
-            if set(source) - {"requests", "last_successful_fetch", "watermark", "pagination", "health"}:
+            if set(source) - {"requests", "last_successful_fetch", "watermark", "pagination", "health", "observations"}:
                 raise DiscoveryStateError(f"Discovery state source {source_id!r} has unknown fields")
             requests = source.get("requests", {})
             if not isinstance(requests, dict):
@@ -93,6 +94,21 @@ class JsonDiscoveryState:
             for field in ("watermark", "pagination"):
                 if field in source and not isinstance(source[field], (dict, str, int, float, type(None))):
                     raise DiscoveryStateError(f"Discovery state source {source_id!r}.{field} has invalid shape")
+            observations = source.get("observations", {})
+            if not isinstance(observations, dict):
+                raise DiscoveryStateError(f"Discovery state source {source_id!r}.observations must be an object")
+            for native_id, observation in observations.items():
+                if (
+                    not isinstance(native_id, str) or not native_id
+                    or not isinstance(observation, dict)
+                    or set(observation) != {"title", "url", "content_hash", "first_seen_time", "last_seen_time"}
+                    or not isinstance(observation["title"], str) or not observation["title"]
+                    or not isinstance(observation["url"], str) or not observation["url"].startswith("https://")
+                    or not isinstance(observation["content_hash"], str)
+                    or not _valid_timestamp(observation["first_seen_time"])
+                    or not _valid_timestamp(observation["last_seen_time"])
+                ):
+                    raise DiscoveryStateError(f"Discovery state source {source_id!r} has an invalid observation")
         for candidate_id, candidate in value["candidates"].items():
             if (not isinstance(candidate_id, str) or not candidate_id
                     or not isinstance(candidate, dict)
@@ -207,6 +223,47 @@ class JsonDiscoveryState:
             "consecutive_failures": previous_failures + 1 if failure else 0,
             "consecutive_empty": previous_empty + 1 if empty else 0,
             "status_started_at": status_started_at,
+        }
+
+    @staticmethod
+    def record_observation(
+        state: dict[str, Any], source_id: str, observation: dict[str, str],
+        observed_at: datetime, *, limit: int = 500,
+    ) -> dict[str, str] | None:
+        """Persist an undated official route for change detection, not publication."""
+        native_id = observation.get("native_id", "")
+        title = observation.get("title", "").strip()[:300]
+        url = observation.get("url", "").strip()[:1000]
+        if not native_id or not title or not url.startswith("https://"):
+            return None
+        timestamp = observed_at.astimezone(timezone.utc).isoformat()
+        digest = hashlib.sha256(f"{url}|{title}".encode("utf-8")).hexdigest()
+        source = state["sources"].setdefault(source_id, {"requests": {}})
+        records = source.setdefault("observations", {})
+        previous = records.get(native_id)
+        change = None
+        if previous is None:
+            change, first_seen = "new", timestamp
+        else:
+            first_seen = previous["first_seen_time"]
+            if previous["content_hash"] != digest:
+                change = "changed"
+        records[native_id] = {
+            "title": title, "url": url, "content_hash": digest,
+            "first_seen_time": first_seen, "last_seen_time": timestamp,
+        }
+        if len(records) > limit:
+            keep = sorted(
+                records.items(),
+                key=lambda entry: (entry[1]["last_seen_time"], entry[0]),
+                reverse=True,
+            )[:limit]
+            source["observations"] = dict(sorted(keep))
+        if change is None:
+            return None
+        return {
+            "change": change, "native_id": native_id, "title": title,
+            "url": url, "first_seen_time": first_seen,
         }
 
     @staticmethod
