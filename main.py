@@ -64,6 +64,7 @@ def _should_persist_discovery_progress(result: DiscoveryResult) -> bool:
         bool(result.candidates)
         or result.status == "empty"
         or bool(result.state_updates)
+        or bool(result.observations)
         or _has_pagination_progress(result.pagination)
     )
 
@@ -207,6 +208,16 @@ def run_pipeline(
                 len(result.candidates),
                 "; ".join(result.errors),
             )
+            for observation in result.observations:
+                change = JsonDiscoveryState.record_observation(
+                    discovery_state_value, result.source_id, observation, result.fetched_at
+                )
+                if change is not None:
+                    print(
+                        f"Discovery observation: {result.source_id} {change['change']} "
+                        f"undated official route title={change['title']!r} "
+                        f"first_seen={change['first_seen_time']} url={change['url']}"
+                    )
             if result.errors:
                 failures.extend(f"{result.source_id}: {error}" for error in result.errors)
 

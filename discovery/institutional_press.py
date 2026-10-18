@@ -567,6 +567,7 @@ def _parse_page(
                 dates_by_native_id.setdefault(native_id, []).append((date_start, date_end, parsed))
                 assigned_date_spans.add(date_span)
 
+    undated_observations: list[dict[str, str]] = []
     grouped_rows: dict[str, list[dict[str, Any]]] = {}
     incomplete_ids: set[str] = set()
     incomplete_reasons: dict[str, set[str]] = {}
@@ -686,6 +687,11 @@ def _parse_page(
                 reasons.add("title")
             if missing_date:
                 reasons.add("date")
+                # Keep an official title/route for change detection, not publication.
+                if not missing_title:
+                    undated_observations.append({
+                        "native_id": safe[1], "url": safe[0], "title": title[:300],
+                    })
             continue
         grouped_rows.setdefault(safe[1], []).append({
             "url": safe[0],
@@ -809,6 +815,11 @@ def _parse_page(
         diagnostics["conflicting_native_ids"] = sorted(conflicting_ids)
     if unresolved_incomplete_ids:
         complete = False
+    if diagnostics is not None:
+        unique_observations: dict[str, dict[str, str]] = {}
+        for observation in undated_observations:
+            unique_observations.setdefault(observation["native_id"], observation)
+        diagnostics["undated_observations"] = list(unique_observations.values())
     if not rows:
         if structured_rows:
             return structured_rows, True
@@ -1419,7 +1430,14 @@ class InstitutionalPressDiscovery:
         status = "partial" if errors and (ordered or used_detail_fallback) else "failed" if errors else (
             "empty" if not ordered else "success"
         )
+        dated_route_ids = {row["native_id"] for row in rows}
+        observations = [
+            item for item in parse_diagnostics.get("undated_observations", [])
+            if isinstance(item, dict) and item.get("native_id") not in dated_route_ids
+            and isinstance(item.get("url"), str) and isinstance(item.get("title"), str)
+        ]
         return DiscoveryResult(
             self.source["source_id"], METHOD, status, candidates=ordered,
             fetched_at=fetched_at, errors=errors, state_updates=updates,
+            observations=observations,
         )

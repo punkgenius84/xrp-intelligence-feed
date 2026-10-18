@@ -34,6 +34,39 @@ def test_valid_state_round_trips_validators_watermark_and_seen_times(tmp_path):
     assert loaded["candidates"]["sec:acc"]["first_seen_time"] == STAMP.isoformat()
 
 
+def test_undated_observations_track_first_seen_and_title_changes_without_publication_date(tmp_path):
+    store = JsonDiscoveryState(tmp_path / "discovery.json")
+    state = store.load()
+    first = JsonDiscoveryState.record_observation(
+        state, "coinbase-blog",
+        {"native_id": "/blog/example", "url": "https://www.coinbase.com/blog/example",
+         "title": "Example announcement"},
+        STAMP,
+    )
+    assert first is not None and first["change"] == "new"
+    later = datetime(2026, 9, 25, 12, tzinfo=timezone.utc)
+    assert JsonDiscoveryState.record_observation(
+        state, "coinbase-blog",
+        {"native_id": "/blog/example", "url": "https://www.coinbase.com/blog/example",
+         "title": "Example announcement"},
+        later,
+    ) is None
+    changed_at = datetime(2026, 9, 26, 12, tzinfo=timezone.utc)
+    changed = JsonDiscoveryState.record_observation(
+        state, "coinbase-blog",
+        {"native_id": "/blog/example", "url": "https://www.coinbase.com/blog/example",
+         "title": "Example announcement updated"},
+        changed_at,
+    )
+    assert changed is not None and changed["change"] == "changed"
+    assert changed["first_seen_time"] == STAMP.isoformat()
+    store.save(state, now=changed_at)
+    record = store.load()["sources"]["coinbase-blog"]["observations"]["/blog/example"]
+    assert record["title"] == "Example announcement updated"
+    assert record["first_seen_time"] == STAMP.isoformat()
+    assert record["last_seen_time"] == changed_at.isoformat()
+
+
 @pytest.mark.parametrize("content", ["{bad", "[]", '{"schema_version":1,"sources":[],"candidates":[]}'])
 def test_corrupt_state_fails_closed_and_save_does_not_replace_it(tmp_path, content):
     path = tmp_path / "discovery.json"
