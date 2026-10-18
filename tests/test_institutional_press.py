@@ -1641,6 +1641,11 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
         "partners-with-yahoo-finance-to-power-discovery"
     )
     assert all(item.source_native_id != unresolved_id for item in result.candidates)
+    assert len(result.observations) == 1
+    assert result.observations[0]["native_id"] == unresolved_id
+    assert result.observations[0]["title"] == (
+        "Coinbase Opens Stock Trading to Everyone in the US Partners with Yahoo Finance to Power Discovery"
+    )
     # A partial index must not advance validators: retry the unresolved route next run.
     assert result.state_updates == {}
     assert any("malformed article on official index" in error for error in result.errors)
