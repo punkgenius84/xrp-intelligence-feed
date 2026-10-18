@@ -678,16 +678,36 @@ def publish_intelligence_events(
         item for item in pending
         if not any(evidence.url.strip() for evidence in item.event.evidence)
     ]
-    publishable_pending = [item for item in pending if item not in invalid_pending]
+    generic_titles = {
+        "read more", "learn more", "click here", "view more", "more", "details",
+    }
+    generic_title_pending = [
+        item for item in pending
+        if item.event.evidence and all(
+            str(evidence.title or "").strip().casefold() in generic_titles
+            or not str(evidence.title or "").strip()
+            for evidence in item.event.evidence
+        )
+    ]
+    publishable_pending = [
+        item for item in pending
+        if item not in invalid_pending and item not in generic_title_pending
+    ]
     if invalid_pending:
         for item in invalid_pending:
             out(
                 f"::warning::Intelligence event held from publication for missing evidence URL: "
                 f"{item.event.event_id}"
             )
-        if not publishable_pending:
+        if not publishable_pending and not generic_title_pending:
             raise SystemExit(
                 "Intelligence publish refused: every pending event lacks an evidence URL"
+            )
+    if generic_title_pending:
+        for item in generic_title_pending:
+            out(
+                f"::warning::Intelligence event held from publication because all evidence "
+                f"titles are empty or generic navigation text: {item.event.event_id}"
             )
 
     limit = max(1, int(getattr(discord_settings, "max_posts", 5)))
