@@ -10,26 +10,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from discovery.institutional_press import InstitutionalPressDiscovery
 
 
-SOURCE_ID = "imf-media-center-news"
 CONFIG_PATH = Path("config/discovery_sources.json")
 
 
-def main() -> int:
-    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    source = next(
-        (item for item in config["sources"] if item.get("source_id") == SOURCE_ID),
-        None,
-    )
-    if source is None:
-        raise SystemExit(f"Missing configured source: {SOURCE_ID}")
+def report_probe(label: str, source: dict[str, object]) -> None:
+    # Enable only this in-memory copy; normal discovery config and state remain untouched.
+    probe_source = dict(source)
+    probe_source["enabled"] = True
+    result = InstitutionalPressDiscovery(probe_source).collect(source_state=None)
 
-    # Exercise the existing production collector against the official index,
-    # without enabling the source in normal feed runs or persisting any state.
-    source = dict(source)
-    source["enabled"] = True
-    result = InstitutionalPressDiscovery(source).collect(source_state=None)
-
-    print(f"IMF Media Center runner probe: status={result.status}")
+    print(f"IMF runner probe: target={label} status={result.status}")
     print(f"source_id={result.source_id} method={result.discovery_method}")
     print(f"candidate_count={len(result.candidates)}")
     for candidate in result.candidates[:5]:
@@ -40,8 +30,38 @@ def main() -> int:
     if len(result.errors) > 10:
         print(f"diagnostic: {len(result.errors) - 10} additional diagnostic(s) omitted")
 
-    # This is an observational probe, not a release gate. Keep its workflow
-    # green while making the collector's real status visible in the logs.
+
+def main() -> int:
+    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    media_center = next(
+        (item for item in config["sources"] if item.get("source_id") == "imf-media-center-news"),
+        None,
+    )
+    if media_center is None:
+        raise SystemExit("Missing configured source: imf-media-center-news")
+
+    report_probe("official IMF Media Center", media_center)
+
+    # The public IMF News index is a separate official route from the
+    # journalist-only Media Center. Probe it with the existing production
+    # parser without adding/enabling it in normal discovery configuration.
+    public_news = {
+        "source_id": "imf-public-news-runner-probe",
+        "name": "International Monetary Fund — Public News",
+        "authority_tier": 1,
+        "category": "institutional",
+        "discovery_method": "institutional_press_html",
+        "source_url": "https://www.imf.org/en/news",
+        "enabled": True,
+        "lookback_days": 365,
+        "max_items": 50,
+        "allowed_hosts": ["www.imf.org", "imf.org"],
+        "article_path_regex": r"/en/news/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
+    }
+    report_probe("official public IMF News index", public_news)
+
+    # Observational only: keep the workflow green while exposing each actual
+    # HTTP/parser result in logs. This script never publishes or persists state.
     return 0
 
 
