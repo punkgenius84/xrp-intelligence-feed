@@ -29,7 +29,6 @@ jobs:
             state/correlation.json
             state/intelligence.json
             state/intelligence_outbox.json
-            state/intelligence_quarantine.json
             state/outbox.json
             state/delivery_history.json
           # Deliberately never an exact hit: the prefix picks the newest immutable state cache.
