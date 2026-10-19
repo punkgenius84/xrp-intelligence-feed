@@ -213,9 +213,14 @@ def run_pipeline(
                     discovery_state_value, result.source_id, observation, result.fetched_at
                 )
                 if change is not None:
+                    previous_title = (
+                        f" previous_title={change['previous_title']!r}"
+                        if change.get("previous_title") else ""
+                    )
                     print(
                         f"Discovery observation: {result.source_id} {change['change']} "
-                        f"undated official route title={change['title']!r} "
+                        f"undated official route title={change['title']!r}"
+                        f"{previous_title} "
                         f"first_seen={change['first_seen_time']} url={change['url']}"
                     )
             if result.errors:
