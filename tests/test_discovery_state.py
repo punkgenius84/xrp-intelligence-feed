@@ -59,6 +59,8 @@ def test_undated_observations_track_first_seen_and_title_changes_without_publica
         changed_at,
     )
     assert changed is not None and changed["change"] == "changed"
+    assert changed["title"] == "Example announcement updated"
+    assert changed["previous_title"] == "Example announcement"
     assert changed["first_seen_time"] == STAMP.isoformat()
     store.save(state, now=changed_at)
     record = store.load()["sources"]["coinbase-blog"]["observations"]["/blog/example"]
