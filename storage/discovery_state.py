@@ -261,10 +261,13 @@ class JsonDiscoveryState:
             source["observations"] = dict(sorted(keep))
         if change is None:
             return None
-        return {
+        result = {
             "change": change, "native_id": native_id, "title": title,
             "url": url, "first_seen_time": first_seen,
         }
+        if change == "changed" and isinstance(previous, dict):
+            result["previous_title"] = previous["title"]
+        return result
 
     @staticmethod
     def observe_candidate(state: dict[str, Any], candidate_id: str, content_hash: str,
