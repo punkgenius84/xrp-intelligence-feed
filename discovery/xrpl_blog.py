@@ -29,6 +29,13 @@ _LINK_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _TAG_RE = re.compile(r"<[^>]+>")
+_GENERIC_LINK_TITLES = {
+    "read more",
+    "learn more",
+    "continue reading",
+    "read article",
+    "view more",
+}
 
 
 def validate_xrpl_source(source: object) -> dict[str, Any]:
