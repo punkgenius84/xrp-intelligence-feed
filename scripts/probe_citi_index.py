@@ -72,6 +72,111 @@ def _safe_citi_url_sample(value: str) -> str:
     return path[:160]
 
 
+def _official_script_asset_urls(content: bytes, base_url: str = URL) -> list[str]:
+    """Select at most two same-host Next.js bundles; never follow arbitrary script hosts."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        html = content.decode("utf-8", errors="replace")
+    selected: set[str] = set()
+    for match in re.finditer(r"<script\b(?P<attrs>[^>]*)>", html, re.IGNORECASE | re.DOTALL):
+        attrs = match.group("attrs")
+        src_match = re.search(
+            r"\bsrc\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)'|(?P<bare>[^\s>]+))",
+            attrs, re.IGNORECASE | re.DOTALL,
+        )
+        if src_match is None:
+            continue
+        src = src_match.group("double") or src_match.group("single") or src_match.group("bare") or ""
+        try:
+            parts = urlsplit(urljoin(base_url, src.strip()))
+        except ValueError:
+            continue
+        if (
+            parts.scheme.lower() != "https"
+            or parts.hostname is None
+            or parts.hostname.casefold() not in ALLOWED_HOSTS
+            or parts.port not in (None, 443)
+            or parts.username is not None
+            or parts.password is not None
+            or "/_next/static/chunks/" not in parts.path
+            or not parts.path.casefold().endswith(".js")
+        ):
+            continue
+        selected.add(f"https://{parts.hostname.casefold()}{parts.path}")
+    return sorted(
+        selected,
+        key=lambda value: (
+            0 if "/chunks/pages/%5b" in value.casefold() or "/chunks/pages/[" in value else
+            1 if "/chunks/main-" in value.casefold() else 2,
+            value,
+        ),
+    )[:2]
+
+
+def _inspect_citi_js_asset(content: bytes, url: str) -> str:
+    """Summarize route/API hints from a bounded official JS asset, never print source."""
+    try:
+        source = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        source = content.decode("utf-8", errors="replace")
+    route_values = {
+        urlsplit(match.group(0).rstrip(".,")).path
+        for match in _ROUTE_RE.finditer(source)
+    }
+    api_paths = {
+        match.group(0).split("?", 1)[0].split("#", 1)[0]
+        for match in re.finditer(
+            r"""(?:/graphql|/(?:api|global/api)(?:/[a-zA-Z0-9._~!def _html_resource_diagnostics(content: bytes) -> str:
+'()*+,;=:@%/-]{1,120})?)""",
+            source,
+            re.IGNORECASE,
+        )
+    }
+    operations = set(re.findall(
+        r"\b(?:query|mutation)\s+([A-Za-z_][A-Za-z0-9_]{2,70})",
+        source,
+    ))
+    path = urlsplit(url).path
+    return (
+        f"js_asset path={path[:180]!r} bytes={len(content)} "
+        f"official_route_strings={len(route_values)} route_samples={sorted(route_values)[:5]} "
+        f"api_like_paths={sorted(api_paths)[:10]} graphql_operation_names={sorted(operations)[:10]}"
+    )
+
+
+def _probe_citi_js_assets(http, content: bytes, base_url: str) -> str:
+    urls = _official_script_asset_urls(content, base_url)
+    if not urls:
+        return "js_asset_probe selected=0"
+    lines = [f"js_asset_probe selected={len(urls)}"]
+    for url in urls:
+        try:
+            response = http.get(
+                url,
+                expected_content_types=("application/javascript", "text/javascript", "application/x-javascript"),
+            )
+        except DiscoveryHttpError as exc:
+            suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+            lines.append(f"  js_asset status=unavailable reason={exc.kind}{suffix}")
+            continue
+        if response.status_code != 200:
+            lines.append(f"  js_asset status=unavailable reason=unexpected_http_status http_status={response.status_code}")
+            continue
+        if not _official_final_url(response.url):
+            lines.append("  js_asset status=rejected reason=non_official_final_url")
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type not in {"application/javascript", "text/javascript", "application/x-javascript"}:
+            lines.append(
+                "  js_asset status=rejected reason=unexpected_content_type "
+                f"content_type={content_type or 'missing'}"
+            )
+            continue
+        lines.append("  " + _inspect_citi_js_asset(response.content, response.url))
+    return "\n".join(lines)
+
+
 def _html_resource_diagnostics(content: bytes) -> str:
     """Report bounded official script paths and API-like paths without fetching them."""
     try:
@@ -235,11 +340,13 @@ def probe_citi_index(http=None) -> str:
         structure = _index_diagnostics(source, response.content, response)
         resources = _html_resource_diagnostics(response.content)
         embedded = _embedded_json_diagnostics(response.content)
+        js_assets = _probe_citi_js_assets(client, response.content, response.url)
         return (
             f"Citi official index diagnostic: status=invalid_page reason={type(exc).__name__}\n"
             f"  {structure}\n"
             f"  {resources}\n"
-            f"  {embedded}"
+            f"  {embedded}\n"
+            f"  {js_assets}"
         )
     lines = [
         "Citi official index diagnostic: "
