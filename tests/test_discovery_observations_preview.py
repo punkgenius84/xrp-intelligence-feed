@@ -42,6 +42,7 @@ def test_preview_shows_first_seen_and_last_seen_without_mutating_state(tmp_path)
     assert "total=1 showing=1" in output
     assert "source=coinbase-blog" in output
     assert "Updated announcement" in output
+    assert "previous_title: Example announcement" in output
     assert "first_seen=2026-10-15T12:00:00+00:00" in output
     assert "last_seen=2026-10-17T12:00:00+00:00" in output
     assert "not the article publication date" in output
