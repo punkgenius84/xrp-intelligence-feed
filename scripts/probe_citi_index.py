@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
+import json
+import re
 import sys
 from urllib.parse import urlsplit
 
@@ -29,6 +30,89 @@ def _official_final_url(value: str) -> bool:
         )
     except ValueError:
         return False
+
+
+
+_SCRIPT_RE = re.compile(r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>", re.IGNORECASE | re.DOTALL)
+_ROUTE_RE = re.compile(
+    r"(?:https://(?:www\.)?citigroup\.com)?/global/news/press-release/20\d{2}/[a-z0-9-]+",
+    re.IGNORECASE,
+)
+_ISO_DATE_RE = re.compile(r"\b20\d{2}-\d{2}-\d{2}(?:T[^\s\"'<>]+)?\b")
+_DATE_KEY_NAMES = {
+    "date", "datepublished", "publishedat", "published_at", "publishdate",
+    "publish_date", "publicationdate", "publication_date", "createdat", "created_at",
+}
+_RELEVANT_KEYS = {
+    "title", "headline", "name", "slug", "url", "href", "link", "date",
+    "datepublished", "publishedat", "published_at", "publishdate", "publish_date",
+    "publicationdate", "publication_date", "createdat", "created_at", "path", "route",
+}
+
+
+def _embedded_json_diagnostics(content: bytes) -> str:
+    """Inspect bounded JSON script data without printing raw page content."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        html = content.decode("utf-8", errors="replace")
+    scripts = []
+    for match in _SCRIPT_RE.finditer(html):
+        attrs = match.group("attrs")
+        if re.search(
+            r"\btype\s*=\s*(?:\"application/json\"|'application/json'|application/json(?:\s|/|))"
+            r"|\bid\s*=\s*(?:\"__NEXT_DATA__\"|'__NEXT_DATA__')",
+            attrs, re.IGNORECASE,
+        ):
+            scripts.append(match.group("body"))
+    parsed = 0
+    visited_total = 0
+    route_values: set[str] = set()
+    top_keys: set[str] = set()
+    relevant_counts: dict[str, int] = {}
+    date_string_count = 0
+    skipped_oversize = 0
+    for body in scripts[:2]:
+        if len(body.encode("utf-8")) > 1_500_000:
+            skipped_oversize += 1
+            continue
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        parsed += 1
+        if isinstance(payload, dict):
+            top_keys.update(str(key)[:60] for key in list(payload)[:20])
+        stack = [payload]
+        visited = 0
+        while stack and visited < 50_000:
+            value = stack.pop()
+            visited += 1
+            if isinstance(value, dict):
+                for key, child in list(value.items())[:10_000]:
+                    normalized = str(key).casefold()
+                    if normalized in _RELEVANT_KEYS:
+                        relevant_counts[normalized] = relevant_counts.get(normalized, 0) + 1
+                    if isinstance(child, (dict, list)):
+                        stack.append(child)
+                    elif isinstance(child, str):
+                        route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(child))
+                        date_string_count += len(_ISO_DATE_RE.findall(child))
+            elif isinstance(value, list):
+                stack.extend(value[:10_000])
+            elif isinstance(value, str):
+                route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(value))
+                date_string_count += len(_ISO_DATE_RE.findall(value))
+        visited_total += visited
+    top_key_list = sorted(top_keys)[:12]
+    key_counts = {key: relevant_counts[key] for key in sorted(relevant_counts)}
+    route_samples = sorted(route_values)[:5]
+    return (
+        f"embedded_json scripts={len(scripts)} parsed={parsed} visited_nodes={visited_total} "
+        f"skipped_oversize={skipped_oversize} top_keys={top_key_list} "
+        f"relevant_key_counts={key_counts} official_route_strings={len(route_values)} "
+        f"iso_date_strings={date_string_count} route_samples={route_samples}"
+    )
 
 
 def probe_citi_index(http=None) -> str:
@@ -63,9 +147,11 @@ def probe_citi_index(http=None) -> str:
         rows, complete = _parse_page(source, response.content)
     except (UnicodeDecodeError, ValueError) as exc:
         structure = _index_diagnostics(source, response.content, response)
+        embedded = _embedded_json_diagnostics(response.content)
         return (
             f"Citi official index diagnostic: status=invalid_page reason={type(exc).__name__}\n"
-            f"  {structure}"
+            f"  {structure}\n"
+            f"  {embedded}"
         )
     lines = [
         "Citi official index diagnostic: "
