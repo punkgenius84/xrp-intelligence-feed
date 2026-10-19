@@ -191,6 +191,11 @@ jobs:
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
           PY
+      - name: Preview persisted Coinbase undated observations (read-only)
+        # Confirm the cache carries title/URL fingerprints across runs without
+        # treating first_seen_time as a publication date or changing state.
+        if: github.event_name == 'push'
+        run: python scripts/preview_discovery_observations.py --source-id coinbase-blog --limit 20
       - name: Preview queued intelligence events (read-only)
         # Push runs are diagnostic dry runs: they never publish or save persistent state.
         # Preview there so queue review does not depend on remembering a manual checkbox.
