@@ -39,10 +39,6 @@ _ROUTE_RE = re.compile(
     re.IGNORECASE,
 )
 _ISO_DATE_RE = re.compile(r"\b20\d{2}-\d{2}-\d{2}(?:T[^\s\"'<>]+)?\b")
-_DATE_KEY_NAMES = {
-    "date", "datepublished", "publishedat", "published_at", "publishdate",
-    "publish_date", "publicationdate", "publication_date", "createdat", "created_at",
-}
 _RELEVANT_KEYS = {
     "title", "headline", "name", "slug", "url", "href", "link", "date",
     "datepublished", "publishedat", "published_at", "publishdate", "publish_date",
