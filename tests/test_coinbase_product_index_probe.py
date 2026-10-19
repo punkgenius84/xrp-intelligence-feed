@@ -58,7 +58,7 @@ def test_product_index_reports_http_403_without_raising():
 
 def test_product_index_rejects_non_official_final_host():
     result = probe_product_index(
-        FakeHttp(_response(b"<html></html>", url="https://attacker.example/blog/landing/product"))
+        FakeHttp(_response(b"<html></html>", url="https://attacker.example/en-gb/blog/landing/product"))
     )
     assert result == "status=rejected reason=non_official_final_url"
 
