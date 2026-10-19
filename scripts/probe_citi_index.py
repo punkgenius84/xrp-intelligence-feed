@@ -56,7 +56,7 @@ def _embedded_json_diagnostics(content: bytes) -> str:
     for match in _SCRIPT_RE.finditer(html):
         attrs = match.group("attrs")
         if re.search(
-            r"\btype\s*=\s*(?:\"application/json\"|'application/json'|application/json(?:\s|/|))"
+            r"\btype\s*=\s*(?:\"application/json\"|'application/json'|application/json(?:\s|/|$))"
             r"|\bid\s*=\s*(?:\"__NEXT_DATA__\"|'__NEXT_DATA__')",
             attrs, re.IGNORECASE,
         ):
