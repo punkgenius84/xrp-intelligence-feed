@@ -96,6 +96,28 @@ def test_old_rows_stop_pagination():
     assert result.pagination["pages_checked"] == 1
 
 
+def test_generic_read_more_duplicate_does_not_become_article_title():
+    html = b"""<html><body>
+      <section>
+        <div>Oct 09 2026</div>
+        <a href="/blog/2026/vulnerabilitydisclosurereport-bug-20261009/">Read More</a>
+        <h4><a href="/blog/2026/vulnerabilitydisclosurereport-bug-20261009/">Vulnerability Disclosure Report for xrpld 3.4.1</a></h4>
+        <p>This report covers two security bugs fixed in the release.</p>
+      </section>
+      <section>
+        <div>Sep 25, 2026</div>
+        <h4><a href="/blog/2026/xrpld-3-4-1">Introducing XRP Ledger version 3.4.1</a></h4>
+      </section>
+    </body></html>"""
+    rows, complete = _parse_page(html)
+    assert complete
+    assert len(rows) == 2
+    assert rows[0]["title"] == "Vulnerability Disclosure Report for xrpld 3.4.1"
+    assert rows[0]["date"] == datetime(2026, 10, 9, tzinfo=timezone.utc)
+    assert rows[1]["title"] == "Introducing XRP Ledger version 3.4.1"
+    assert rows[1]["date"] == datetime(2026, 9, 25, tzinfo=timezone.utc)
+
+
 def test_official_blog_navigation_links_without_dates_are_ignored():
     html = b"""<html><body>
       <nav><a href="/blog/2026/">Blog</a></nav>
