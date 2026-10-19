@@ -46,6 +46,32 @@ _RELEVANT_KEYS = {
 }
 
 
+def _safe_citi_url_sample(value: str) -> str:
+    """Return only a bounded official URL path, never query strings or external hosts."""
+    try:
+        parts = urlsplit(value.strip())
+    except ValueError:
+        return ""
+    if parts.scheme:
+        if (
+            parts.scheme.lower() != "https"
+            or parts.hostname is None
+            or parts.hostname.casefold() not in ALLOWED_HOSTS
+            or parts.port not in (None, 443)
+            or parts.username is not None
+            or parts.password is not None
+        ):
+            return ""
+    path = parts.path
+    if not path or not (
+        path.startswith("/global/")
+        or "press-release" in path.casefold()
+        or "news" in path.casefold()
+    ):
+        return ""
+    return path[:160]
+
+
 def _embedded_json_diagnostics(content: bytes) -> str:
     """Inspect bounded JSON script data without printing raw page content."""
     try:
@@ -68,6 +94,8 @@ def _embedded_json_diagnostics(content: bytes) -> str:
     relevant_counts: dict[str, int] = {}
     date_string_count = 0
     skipped_oversize = 0
+    url_samples: set[str] = set()
+    press_release_like_strings = 0
     for body in scripts[:2]:
         if len(body.encode("utf-8")) > 1_500_000:
             skipped_oversize += 1
@@ -92,13 +120,21 @@ def _embedded_json_diagnostics(content: bytes) -> str:
                     if isinstance(child, (dict, list)):
                         stack.append(child)
                     elif isinstance(child, str):
-                        route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(child))
+                        route_values.update(urlsplit(match.group(0).rstrip(".,")).path for match in _ROUTE_RE.finditer(child))
                         date_string_count += len(_ISO_DATE_RE.findall(child))
+                        if "press-release" in child.casefold() or "press release" in child.casefold():
+                            press_release_like_strings += 1
+                        if normalized in {"url", "link", "href", "path", "canonicalurl", "canonical_url"}:
+                            sample = _safe_citi_url_sample(child)
+                            if sample:
+                                url_samples.add(f"{normalized}:{sample}")
             elif isinstance(value, list):
                 stack.extend(value[:10_000])
             elif isinstance(value, str):
-                route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(value))
+                route_values.update(urlsplit(match.group(0).rstrip(".,")).path for match in _ROUTE_RE.finditer(value))
                 date_string_count += len(_ISO_DATE_RE.findall(value))
+                if "press-release" in value.casefold() or "press release" in value.casefold():
+                    press_release_like_strings += 1
         visited_total += visited
     top_key_list = sorted(top_keys)[:12]
     key_counts = {key: relevant_counts[key] for key in sorted(relevant_counts)}
@@ -107,7 +143,8 @@ def _embedded_json_diagnostics(content: bytes) -> str:
         f"embedded_json scripts={len(scripts)} parsed={parsed} visited_nodes={visited_total} "
         f"skipped_oversize={skipped_oversize} top_keys={top_key_list} "
         f"relevant_key_counts={key_counts} official_route_strings={len(route_values)} "
-        f"iso_date_strings={date_string_count} route_samples={route_samples}"
+        f"press_release_like_strings={press_release_like_strings} iso_date_strings={date_string_count} "
+        f"route_samples={route_samples} url_samples={sorted(url_samples)[:10]}"
     )
 
 
