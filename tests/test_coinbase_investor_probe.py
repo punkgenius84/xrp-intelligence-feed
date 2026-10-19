@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
 from discovery.http import HttpResponse
-from scripts.probe_coinbase_investor_news import probe_coinbase_investor_news
+from scripts.probe_coinbase_investor_news import PROBE_URL, probe_coinbase_investor_news
 
 
 STAMP = datetime(2026, 10, 18, 12, tzinfo=timezone.utc)
-INDEX_URL = "https://investor.coinbase.com/news/"
+INDEX_URL = PROBE_URL
 ARTICLE_URL = "https://investor.coinbase.com/news/news-details/2026/example-release/default.aspx"
 
 

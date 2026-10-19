@@ -11,6 +11,8 @@ from discovery.dispatch import load_discovery_sources
 from discovery.http import BoundedHttpClient
 from discovery.institutional_press import InstitutionalPressDiscovery
 
+PROBE_URL = "https://investor.coinbase.com/news/default.aspx"
+
 
 def probe_coinbase_investor_news(http=None, *, now=None) -> str:
     """Read the official IR index once; never saves state or enables the source."""
@@ -20,6 +22,8 @@ def probe_coinbase_investor_news(http=None, *, now=None) -> str:
     )
     source = dict(source)
     source["enabled"] = True
+    # The /news/ route returns a generic shell; probe the official dated index route.
+    source["source_url"] = PROBE_URL
     # This is an index-only probe: no article-detail fallback requests.
     source.pop("detail_fallback_limit", None)
     client = http or BoundedHttpClient(
@@ -37,7 +41,7 @@ def probe_coinbase_investor_news(http=None, *, now=None) -> str:
     result = collector.collect()
     lines = [
         "Coinbase investor news diagnostic: "
-        f"status={result.status} candidates={len(result.candidates)} "
+        f"index={PROBE_URL} status={result.status} candidates={len(result.candidates)} "
         "detail_fallback=disabled"
     ]
     for item in result.candidates[:10]:
