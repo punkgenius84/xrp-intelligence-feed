@@ -120,7 +120,7 @@ def _embedded_json_diagnostics(content: bytes) -> str:
                     if isinstance(child, (dict, list)):
                         stack.append(child)
                     elif isinstance(child, str):
-                        route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(child))
+                        route_values.update(urlsplit(match.group(0).rstrip(".,")).path for match in _ROUTE_RE.finditer(child))
                         date_string_count += len(_ISO_DATE_RE.findall(child))
                         if "press-release" in child.casefold() or "press release" in child.casefold():
                             press_release_like_strings += 1
@@ -131,7 +131,7 @@ def _embedded_json_diagnostics(content: bytes) -> str:
             elif isinstance(value, list):
                 stack.extend(value[:10_000])
             elif isinstance(value, str):
-                route_values.update(match.group(0).rstrip(".,") for match in _ROUTE_RE.finditer(value))
+                route_values.update(urlsplit(match.group(0).rstrip(".,")).path for match in _ROUTE_RE.finditer(value))
                 date_string_count += len(_ISO_DATE_RE.findall(value))
                 if "press-release" in value.casefold() or "press release" in value.casefold():
                     press_release_like_strings += 1
