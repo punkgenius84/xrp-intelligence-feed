@@ -61,3 +61,17 @@ def test_landing_index_rejects_non_official_final_host():
         FakeHttp(_response(b"<html></html>", url="https://attacker.example/en-gb/blog/landing"))
     )
     assert result == "status=rejected reason=non_official_final_url"
+
+
+def test_landing_index_matches_locale_prefixed_target_route():
+    html = (
+        '<html><body><article>'
+        '<time datetime="2026-10-15T12:00:00Z">October 15, 2026</time>'
+        f'<a href="https://www.coinbase.com/en-gb{TARGET_PATH}">Coinbase stock trading</a>'
+        '</article></body></html>'
+    ).encode()
+
+    result = probe_landing_index(FakeHttp(_response(html)))
+
+    assert "target_route=present" in result
+    assert "target_date=2026-10-15T12:00:00+00:00" in result

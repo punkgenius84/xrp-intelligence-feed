@@ -66,3 +66,17 @@ def test_product_index_rejects_non_official_final_host():
 def test_product_index_rejects_wrong_content_type():
     result = probe_product_index(FakeHttp(_response(b"<html></html>", content_type="application/json")))
     assert result == "status=rejected reason=unexpected_content_type content_type=application/json"
+
+
+def test_product_index_matches_locale_prefixed_target_route():
+    html = (
+        '<html><body><article>'
+        '<time datetime="2026-10-15T12:00:00Z">October 15, 2026</time>'
+        f'<a href="https://www.coinbase.com/en-gb{TARGET_PATH}">Coinbase stock trading</a>'
+        '</article></body></html>'
+    ).encode()
+
+    result = probe_product_index(FakeHttp(_response(html)))
+
+    assert "target_route=present" in result
+    assert "target_date=2026-10-15T12:00:00+00:00" in result
