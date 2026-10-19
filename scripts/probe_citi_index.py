@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import re
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -70,6 +70,59 @@ def _safe_citi_url_sample(value: str) -> str:
     ):
         return ""
     return path[:160]
+
+
+def _html_resource_diagnostics(content: bytes) -> str:
+    """Report bounded official script paths and API-like paths without fetching them."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        html = content.decode("utf-8", errors="replace")
+    script_tags = list(re.finditer(r"<script\b(?P<attrs>[^>]*)>", html, re.IGNORECASE | re.DOTALL))
+    official_paths: set[str] = set()
+    external_count = 0
+    for match in script_tags:
+        attrs = match.group("attrs")
+        src_match = re.search(
+            r"\bsrc\s*=\s*(?:\"(?P<double>[^\"]*)\"|'(?P<single>[^']*)'|(?P<bare>[^\s>]+))",
+            attrs, re.IGNORECASE | re.DOTALL,
+        )
+        if src_match is None:
+            continue
+        src = src_match.group("double") or src_match.group("single") or src_match.group("bare") or ""
+        try:
+            parts = urlsplit(urljoin(URL, src.strip()))
+        except ValueError:
+            external_count += 1
+            continue
+        if (
+            parts.scheme.lower() == "https"
+            and parts.hostname is not None
+            and parts.hostname.casefold() in ALLOWED_HOSTS
+            and parts.port in (None, 443)
+            and parts.username is None
+            and parts.password is None
+        ):
+            if parts.path:
+                official_paths.add(parts.path[:180])
+        else:
+            external_count += 1
+    api_like_paths = set()
+    for match in re.finditer(
+        r"""(?P<path>/(?:api|graphql|_next/data|global/api)(?:/[a-zA-Z0-9._~!def _embedded_json_diagnostics(content: bytes) -> str:
+'()*+,;=:@%/-]{1,180})?)""",
+        html,
+        re.IGNORECASE,
+    ):
+        path = match.group("path").split("?", 1)[0].split("#", 1)[0]
+        if path and not path.startswith("//"):
+            api_like_paths.add(path)
+    return (
+        f"html_resources script_tags={len(script_tags)} "
+        f"official_script_srcs={len(official_paths)} external_script_srcs={external_count} "
+        f"official_script_paths={sorted(official_paths)[:8]} "
+        f"api_like_paths={sorted(api_like_paths)[:10]}"
+    )
 
 
 def _embedded_json_diagnostics(content: bytes) -> str:
@@ -180,10 +233,12 @@ def probe_citi_index(http=None) -> str:
         rows, complete = _parse_page(source, response.content)
     except (UnicodeDecodeError, ValueError) as exc:
         structure = _index_diagnostics(source, response.content, response)
+        resources = _html_resource_diagnostics(response.content)
         embedded = _embedded_json_diagnostics(response.content)
         return (
             f"Citi official index diagnostic: status=invalid_page reason={type(exc).__name__}\n"
             f"  {structure}\n"
+            f"  {resources}\n"
             f"  {embedded}"
         )
     lines = [
