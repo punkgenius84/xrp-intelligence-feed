@@ -101,6 +101,12 @@ Enabled registry sources are collected as RSS, normalized into NewsItem, dedupli
 
 Discovery sources persist lightweight health telemetry in `state/discovery.json`: last attempt/status, candidate count, last error, consecutive hard failures, and consecutive empty/partial runs. A `partial` result is not counted as a hard failure streak; this avoids treating bounded multi-request sources as completely unavailable when only one request had trouble. Health is returned as part of the pipeline result and printed in normal runs.
 
+### Undated official route observations
+
+A source may opt into `track_undated_observations: true` when its official index exposes an article title and URL but no defensible publication date. For an opted-in source, `state/discovery.json` retains the route, title, first-seen time, last-seen time, and a title/URL fingerprint (capped at 500 routes per source). The feed logs a route when it is first observed or its title/URL changes; unchanged observations stay quiet.
+
+**Observation time is not publication time.** An undated observation is not a `DiscoveryCandidate`, is not eligible for relevance scoring or Discord publishing, and does not let the collector borrow a neighboring card's date. The option is currently enabled only for Coinbase's official blog index, where the date remains unresolved. Other sources' observation records are cleared unless they explicitly opt in.
+
 ## Pipeline result model
 
 The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, discovery health, publishable items, and separately flagged buried signals. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
