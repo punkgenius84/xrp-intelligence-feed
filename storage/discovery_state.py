@@ -101,8 +101,12 @@ class JsonDiscoveryState:
                 if (
                     not isinstance(native_id, str) or not native_id
                     or not isinstance(observation, dict)
-                    or set(observation) != {"title", "url", "content_hash", "first_seen_time", "last_seen_time"}
+                    or set(observation) not in (
+                        {"title", "url", "content_hash", "first_seen_time", "last_seen_time"},
+                        {"title", "url", "content_hash", "first_seen_time", "last_seen_time", "previous_title"},
+                    )
                     or not isinstance(observation["title"], str) or not observation["title"]
+                    or ("previous_title" in observation and not isinstance(observation["previous_title"], str))
                     or not isinstance(observation["url"], str) or not observation["url"].startswith("https://")
                     or not isinstance(observation["content_hash"], str)
                     or not _valid_timestamp(observation["first_seen_time"])
@@ -248,10 +252,17 @@ class JsonDiscoveryState:
             first_seen = previous["first_seen_time"]
             if previous["content_hash"] != digest:
                 change = "changed"
-        records[native_id] = {
+        record = {
             "title": title, "url": url, "content_hash": digest,
             "first_seen_time": first_seen, "last_seen_time": timestamp,
         }
+        previous_title = (
+            previous["title"] if change == "changed" and isinstance(previous, dict)
+            else previous.get("previous_title", "") if isinstance(previous, dict) else ""
+        )
+        if previous_title:
+            record["previous_title"] = previous_title
+        records[native_id] = record
         if len(records) > limit:
             keep = sorted(
                 records.items(),
