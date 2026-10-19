@@ -222,6 +222,16 @@ Preview the quarantined records locally without changing state or posting to Dis
 
 Use `--path` to inspect a copied quarantine JSON file. The preview command is read-only and limits output to five evidence records per event.
 
+## Undated official-source observations
+
+Some official index pages expose a reliable headline and URL but no publication date. The Coinbase adapter records these routes only for change detection; they are never published as news candidates without a trustworthy publication date. The state records when the feed first and most recently observed a route, which is acquisition timing—not the article's publication date. When a headline changes, the run log includes both the previous and current title.
+
+Inspect saved observations locally without changing state or posting to Discord:
+
+    python scripts/preview_discovery_observations.py --source-id coinbase-blog --limit 50
+
+Omit `--source-id` to inspect observations from all opted-in sources. Use `--path` to inspect a copied `state/discovery.json` file. The preview is read-only.
+
 ## Source availability notes
 
 - **Citi press releases are temporarily parked.** The GitHub Actions runner receives a large HTML shell without allowlisted official release links or embedded article routes. The parser fails closed rather than inventing releases. Re-enable the source only after an official machine-readable listing/feed is verified; fixture tests continue to exercise the parser and bounded detail fallback.
