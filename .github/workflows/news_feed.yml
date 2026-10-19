@@ -57,6 +57,9 @@ jobs:
       - name: Probe Coinbase official dated index (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_landing_index.py
+      - name: Probe Coinbase official product index (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_coinbase_product_index.py
       - name: Probe Coinbase investor-news index (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_investor_news.py
