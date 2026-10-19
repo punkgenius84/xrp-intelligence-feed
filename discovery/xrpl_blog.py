@@ -152,6 +152,11 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
             end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), match.end() + 1200)
             window = text[start:end]
             title = _clean(match.group("title"))
+            # XRPL cards expose a second link to the same article whose label is
+            # only "Read More". Never let that generic duplicate become the
+            # candidate title (or borrow a nearby card's date).
+            if title.casefold() in _GENERIC_LINK_TITLES:
+                continue
             published = _parse_nearest_date(window, match.start() - start)
             # The blog index also contains official /blog/YYYY/... links that
             # are navigation or related-content links without an adjacent
