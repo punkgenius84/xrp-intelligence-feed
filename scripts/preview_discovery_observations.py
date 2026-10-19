@@ -53,6 +53,8 @@ def render_preview(
             f"{index}. source={_one_line(item['source_id'], 80)} "
             f"first_seen={item['first_seen_time']} last_seen={item['last_seen_time']}"
         )
+        if item.get("previous_title"):
+            lines.append(f"   previous_title: {_one_line(item['previous_title'], 300)}")
         lines.append(f"   title: {_one_line(item['title'], 300)}")
         lines.append(f"   url: {_one_line(item['url'], 500)}")
     if len(observations) > len(shown):

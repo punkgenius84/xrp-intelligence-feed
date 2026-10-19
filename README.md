@@ -224,7 +224,7 @@ Use `--path` to inspect a copied quarantine JSON file. The preview command is re
 
 ## Undated official-source observations
 
-Some official index pages expose a reliable headline and URL but no publication date. The Coinbase adapter records these routes only for change detection; they are never published as news candidates without a trustworthy publication date. The state records when the feed first and most recently observed a route, which is acquisition timing—not the article's publication date. When a headline changes, the run log includes both the previous and current title.
+Some official index pages expose a reliable headline and URL but no publication date. The Coinbase adapter records these routes only for change detection; they are never published as news candidates without a trustworthy publication date. The state records when the feed first and most recently observed a route, which is acquisition timing—not the article's publication date. When a headline changes, the previous and current titles are logged and the latest previous title is retained in state for review.
 
 Inspect saved observations locally without changing state or posting to Discord:
 

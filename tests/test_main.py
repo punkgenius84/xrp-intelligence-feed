@@ -168,6 +168,15 @@ def test_discovery_empty_persists_without_validators_or_pagination():
     assert main._should_persist_discovery_progress(result) is True
 
 
+def test_discovery_observations_persist_without_candidates_or_validators():
+    result = SimpleNamespace(
+        status="partial", candidates=[], state_updates={}, pagination={},
+        observations=[{"native_id": "/blog/undated", "title": "Undated official headline",
+                       "url": "https://www.coinbase.com/blog/undated"}],
+    )
+    assert main._should_persist_discovery_progress(result) is True
+
+
 def test_discovery_failed_does_not_count_as_successful_progress():
     result = SimpleNamespace(status="failed", candidates=[], state_updates={}, pagination={})
     assert main._should_persist_discovery_progress(result) is False
