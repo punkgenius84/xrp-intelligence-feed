@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import sys
 from urllib.parse import urlsplit
 
@@ -59,7 +60,13 @@ def probe_landing_index(http=None) -> str:
     except (UnicodeDecodeError, ValueError) as exc:
         return f"status=invalid_page reason={type(exc).__name__}"
 
-    target = next((row for row in rows if row.get("native_id") == TARGET_PATH.casefold()), None)
+    def target_route_matches(native_id: object) -> bool:
+        if not isinstance(native_id, str):
+            return False
+        normalized = re.sub(r"^/[a-z]{2}-[a-z]{2}(?=/blog/)", "", native_id.casefold())
+        return normalized == TARGET_PATH.casefold()
+
+    target = next((row for row in rows if target_route_matches(row.get("native_id"))), None)
     if target is not None:
         published = target.get("date")
         date_label = published.isoformat() if hasattr(published, "isoformat") else "missing"
