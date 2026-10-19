@@ -253,3 +253,55 @@ def test_correlation_state_save_failure_does_not_mark_candidate_seen(
     retry_result = main.run_pipeline(**args)
     assert retry_result.fresh == [candidate]
     assert seen.load()
+
+
+
+def test_undated_official_observations_persist_first_seen_and_title_changes(
+        tmp_path, monkeypatch):
+    route = "/blog/undated-official-announcement"
+    url = "https://www.coinbase.com" + route
+    first_observation = {
+        "native_id": route,
+        "url": url,
+        "title": "Coinbase official announcement",
+    }
+    first_result = DiscoveryResult(
+        source_id="coinbase-blog", discovery_method="institutional_press_html",
+        status="partial", fetched_at=STAMP, observations=[first_observation],
+    )
+    changed_at = datetime(2026, 9, 24, 12, tzinfo=timezone.utc)
+    changed_observation = {
+        **first_observation,
+        "title": "Coinbase official announcement updated",
+    }
+    changed_result = DiscoveryResult(
+        source_id="coinbase-blog", discovery_method="institutional_press_html",
+        status="partial", fetched_at=changed_at, observations=[changed_observation],
+    )
+    results = iter([first_result, changed_result])
+    monkeypatch.setattr(main, "collect_source", lambda source, state: next(results))
+
+    seen = JsonState(str(tmp_path / "seen.json"))
+    discovery = JsonDiscoveryState(tmp_path / "discovery.json")
+    source = {"source_id": "coinbase-blog", "track_undated_observations": True}
+    args = dict(
+        sources=[], state=seen, discovery_sources=[source], discovery_state=discovery,
+    )
+
+    first_pipeline = main.run_pipeline(**args)
+    first_record = discovery.load()["sources"]["coinbase-blog"]["observations"][route]
+    assert first_pipeline.collected == []
+    assert first_pipeline.fresh == []
+    assert first_record["title"] == first_observation["title"]
+    assert first_record["first_seen_time"] == STAMP.isoformat()
+    assert first_record["last_seen_time"] == STAMP.isoformat()
+    assert discovery.load()["candidates"] == {}
+
+    second_pipeline = main.run_pipeline(**args)
+    second_record = discovery.load()["sources"]["coinbase-blog"]["observations"][route]
+    assert second_pipeline.collected == []
+    assert second_pipeline.fresh == []
+    assert second_record["title"] == changed_observation["title"]
+    assert second_record["first_seen_time"] == STAMP.isoformat()
+    assert second_record["last_seen_time"] == changed_at.isoformat()
+    assert discovery.load()["candidates"] == {}
