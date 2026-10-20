@@ -32,6 +32,8 @@ def probe_citi_discovery_collector(http=None) -> str:
     lines = []
     for index_name, index_url in (("global_news", NEWS_URL), ("home", HOME_URL)):
         source = {**base_source, "source_url": index_url, "enabled": True, "detail_fallback_limit": 2}
+        source.pop("sitemap_url", None)
+        source.pop("sitemap_detail_limit", None)
         result = InstitutionalPressDiscovery(
             source,
             http=client,
