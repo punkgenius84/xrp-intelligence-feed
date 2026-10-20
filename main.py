@@ -747,6 +747,28 @@ def publish_intelligence_events(
             for evidence in item.event.evidence
         )
     ]
+    if generic_title_pending:
+        generic_keys = {item.key for item in generic_title_pending}
+        quarantine = quarantine_store or JsonIntelligenceQuarantineState()
+        try:
+            # Preserve the complete malformed event for audit before removing it
+            # from the active queue. If quarantine persistence fails, fail closed.
+            quarantine.quarantine(
+                generic_title_pending,
+                reason="all evidence titles are empty or generic navigation text",
+                quarantined_at=now,
+            )
+        except IntelligenceQuarantineError as exc:
+            raise SystemExit(
+                "Intelligence publish refused: generic-title events could not be safely "
+                "quarantined; active outbox was not changed"
+            ) from exc
+        queue.remove(generic_keys)
+        pending = [item for item in pending if item.key not in generic_keys]
+        out(
+            f"Intelligence: quarantined {len(generic_keys)} malformed event(s) with "
+            "only empty or generic navigation titles; full records preserved for review"
+        )
     url_valid_pending = [item for item in pending if item not in invalid_pending]
     publishable_pending = [
         item for item in url_valid_pending if item not in generic_title_pending
