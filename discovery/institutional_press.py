@@ -1403,8 +1403,11 @@ class InstitutionalPressDiscovery:
                 key: root_response.headers[key]
                 for key in ("etag", "last_modified") if root_response.headers.get(key)
             }
+            # The sitemap was fetched and parsed successfully; an unchanged
+            # digest means there are no newly changed article details to revisit,
+            # not that the source itself is empty or unhealthy.
             return DiscoveryResult(
-                self.source["source_id"], METHOD, "empty", fetched_at=fetched_at,
+                self.source["source_id"], METHOD, "success", fetched_at=fetched_at,
                 state_updates={request_id: header_updates} if header_updates else {},
                 pagination={"citi_sitemap_sha256": digest},
             )
