@@ -146,3 +146,54 @@ def test_jsonld_can_identify_the_exact_localized_article_route():
     assert probe_coinbase_localized_article_metadata(FakeHttp(_response(html, url=LOCALIZED_URL))) == (
         "status=localized_official_metadata_date date=2026-02-24"
     )
+
+
+def test_coinbase_robots_sitemap_probe_only_accepts_official_sitemaps():
+    from scripts.probe_coinbase_official_sitemap import _robots_sitemaps
+
+    assert _robots_sitemaps(
+        b"User-agent: *\nSitemap: https://www.coinbase.com/sitemap.xml\n"
+        b"Sitemap: https://attacker.example/sitemap.xml\n"
+        b"Sitemap: https://www.coinbase.com/sitemap.xml\n"
+    ) == ["https://www.coinbase.com/sitemap.xml"]
+
+
+def test_coinbase_sitemap_requires_exact_target_and_explicit_news_publication_date():
+    from scripts.probe_coinbase_official_sitemap import TARGET_URL, _sitemap_target_metadata
+
+    target_path = TARGET_URL.rsplit("/", 1)[-1]
+    xml = f'''<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+      <url><loc>{TARGET_URL}</loc><lastmod>2026-10-19</lastmod></url>
+      <url><loc>https://www.coinbase.com/blog/another-article</loc>
+        <news:news><news:publication><news:name>Coinbase</news:name>
+        <news:language>en</news:language></news:publication>
+        <news:publication_date>2026-02-24</news:publication_date></news:news></url>
+      <url><loc>{TARGET_URL}</loc>
+        <news:news><news:publication><news:name>Coinbase</news:name>
+        <news:language>en</news:language></news:publication>
+        <news:publication_date>2026-02-24</news:publication_date></news:news></url>
+    </urlset>'''.encode()
+
+    kind, dates = _sitemap_target_metadata(xml)
+
+    assert kind == "urlset"
+    assert dates == ["2026-02-24"]
+
+
+def test_coinbase_sitemap_never_treats_lastmod_as_publication_date():
+    from scripts.probe_coinbase_official_sitemap import TARGET_URL, _sitemap_target_metadata
+
+    xml = (
+        '<urlset><url><loc>' + TARGET_URL + '</loc>'
+        '<lastmod>2026-10-19</lastmod></url></urlset>'
+    ).encode()
+
+    assert _sitemap_target_metadata(xml) == ("urlset", [])
+
+
+def test_coinbase_sitemap_rejects_malformed_or_oversized_xml():
+    from scripts.probe_coinbase_official_sitemap import MAX_BYTES, _sitemap_target_metadata
+
+    assert _sitemap_target_metadata(b"<broken") == ("invalid_xml", [])
+    assert _sitemap_target_metadata(b"x" * (MAX_BYTES + 1)) == ("oversize", [])
