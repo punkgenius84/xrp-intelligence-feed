@@ -137,3 +137,26 @@ def test_outbox_removal_failure_keeps_audited_copy_and_active_event(tmp_path, mo
 
     assert [item.event.event_id for item in outbox.load()] == ["evt-generic"]
     assert [item.event.event_id for item in quarantine.load()] == ["evt-generic"]
+
+
+def test_maintenance_workflow_is_manual_nonpublishing_and_saves_audit_first():
+    from pathlib import Path
+
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github"
+        / "workflows"
+        / "quarantine_intelligence_event.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "if: github.ref == 'refs/heads/main'" in workflow
+    assert "group: xrp-intelligence-feed" in workflow
+    assert "scripts/quarantine_generic_intelligence_event.py" in workflow
+    assert "python main.py" not in workflow
+    assert "DISCORD_WEBHOOK_URL" not in workflow
+    assert "publish_intelligence" not in workflow
+    assert workflow.index("name: Save intelligence quarantine") < workflow.index(
+        "name: Save persistent state"
+    )
+    assert "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9" in workflow
