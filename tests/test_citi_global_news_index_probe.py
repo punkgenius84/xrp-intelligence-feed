@@ -221,3 +221,27 @@ def test_citi_embedded_record_shape_diagnostics_bounds_oversized_scripts():
 
     assert "route_objects=0" in result
     assert "route_with_title_and_date=0" in result
+
+
+def test_citi_record_shape_diagnostics_report_nested_keys_and_types_only():
+    payload = {
+        "items": [{
+            "url": "/global/news/press-release/2026/example",
+            "publishDate": "2026-10-19",
+            "info": {"headline": "Do not log this headline", "description": "Do not log this body"},
+            "subtitle": "Do not log this subtitle",
+        }]
+    }
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    result = _embedded_record_shape_diagnostics({}, html)
+
+    assert "info_nested_shapes=[{'depth': 0, 'keys': ['description', 'headline']}]" in result
+    assert "'info': 'dict'" in result
+    assert "Do not log this headline" not in result
+    assert "Do not log this body" not in result
+    assert "Do not log this subtitle" not in result
