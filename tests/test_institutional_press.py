@@ -1687,7 +1687,7 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
     # The official title/route remains observable, but never becomes a candidate.
     # Since no unresolved publishable-card parse error remains, index validators may
     # advance normally; the observation is still updated only from trusted index data.
-    assert result.state_updates == {}
+    assert result.state_updates == {_index_request_id(index_url): {}}
     assert not any("malformed article on official index" in error for error in result.errors)
 
 
