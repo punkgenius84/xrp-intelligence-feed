@@ -160,7 +160,7 @@ def test_maintenance_workflow_is_manual_nonpublishing_and_saves_audit_first():
         "name: Save persistent state"
     )
     assert "id: quarantine" in workflow
-    assert "steps.quarantine.outcome == 'success' || steps.quarantine.outcome == 'failure'" in workflow
+    assert "always() && (steps.quarantine.outcome == 'success' || steps.quarantine.outcome == 'failure')" in workflow
     state_save_block = workflow.split("name: Save persistent state", 1)[1].split(
         "name: Save intelligence quarantine", 1
     )[0]
