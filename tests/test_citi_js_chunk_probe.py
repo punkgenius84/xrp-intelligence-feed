@@ -21,7 +21,7 @@ def response(body, *, status=200, content_type="application/javascript", url):
     return HttpResponse(status, {"content-type": content_type}, body, url)
 
 
-def test_citi_script_selector_limits_to_two_official_next_bundles():
+def test_citi_script_selector_limits_to_four_official_next_bundles():
     html = b"""<script src="/global/citigroup-ui/_next/static/chunks/main-a.js"></script>
     <script src="/global/citigroup-ui/_next/static/chunks/pages/%5B...params%5D-b.js"></script>
     <script src="https://attacker.example/_next/static/chunks/evil.js"></script>
@@ -29,7 +29,7 @@ def test_citi_script_selector_limits_to_two_official_next_bundles():
 
     urls = _official_script_asset_urls(html, URL)
 
-    assert len(urls) == 2
+    assert len(urls) == 3
     assert all("www.citigroup.com" in url for url in urls)
     assert any("/chunks/pages/%5B...params%5D-b.js" in url for url in urls)
     assert all("attacker.example" not in url for url in urls)
