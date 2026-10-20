@@ -75,6 +75,9 @@ jobs:
       - name: Probe Citi broader official news index (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_citi_global_news_index.py
+      - name: Probe Citi institutional collector fallback (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_citi_discovery_collector.py
       - name: Restore persistent state
         id: state_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
