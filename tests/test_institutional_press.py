@@ -262,10 +262,12 @@ def test_registered_institutional_sources_are_bounded():
     # The article detail route returns HTTP 403 in Actions; do not retry it on every poll.
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["source_url"] == "https://www.citigroup.com/global/news"
+    assert citi["source_url"] == "https://www.citigroup.com/global/sitemap.xml"
+    assert citi["discovery_method"] == "institutional_press_sitemap"
+    assert citi["max_items"] == 10
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert citi["enabled"] is False  # Parked until the runner can read an official article index.
-    assert citi["detail_fallback_limit"] == 3
+    assert citi["enabled"] is False  # Parked until sitemap collector live validation completes.
+    assert citi["sitemap_detail_limit"] == 10
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
     jpmorgan = next(item for item in sources if item["source_id"] == "jpmorgan-payments-newsroom")
@@ -273,7 +275,7 @@ def test_registered_institutional_sources_are_bounded():
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["enabled"] is False
-    assert citi["detail_fallback_limit"] == 3
+    assert citi["sitemap_detail_limit"] == 10
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
     assert swift_registry["article_path_regex"] == r"(?:/about-us/media-centre/press-releases|/news-events/press-releases|/news-events/migrated-news/press-releases)/[^/?#]+"
@@ -608,6 +610,17 @@ def test_institutional_numeric_date_order_rejects_unknown_values(value):
     with pytest.raises(ValueError, match="numeric_date_order must be"):
         validate_institutional_source(source(numeric_date_order=value))
 
+def citi_html_test_source():
+    citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
+    html_source = {key: value for key, value in citi.items() if key != "sitemap_detail_limit"}
+    html_source.update({
+        "discovery_method": METHOD,
+        "source_url": "https://www.citigroup.com/global/news/press-release",
+        "detail_fallback_limit": 3,
+    })
+    return html_source
+
+
 class SequenceHttp:
     def __init__(self, responses):
         self.responses = list(responses)
@@ -619,10 +632,12 @@ class SequenceHttp:
 
 
 def test_citi_source_is_parked_without_network_requests():
+    from discovery.institutional_sitemap import InstitutionalPressSitemapDiscovery
+
     citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
     http = SequenceHttp([])
 
-    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+    result = InstitutionalPressSitemapDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert citi["enabled"] is False
     assert result.status == "not_configured"
@@ -650,11 +665,7 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
         article_url,
     )
     http = SequenceHttp([index, detail])
-    citi = next(
-        item for item in load_discovery_sources()
-        if item["source_id"] == "citi-press-releases"
-    )
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi_html_test_source(), "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap strategy.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial"
@@ -681,8 +692,7 @@ def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
         article_url,
     )
     http = SequenceHttp([index, detail])
-    citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi_html_test_source(), "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap strategy.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial", result.errors
@@ -706,11 +716,7 @@ def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
         "https://www.citigroup.com/global/news/press-release/2026/citi-example",
     )
     http = SequenceHttp([index, detail])
-    citi = next(
-        item for item in load_discovery_sources()
-        if item["source_id"] == "citi-press-releases"
-    )
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi_html_test_source(), "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap strategy.
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "failed"
