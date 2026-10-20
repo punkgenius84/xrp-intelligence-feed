@@ -5,6 +5,7 @@ from scripts.probe_citi_global_news_index import (
     NEWS_URL,
     _embedded_official_article_urls,
     _embedded_record_shape_diagnostics,
+    _jsonld_article_metadata,
     _next_data_candidates,
     probe_citi_global_news_index,
 )
@@ -279,3 +280,52 @@ def test_citi_embedded_official_routes_are_bounded_and_allowlisted():
         "https://www.citigroup.com/global/news/press-release/2026/first-release/",
         "https://www.citigroup.com/global/news/press-release/2026/second-release/",
     ]
+
+
+def test_citi_jsonld_article_metadata_requires_explicit_date_and_matching_official_url():
+    from discovery.dispatch import load_discovery_sources
+    from scripts.probe_citi_global_news_index import ROOT
+
+    source = next(
+        item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+        if item["source_id"] == "citi-press-releases"
+    )
+    source = {**source, "source_url": NEWS_URL}
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/citi-example-release/"
+
+    payload = {
+        "@type": "NewsArticle",
+        "headline": "Citi Announces Example Release",
+        "datePublished": "2026-10-18T09:30:00-04:00",
+        "url": article_url,
+    }
+    html = (
+        '<script type="application/ld+json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    rows = _jsonld_article_metadata(source, article_url, html)
+
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Citi Announces Example Release"
+    assert rows[0]["date"].isoformat() == "2026-10-18T13:30:00+00:00"
+
+    wrong_url = {
+        **payload,
+        "url": "https://www.citigroup.com/global/news/press-release/2026/a-different-release/",
+    }
+    wrong_html = (
+        '<script type="application/ld+json">'
+        + json.dumps(wrong_url)
+        + "</script>"
+    ).encode()
+    assert _jsonld_article_metadata(source, article_url, wrong_html) == []
+
+    missing_date = {key: value for key, value in payload.items() if key != "datePublished"}
+    missing_html = (
+        '<script type="application/ld+json">'
+        + json.dumps(missing_date)
+        + "</script>"
+    ).encode()
+    assert _jsonld_article_metadata(source, article_url, missing_html) == []
