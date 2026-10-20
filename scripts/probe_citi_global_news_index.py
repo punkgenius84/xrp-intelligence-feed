@@ -127,6 +127,88 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
     return sorted(rows.values(), key=lambda row: (row["date"], row["native_id"]), reverse=True)
 
 
+
+def _embedded_record_shape_diagnostics(source: dict, content: bytes) -> str:
+    """Report bounded key-shape counts for route-bearing embedded records, never values."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return "embedded_record_shapes unavailable=decode_error"
+    route_re = re.compile(
+        r"(?:https://(?:www\.)?citigroup\.com)?/global/news/press-release/20\d{2}/[a-z0-9-]+",
+        re.IGNORECASE,
+    )
+    route_keys = {"url", "href", "link", "path", "route", "slug", "nativeid", "canonicalurl", "canonical_url"}
+    title_keys = {"title", "headline", "name"}
+    date_keys = {
+        "date", "datepublished", "publishedat", "published_at", "publishdate", "publish_date",
+        "publicationdate", "publication_date", "createdat", "created_at", "modifiedat", "modified_at",
+    }
+    objects = 0
+    route_objects = route_title = route_date = route_title_date = 0
+    shapes = []
+    scripts = re.finditer(
+        r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def walk(value):
+        stack = [value]
+        visited = 0
+        while stack and visited < 30000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                yield item
+                stack.extend(item.values())
+            elif isinstance(item, list):
+                stack.extend(item)
+
+    inspected = 0
+    for match in scripts:
+        attrs, body = match.group("attrs"), match.group("body")
+        if not re.search(
+            r"""\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__')|\btype\s*=\s*(?:"application/json"|'application/json')""",
+            attrs,
+            re.IGNORECASE,
+        ):
+            continue
+        if len(body) > 300000 or inspected >= 3:
+            continue
+        inspected += 1
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        for item in walk(payload):
+            objects += 1
+            normalized = {str(key).casefold(): value for key, value in item.items()}
+            found_route_keys = sorted(
+                key for key in route_keys
+                if isinstance(normalized.get(key), str) and route_re.search(normalized[key])
+            )
+            if not found_route_keys:
+                continue
+            has_title = any(isinstance(normalized.get(key), str) and normalized[key].strip() for key in title_keys)
+            has_date = any(isinstance(normalized.get(key), str) and normalized[key].strip() for key in date_keys)
+            route_objects += 1
+            route_title += int(has_title)
+            route_date += int(has_date)
+            route_title_date += int(has_title and has_date)
+            if len(shapes) < 4:
+                shapes.append({
+                    "keys": sorted(str(key).casefold()[:40] for key in item.keys())[:18],
+                    "route_keys": found_route_keys,
+                    "title_keys": sorted(key for key in title_keys if isinstance(normalized.get(key), str)),
+                    "date_keys": sorted(key for key in date_keys if isinstance(normalized.get(key), str)),
+                })
+    return (
+        f"embedded_record_shapes scripts={inspected} objects={objects} route_objects={route_objects} "
+        f"route_with_title={route_title} route_with_date={route_date} "
+        f"route_with_title_and_date={route_title_date} key_shapes={shapes}"
+    )
+
 def probe_citi_global_news_index(http=None) -> str:
     """Read-only probe of Citi's broader official news index; no state writes or activation."""
     client = http or BoundedHttpClient(
@@ -185,6 +267,7 @@ def probe_citi_global_news_index(http=None) -> str:
             f"  {_index_diagnostics(source, response.content, response)}",
             f"  {_html_resource_diagnostics(response.content)}",
             f"  {_embedded_json_diagnostics(response.content)}",
+            f"  {_embedded_record_shape_diagnostics(source, response.content)}",
             f"  {_probe_citi_js_assets(client, response.content, response.url)}",
         ])
         return "\n".join(lines)
