@@ -97,6 +97,11 @@ def test_next_data_probe_extracts_only_records_with_same_object_title_url_and_da
                         "url": "https://attacker.example/global/news/press-release/2026/attack",
                         "publishDate": "2026-10-01T12:00:00Z",
                     },
+                    {
+                        "title": "Malformed URL must be rejected without crashing",
+                        "url": "https://[invalid",
+                        "publishDate": "2026-10-01T12:00:00Z",
+                    },
                 ]
             }
         }
