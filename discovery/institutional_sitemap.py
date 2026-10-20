@@ -22,9 +22,8 @@ METHOD = "institutional_press_sitemap"
 MAX_SITEMAP_BYTES = 2_000_000
 MAX_SITEMAPS = 3
 MAX_DETAIL_FETCHES = 10
-_SITEMAP_REQUEST_ID = "sitemap:" + hashlib.sha256(
-    b"https://www.citigroup.com/global/sitemap.xml"
-).hexdigest()[:16]
+def _sitemap_request_id(source_url: str) -> str:
+    return "sitemap:" + hashlib.sha256(source_url.encode("utf-8")).hexdigest()[:16]
 
 
 def _safe_sitemap_url(source: dict[str, Any], value: object) -> str | None:
@@ -172,7 +171,8 @@ class InstitutionalPressSitemapDiscovery:
         if not isinstance(previous_pagination, dict):
             previous_pagination = {}
         previous_digest = previous_pagination.get("citi_sitemap_sha256")
-        validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], _SITEMAP_REQUEST_ID)
+        request_id = _sitemap_request_id(self.source["source_url"])
+        validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], request_id)
         errors: list[str] = []
         updates: dict[str, dict[str, str]] = {}
 
@@ -191,7 +191,7 @@ class InstitutionalPressSitemapDiscovery:
             )
 
         if response.status_code == 304:
-            updates[_SITEMAP_REQUEST_ID] = {
+            updates[request_id] = {
                 key: response.headers.get(key, validators.get(key, ""))
                 for key in ("etag", "last_modified")
                 if response.headers.get(key, validators.get(key, ""))
@@ -255,7 +255,7 @@ class InstitutionalPressSitemapDiscovery:
                 self.source["source_id"], METHOD, "empty", fetched_at=fetched_at,
                 pagination={"citi_sitemap_sha256": digest},
                 state_updates={
-                    _SITEMAP_REQUEST_ID: {
+                    request_id: {
                         key: response.headers[key]
                         for key in ("etag", "last_modified") if response.headers.get(key)
                     }
@@ -308,7 +308,7 @@ class InstitutionalPressSitemapDiscovery:
         )[:self.source["max_items"]]
         status = "partial" if errors and ordered else "failed" if errors else "empty" if not ordered else "success"
         if status in {"success", "empty"}:
-            updates[_SITEMAP_REQUEST_ID] = {
+            updates[request_id] = {
                 key: response.headers[key]
                 for key in ("etag", "last_modified") if response.headers.get(key)
             }
