@@ -81,6 +81,9 @@ jobs:
       - name: Probe Citi official sitemap (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_citi_sitemap.py
+      - name: Probe Citi production sitemap collector (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_citi_production_sitemap_collector.py
       - name: Restore persistent state
         id: state_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
