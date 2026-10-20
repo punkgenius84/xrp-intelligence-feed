@@ -53,6 +53,12 @@ jobs:
         run: >-
           python scripts/quarantine_generic_intelligence_event.py
           --event-id "$EVENT_ID"
+      - name: Save intelligence quarantine
+        if: success() && hashFiles('state/intelligence_quarantine.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-main-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
       - name: Save persistent state
         if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -66,9 +72,3 @@ jobs:
             state/outbox.json
             state/delivery_history.json
           key: xrp-state-main-v1-maintenance-${{ github.run_id }}-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
-      - name: Save intelligence quarantine
-        if: success() && hashFiles('state/intelligence_quarantine.json') != ''
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: state/intelligence_quarantine.json
-          key: xrp-intelligence-quarantine-main-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
