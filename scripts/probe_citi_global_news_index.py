@@ -106,7 +106,10 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
             title = _clean(re.sub(r"<[^>]+>", " ", title_value))
             if len(title) < 12 or title.casefold() in {"read more", "learn more", "view more", "press release"}:
                 continue
-            safe = _official_article(source, href_value)
+            try:
+                safe = _official_article(source, href_value)
+            except (TypeError, ValueError):
+                continue
             published = _parse_date(date_value, source.get("numeric_date_order", "mdy"))
             if safe is None or published is None:
                 continue
