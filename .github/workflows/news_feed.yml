@@ -51,6 +51,9 @@ jobs:
       # CI/test tooling lives in the development requirements file; runtime requirements stay lean.
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
+      - name: Probe Coinbase article-owned publication metadata (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_coinbase_article_metadata.py
       - name: Probe Coinbase official RSS (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_blog_rss.py

@@ -29,6 +29,7 @@ from intelligence.buried_signals import detect_buried_signals
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
+from intelligence.event_quality import has_only_generic_evidence_titles
 from sources.registry import SourceRegistryError, enabled_sources
 from storage.correlation_state import CorrelationStateError, JsonCorrelationState
 from storage.database import JsonState, StateFileError
@@ -736,16 +737,9 @@ def publish_intelligence_events(
         item for item in pending
         if not any(evidence.url.strip() for evidence in item.event.evidence)
     ]
-    generic_titles = {
-        "read more", "learn more", "click here", "view more", "more", "details",
-    }
     generic_title_pending = [
         item for item in pending
-        if item.event.evidence and all(
-            str(evidence.title or "").strip().casefold() in generic_titles
-            or not str(evidence.title or "").strip()
-            for evidence in item.event.evidence
-        )
+        if has_only_generic_evidence_titles(item.event)
     ]
     if generic_title_pending:
         generic_keys = {item.key for item in generic_title_pending}
