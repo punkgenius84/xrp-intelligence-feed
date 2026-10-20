@@ -459,7 +459,7 @@ def test_citi_next_data_urls_are_derived_from_bounded_official_bootstrap():
     assert _next_data_request_urls(html, "https://attacker.example/global/news") == []
 
 
-def test_citi_config_uses_broader_official_index_but_stays_disabled():
+def test_citi_config_uses_broader_official_index_and_enabled_sitemap():
     from pathlib import Path
     from discovery.dispatch import load_discovery_sources
 
@@ -468,5 +468,7 @@ def test_citi_config_uses_broader_official_index_but_stays_disabled():
     citi = next(source for source in sources if source["source_id"] == "citi-press-releases")
 
     assert citi["source_url"] == NEWS_URL
-    assert citi["enabled"] is False
+    assert citi["enabled"] is True
+    assert citi["sitemap_url"] == "https://www.citigroup.com/global/sitemap.xml"
+    assert citi["sitemap_detail_limit"] == 10
     assert citi["allowed_hosts"] == ["www.citigroup.com", "citigroup.com"]
