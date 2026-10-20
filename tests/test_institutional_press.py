@@ -655,7 +655,9 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
         item for item in load_discovery_sources()
         if item["source_id"] == "citi-press-releases"
     )
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
+    citi.pop("sitemap_url", None)
+    citi.pop("sitemap_detail_limit", None)
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
@@ -685,7 +687,9 @@ def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
     )
     http = SequenceHttp([index, detail])
     citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
+    citi.pop("sitemap_url", None)
+    citi.pop("sitemap_detail_limit", None)
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
@@ -715,7 +719,9 @@ def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
         item for item in load_discovery_sources()
         if item["source_id"] == "citi-press-releases"
     )
-    citi = {**citi, "enabled": True}  # Exercise parser behavior while production source is parked.
+    citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
+    citi.pop("sitemap_url", None)
+    citi.pop("sitemap_detail_limit", None)
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
@@ -1707,7 +1713,7 @@ def test_institutional_sitemap_collector_uses_official_detail_dates_and_never_la
 
     http = SitemapHttp()
     result = InstitutionalPressDiscovery(
-        source_config, http=http, now=lambda: STAMP
+        source_config, http=http, now=lambda: datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
     ).collect(source_state={})
 
     assert result.status == "success"
