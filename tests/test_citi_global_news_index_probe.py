@@ -213,7 +213,7 @@ def test_citi_embedded_record_shape_diagnostics_report_structure_not_values():
 def test_citi_embedded_record_shape_diagnostics_bounds_oversized_scripts():
     html = (
         '<script id="__NEXT_DATA__" type="application/json">'
-        + json.dumps({"releases": [{"url": "/global/news/press-release/2026/example", "title": "x"}], "large": "x" * 350_000})
+        + json.dumps({"releases": [{"url": "/global/news/press-release/2026/example", "title": "x"}], "large": "x" * 1_600_000})
         + "</script>"
     ).encode()
 

@@ -63,7 +63,7 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
         ):
             continue
         body = script.group("body")
-        if len(body) > 300000 or inspected >= 3:
+        if len(body) > 1500000 or inspected >= 3:
             continue
         inspected += 1
         try:
