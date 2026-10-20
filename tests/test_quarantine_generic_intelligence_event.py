@@ -160,6 +160,9 @@ def test_maintenance_workflow_is_manual_nonpublishing_and_saves_audit_first():
         "name: Save persistent state"
     )
     assert "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9" in workflow
+    assert "key: xrp-state-main-v1-restore" in workflow
+    assert "key: xrp-state-main-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in workflow
+    assert "key: xrp-state-main-v1-maintenance-" not in workflow
 
 
 def test_refuses_same_key_with_changed_event_content(tmp_path):
