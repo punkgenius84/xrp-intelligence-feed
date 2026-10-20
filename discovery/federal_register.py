@@ -252,38 +252,63 @@ class FederalRegisterDiscovery:
                 if total_pages is not None and page > total_pages:
                     return True
                 query_url = self._query_url(term, page, cutoff.isoformat())
-                requests_made += 1
-                try:
-                    response = self.http.get(query_url, expected_content_types=("application/json", "text/json"))
-                    payload = json.loads(response.content.decode("utf-8"))
-                    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
-                        raise ValueError("Federal Register API response must contain a results list")
-                    reported_pages = payload.get("total_pages")
-                    if type(reported_pages) is int and reported_pages >= 0:
-                        if total_pages is None:
-                            total_pages = reported_pages
-                        elif total_pages != reported_pages:
-                            total_pages_trustworthy = False
-                    elif "total_pages" in payload:
+                payload: object = None
+                for attempt in range(2):
+                    requests_made += 1
+                    try:
+                        response = self.http.get(
+                            query_url,
+                            expected_content_types=("application/json", "text/json"),
+                        )
+                        payload = json.loads(response.content.decode("utf-8"))
+                    except DiscoveryHttpError as exc:
+                        errors.append(
+                            f"{exc.kind}" + (f" (HTTP {exc.status_code})" if exc.status_code else "")
+                        )
+                        term_complete = False
+                        return False
+                    except (UnicodeError, json.JSONDecodeError) as exc:
+                        errors.append(str(exc) or "Malformed Federal Register API response")
+                        term_complete = False
+                        return False
+
+                    if isinstance(payload, dict) and isinstance(payload.get("results"), list):
+                        break
+                    if attempt == 0:
+                        # The API has occasionally returned a JSON error object with
+                        # HTTP 200. Retry this exact page once; never advance pagination
+                        # or accept candidates until the expected schema is present.
+                        continue
+
+                    errors.append("Federal Register API response must contain a results list")
+                    term_complete = False
+                    return False
+
+                if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+                    errors.append("Federal Register API response must contain a results list")
+                    term_complete = False
+                    return False
+
+                reported_pages = payload.get("total_pages")
+                if type(reported_pages) is int and reported_pages >= 0:
+                    if total_pages is None:
+                        total_pages = reported_pages
+                    elif total_pages != reported_pages:
                         total_pages_trustworthy = False
-                    ids: list[str] = []
-                    for row in payload["results"]:
-                        try:
-                            candidate = self._candidate(row, query_url, fetched_at)
-                        except (ValueError, TypeError) as exc:
-                            errors.append(str(exc))
-                            term_complete = False
-                            continue
-                        candidates.setdefault(candidate.source_native_id, candidate)
-                        ids.append(candidate.source_native_id)
-                    page_rows[page] = ids
-                    return True
-                except DiscoveryHttpError as exc:
-                    errors.append(f"{exc.kind}" + (f" (HTTP {exc.status_code})" if exc.status_code else ""))
-                except (UnicodeError, json.JSONDecodeError, ValueError, TypeError) as exc:
-                    errors.append(str(exc) or "Malformed Federal Register API response")
-                term_complete = False
-                return False
+                elif "total_pages" in payload:
+                    total_pages_trustworthy = False
+                ids: list[str] = []
+                for row in payload["results"]:
+                    try:
+                        candidate = self._candidate(row, query_url, fetched_at)
+                    except (ValueError, TypeError) as exc:
+                        errors.append(str(exc))
+                        term_complete = False
+                        continue
+                    candidates.setdefault(candidate.source_native_id, candidate)
+                    ids.append(candidate.source_native_id)
+                page_rows[page] = ids
+                return True
 
             # Refresh the first two pages on every run; avoid asking for pages
             # the API has explicitly said do not exist.
