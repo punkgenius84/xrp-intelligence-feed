@@ -139,7 +139,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit", "track_undated_observations"}
+    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit", "track_undated_observations", "sitemap_url", "sitemap_detail_limit"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
         raise ValueError(f"Institutional source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
@@ -159,6 +159,15 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         raise ValueError("allowed_hosts must be a non-empty list")
     if any(not isinstance(host, str) or not host.strip() for host in source["allowed_hosts"]):
         raise ValueError("allowed_hosts must contain non-empty strings")
+    if "sitemap_url" in source and (
+        not isinstance(source["sitemap_url"], str) or _safe_sitemap_url(source, source["sitemap_url"]) is None
+    ):
+        raise ValueError("sitemap_url must be an allowlisted HTTPS URL under /global/")
+    if "sitemap_detail_limit" in source and (
+        type(source["sitemap_detail_limit"]) is not int
+        or not 1 <= source["sitemap_detail_limit"] <= _SITEMAP_MAX_DETAIL_PAGES
+    ):
+        raise ValueError(f"sitemap_detail_limit must be an integer from 1 to {_SITEMAP_MAX_DETAIL_PAGES}")
     if "native_id_query_param" in source and (
         not isinstance(source["native_id_query_param"], str) or not source["native_id_query_param"].strip()
     ):
