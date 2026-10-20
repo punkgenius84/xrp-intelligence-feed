@@ -187,6 +187,23 @@ def test_transient_api_schema_error_retries_same_page_once_without_poisoning_sta
     assert first_query["conditions[term]"] == retry_query["conditions[term]"] == ["digital assets"]
 
 
+def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
+    source = fr_source(search_terms=["digital assets"])
+    previous = fr_state("2026-00100", 3)
+    http = FakeHttp([
+        api_response({"message": "temporary upstream error"}),
+        api_response({"message": "temporary upstream error"}),
+    ])
+
+    result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect(previous)
+
+    assert result.status == "failed"
+    assert len(http.calls) == 2
+    assert any("term='digital assets'" in error and "page=1" in error for error in result.errors)
+    saved = result.pagination["federal_register_terms"]["digital assets"]
+    assert saved == previous["sources"]["federal-register-api"]["pagination"]["federal_register_terms"]["digital assets"]
+
+
 def test_pagination_is_bounded_even_when_api_claims_many_pages():
     source = fr_source(search_terms=["digital assets", "stablecoin"])
     state = fr_state("2026-00101", 3)
