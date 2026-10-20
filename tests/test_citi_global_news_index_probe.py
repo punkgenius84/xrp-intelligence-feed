@@ -455,3 +455,16 @@ def test_citi_next_data_urls_are_derived_from_bounded_official_bootstrap():
         "https://www.citigroup.com/_next/data/build-2026_10/global/news.json",
     ]
     assert _next_data_request_urls(html, "https://attacker.example/global/news") == []
+
+
+def test_citi_config_uses_broader_official_index_but_stays_disabled():
+    from pathlib import Path
+    from discovery.dispatch import load_discovery_sources
+
+    root = Path(__file__).resolve().parents[1]
+    sources = load_discovery_sources(root / "config" / "discovery_sources.json")
+    citi = next(source for source in sources if source["source_id"] == "citi-press-releases")
+
+    assert citi["source_url"] == NEWS_URL
+    assert citi["enabled"] is False
+    assert citi["allowed_hosts"] == ["www.citigroup.com", "citigroup.com"]
