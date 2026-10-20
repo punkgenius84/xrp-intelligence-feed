@@ -3,6 +3,7 @@ import json
 from discovery.http import HttpResponse
 from scripts.probe_citi_global_news_index import (
     NEWS_URL,
+    _embedded_record_shape_diagnostics,
     _next_data_candidates,
     probe_citi_global_news_index,
 )
@@ -175,3 +176,48 @@ def test_next_data_probe_accepts_full_official_route_in_slug_field():
     assert len(rows) == 1
     assert rows[0]["title"] == "Citi Token Services expands digital asset infrastructure"
     assert rows[0]["date"].isoformat() == "2026-09-28T00:00:00+00:00"
+
+
+def test_citi_embedded_record_shape_diagnostics_report_structure_not_values():
+    payload = {
+        "releases": [
+            {
+                "url": "/global/news/press-release/2026/citi-example-release",
+                "title": "Sensitive headline should not be logged",
+                "publishDate": "2026-10-18",
+            },
+            {
+                "slug": "/global/news/press-release/2026/citi-second-release",
+                "title": "Another headline should not be logged",
+            },
+        ]
+    }
+    html = (
+        '<html><script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script></html>"
+    ).encode()
+
+    result = _embedded_record_shape_diagnostics({}, html)
+
+    assert "route_objects=2" in result
+    assert "route_with_title=2" in result
+    assert "route_with_date=1" in result
+    assert "route_with_title_and_date=1" in result
+    assert "publishdate" in result
+    assert "Sensitive headline should not be logged" not in result
+    assert "Another headline should not be logged" not in result
+    assert len(result) < 3000
+
+
+def test_citi_embedded_record_shape_diagnostics_bounds_oversized_scripts():
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps({"releases": [{"url": "/global/news/press-release/2026/example", "title": "x"}], "large": "x" * 350_000})
+        + "</script>"
+    ).encode()
+
+    result = _embedded_record_shape_diagnostics({}, html)
+
+    assert "route_objects=0" in result
+    assert "route_with_title_and_date=0" in result
