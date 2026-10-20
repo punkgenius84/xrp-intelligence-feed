@@ -280,9 +280,21 @@ class FederalRegisterDiscovery:
                         # or accept candidates until the expected schema is present.
                         continue
 
+                    if isinstance(payload, dict):
+                        payload_keys = sorted(str(key) for key in payload)[:8]
+                        response_shape = f"payload_keys={payload_keys!r}"
+                        api_message = payload.get("message")
+                        if not isinstance(api_message, str):
+                            api_message = payload.get("error")
+                        if isinstance(api_message, str):
+                            api_message = " ".join(api_message.split())[:120]
+                            response_shape += f", api_message={api_message!r}"
+                    else:
+                        response_shape = f"payload_type={type(payload).__name__}"
+
                     errors.append(
                         "Federal Register API response must contain a results list "
-                        f"(term={term!r}, page={page}, attempts=2)"
+                        f"(term={term!r}, page={page}, attempts=2, {response_shape})"
                     )
                     term_complete = False
                     return False
