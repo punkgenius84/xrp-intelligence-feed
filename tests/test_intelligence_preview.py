@@ -14,7 +14,13 @@ from storage.intelligence_outbox import JsonIntelligenceOutboxState
 STAMP = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
 
 
-def _event(event_id: str, summary: str) -> IntelligenceEvent:
+def _event(
+    event_id: str,
+    summary: str,
+    *,
+    published_at: datetime | str = STAMP,
+    title: str = "Official release headline",
+) -> IntelligenceEvent:
     return IntelligenceEvent(
         event_id=event_id,
         event_type="announcement",
@@ -25,8 +31,8 @@ def _event(event_id: str, summary: str) -> IntelligenceEvent:
                 source_id="official-source",
                 source="Official source",
                 url="https://example.com/official-release",
-                published_at=STAMP.isoformat(),
-                title="Official release headline",
+                published_at=published_at.isoformat() if isinstance(published_at, datetime) else published_at,
+                title=title,
                 source_quality="primary",
             )
         ],
@@ -54,6 +60,45 @@ def test_preview_reports_queued_event_evidence_without_mutating_state(tmp_path):
     assert "Second queued intelligence summary" not in output
     assert "Read-only preview" in output
     assert path.read_bytes() == before
+
+
+def test_preview_labels_stale_undated_and_generic_title_evidence(tmp_path):
+    path = tmp_path / "intelligence_outbox.json"
+    store = JsonIntelligenceOutboxState(path)
+    store.enqueue(
+        [
+            _event(
+                "evt-stale-generic",
+                "Old event with generic evidence",
+                published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                title="Read More",
+            ),
+            _event(
+                "evt-undated",
+                "Event with no parseable evidence date",
+                published_at="not-a-date",
+            ),
+            _event(
+                "evt-near-future",
+                "Event with an allowed near-future timestamp",
+                published_at=datetime(2026, 10, 21, 0, tzinfo=timezone.utc),
+            ),
+        ],
+        queued_at=STAMP,
+    )
+
+    output = render_preview(
+        path,
+        limit=5,
+        now=datetime(2026, 10, 20, 12, tzinfo=timezone.utc),
+        stale_after_days=30,
+    )
+
+    assert "evidence_freshness=stale latest_evidence_date=2026-08-01 age_days=80" in output
+    assert "generic_evidence_titles_only=true" in output
+    assert "evidence_freshness=undated latest_evidence_date=none" in output
+    assert "evidence_freshness=fresh latest_evidence_date=2026-10-21 age_days=0" in output
+    assert "generic_evidence_titles_only=false" in output
 
 
 def test_preview_cli_runs_from_outside_repository_root(tmp_path):
