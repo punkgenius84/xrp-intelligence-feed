@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from intelligence.event_quality import has_only_generic_evidence_titles
+from intelligence.events import event_to_dict
 from storage.intelligence_outbox import (
     IntelligenceOutboxError,
     JsonIntelligenceOutboxState,
@@ -47,6 +48,20 @@ def quarantine_event(
     if not has_only_generic_evidence_titles(item.event):
         raise ValueError(
             f"event {event_id!r} has descriptive evidence; refusing to quarantine it"
+        )
+
+    # An existing audit record with the same key must be an exact match. The
+    # quarantine store intentionally preserves the first record for a key, so
+    # removing changed queue content on a key collision could lose that content.
+    existing = {record.key: record for record in quarantine.load()}
+    prior = existing.get(item.key)
+    if prior is not None and (
+        event_to_dict(prior.event) != event_to_dict(item.event)
+        or prior.queued_at != item.queued_at
+    ):
+        raise ValueError(
+            f"quarantine already contains different content for event {event_id!r}; "
+            "active queue was left unchanged"
         )
 
     # Audit persistence must succeed before active-queue removal. If removal fails,
