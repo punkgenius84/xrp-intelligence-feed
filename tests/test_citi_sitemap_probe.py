@@ -51,3 +51,39 @@ def test_citi_sitemap_candidate_order_uses_lastmod_only_for_bounded_fetch_priori
         "https://www.citigroup.com/global/news/press-release/2026/older/",
         "https://www.citigroup.com/global/news/press-release/2026/undated/",
     ]
+
+
+def test_live_probe_exercises_collector_in_memory_without_persisting_state():
+    from datetime import datetime, timezone
+    from discovery.http import HttpResponse
+    from scripts.probe_citi_sitemap import probe_citi_sitemap_collector
+
+    sitemap_url = "https://www.citigroup.com/global/sitemap.xml"
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/example-release"
+    sitemap = (
+        b'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        + f"<url><loc>{article_url}</loc><lastmod>2026-10-20</lastmod></url>".encode()
+        + b"</urlset>"
+    )
+    article_date = datetime.now(timezone.utc).strftime("%B %d, %Y")
+    detail = f"<html><h1>Citi Example Release</h1><p>{article_date}</p></html>".encode()
+
+    class FakeHttp:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, url, **kwargs):
+            self.calls.append(url)
+            if url == sitemap_url:
+                return HttpResponse(200, {"content-type": "application/xml"}, sitemap, url)
+            if url.rstrip("/") == article_url:
+                return HttpResponse(200, {"content-type": "text/html"}, detail, article_url + "/")
+            raise AssertionError(f"unexpected URL: {url}")
+
+    http = FakeHttp()
+    output = probe_citi_sitemap_collector(http)
+
+    assert "status=success candidates=1 errors=0" in output
+    assert "published_at=" in output
+    assert "persistent_writes=0 publishing=disabled" in output
+    assert len(http.calls) == 2
