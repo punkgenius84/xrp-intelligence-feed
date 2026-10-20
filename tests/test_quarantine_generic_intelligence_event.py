@@ -160,3 +160,46 @@ def test_maintenance_workflow_is_manual_nonpublishing_and_saves_audit_first():
         "name: Save persistent state"
     )
     assert "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9" in workflow
+
+
+def test_refuses_same_key_with_changed_event_content(tmp_path):
+    outbox, quarantine, outbox_path, quarantine_path = stores(tmp_path)
+    queued = outbox.enqueue([event("evt-collision", "Read More")], queued_at=STAMP)
+    quarantine.quarantine(
+        queued,
+        reason="earlier malformed version",
+        quarantined_at=STAMP,
+    )
+    outbox.enqueue([event("evt-collision", "Learn More")], queued_at=STAMP)
+
+    with pytest.raises(ValueError, match="different content"):
+        quarantine_event(
+            "evt-collision",
+            outbox_path=outbox_path,
+            quarantine_path=quarantine_path,
+            now=STAMP,
+        )
+
+    assert [item.event.evidence[0].title for item in outbox.load()] == ["Learn More"]
+    assert [item.event.evidence[0].title for item in quarantine.load()] == ["Read More"]
+
+
+def test_identical_existing_quarantine_record_allows_safe_retry(tmp_path):
+    outbox, quarantine, outbox_path, quarantine_path = stores(tmp_path)
+    queued = outbox.enqueue([event("evt-retry", "Read More")], queued_at=STAMP)
+    quarantine.quarantine(
+        queued,
+        reason="earlier malformed version",
+        quarantined_at=STAMP,
+    )
+
+    quarantine_event(
+        "evt-retry",
+        outbox_path=outbox_path,
+        quarantine_path=quarantine_path,
+        now=STAMP,
+    )
+
+    assert outbox.load() == []
+    assert len(quarantine.load()) == 1
+    assert quarantine.load()[0].reason == "earlier malformed version"
