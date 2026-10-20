@@ -15,6 +15,8 @@ from discovery.http import BoundedHttpClient, DiscoveryHttpError
 
 URL = "https://www.coinbase.com/blog/coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
 TARGET_PATH = urlsplit(URL).path
+LOCALIZED_URL = "https://www.coinbase.com/en-ca" + TARGET_PATH
+LOCALIZED_TARGET_PATH = urlsplit(LOCALIZED_URL).path
 HOSTS = {"www.coinbase.com", "coinbase.com"}
 
 
@@ -29,7 +31,7 @@ def _official_url(value: object) -> bool:
         and parts.port in (None, 443)
         and parts.username is None
         and parts.password is None
-        and parts.path.rstrip("/") == TARGET_PATH
+        and parts.path.rstrip("/") in {TARGET_PATH, LOCALIZED_TARGET_PATH}
     )
 
 
@@ -178,8 +180,56 @@ def probe_coinbase_article_metadata(http=None) -> str:
     return "status=official_page_date_unresolved"
 
 
+def probe_coinbase_localized_article_metadata(http=None) -> str:
+    """Check the same official article's localized route for explicit article-owned dates."""
+    client = http or BoundedHttpClient(
+        user_agent="XRPIntelligenceFeed/0.4 (+read-only Coinbase localized metadata diagnostic)",
+        timeout=(3.0, 8.0),
+        max_bytes=2_000_000,
+        max_redirects=2,
+        max_attempts=1,
+    )
+    try:
+        response = client.get(LOCALIZED_URL, expected_content_types=("text/html",))
+    except DiscoveryHttpError as exc:
+        suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+        return f"status=unavailable reason={exc.kind}{suffix}"
+    if response.status_code != 200:
+        return f"status=unavailable reason=unexpected_http_status http_status={response.status_code}"
+    final = urlsplit(response.url)
+    if (
+        final.scheme.lower() != "https"
+        or final.hostname is None
+        or final.hostname.casefold() not in HOSTS
+        or final.port not in (None, 443)
+        or final.username is not None
+        or final.password is not None
+        or final.path.rstrip("/") != LOCALIZED_TARGET_PATH
+    ):
+        return "status=rejected reason=non_official_final_url"
+    content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "text/html":
+        return f"status=rejected reason=unexpected_content_type content_type={content_type or 'missing'}"
+    try:
+        html = response.content.decode("utf-8-sig")
+        parser = _ArticleMetadataParser()
+        parser.feed(html)
+        parser.close()
+    except (UnicodeDecodeError, ValueError):
+        return "status=invalid_page reason=html_decode_or_parse_error"
+    candidates = parser.meta_dates + parser.itemprop_dates + _jsonld_dates(parser)
+    normalized = {_normalize_date(value) for value in candidates}
+    normalized.discard(None)
+    if len(normalized) == 1:
+        return f"status=localized_official_metadata_date date={next(iter(normalized))}"
+    if len(normalized) > 1:
+        return f"status=conflicting_localized_metadata_date distinct_dates={len(normalized)}"
+    return "status=localized_official_page_date_unresolved"
+
+
 def main() -> None:
     print(f"Coinbase official article metadata diagnostic: {probe_coinbase_article_metadata()}")
+    print(f"Coinbase localized official article metadata diagnostic: {probe_coinbase_localized_article_metadata()}")
 
 
 if __name__ == "__main__":
