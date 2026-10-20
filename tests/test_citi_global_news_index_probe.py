@@ -421,8 +421,8 @@ def test_citi_collector_probe_uses_temporary_enable_and_never_persists_state():
 
         def get(self, url, **kwargs):
             self.calls.append(url)
-            if url == NEWS_URL:
-                return HttpResponse(200, {"content-type": "text/html"}, index, NEWS_URL)
+            if url.rstrip("/").endswith("/global/news/press-release"):
+                return HttpResponse(200, {"content-type": "text/html"}, index, url)
             return HttpResponse(200, {"content-type": "text/html"}, detail, url)
 
     http = RouteAwareHttp()
