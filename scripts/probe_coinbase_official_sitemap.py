@@ -75,13 +75,10 @@ def _sitemap_target_metadata(content: bytes) -> tuple[str, list[str]]:
             fields[local] = (child.text or "").strip()
             if local == "news":
                 for nested in list(child):
-                    if nested.tag.rsplit("}", 1)[-1].casefold() != "publication":
-                        continue
-                    for publication_field in list(nested):
-                        if publication_field.tag.rsplit("}", 1)[-1].casefold() == "publication_date":
-                            value = (publication_field.text or "").strip()
-                            if value:
-                                news_dates.append(value)
+                    if nested.tag.rsplit("}", 1)[-1].casefold() == "publication_date":
+                        value = (nested.text or "").strip()
+                        if value:
+                            news_dates.append(value)
         loc = _official_url(fields.get("loc"))
         if not loc or urlsplit(loc).path.rstrip("/") != TARGET_PATH:
             continue
