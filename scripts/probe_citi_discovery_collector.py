@@ -22,6 +22,7 @@ def probe_citi_discovery_collector(http=None) -> str:
         item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
         if item["source_id"] == "citi-press-releases"
     )
+    base_source = {key: value for key, value in base_source.items() if key != "sitemap_detail_limit"}
     client = http or BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only Citi collector diagnostic)",
         timeout=(3.0, 8.0),
@@ -31,7 +32,7 @@ def probe_citi_discovery_collector(http=None) -> str:
     )
     lines = []
     for index_name, index_url in (("global_news", NEWS_URL), ("home", HOME_URL)):
-        source = {**base_source, "source_url": index_url, "enabled": True, "detail_fallback_limit": 2}
+        source = {**base_source, "discovery_method": "institutional_press_html", "source_url": index_url, "enabled": True, "detail_fallback_limit": 2}
         result = InstitutionalPressDiscovery(
             source,
             http=client,
