@@ -570,7 +570,7 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
 
 
 def _next_data_request_urls(content: bytes, page_url: str) -> list[str]:
-    """Derive at most two same-host Next.js data URLs from official page bootstrap metadata."""
+    """Derive at most four same-host Next.js data URLs from official page bootstrap metadata."""
     try:
         html = content.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -620,14 +620,16 @@ def _next_data_request_urls(content: bytes, page_url: str) -> list[str]:
     candidates = []
     if asset_prefix:
         candidates.append(f"https://www.citigroup.com{asset_prefix}/_next/data/{build_id}{page_path}.json")
+        candidates.append(f"https://www.citigroup.com{asset_prefix}/_next/data/{build_id}{page_path}/index.json")
     candidates.append(f"https://www.citigroup.com/_next/data/{build_id}{page_path}.json")
+    candidates.append(f"https://www.citigroup.com/_next/data/{build_id}{page_path}/index.json")
     safe = []
     for candidate in candidates:
         parts = urlsplit(candidate)
         if _official_final_url(candidate) and parts.path.startswith("/"):
             if candidate not in safe:
                 safe.append(candidate)
-    return safe[:2]
+    return safe[:4]
 
 
 def _probe_citi_next_data(client, content: bytes, page_url: str) -> str:
