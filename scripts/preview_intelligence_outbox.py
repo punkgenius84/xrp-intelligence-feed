@@ -35,7 +35,7 @@ def _evidence_freshness(event, now: datetime, stale_after_days: int) -> tuple[st
     if not dates:
         return "undated", "none", None
     latest = max(dates)
-    age_days = int((now - latest).total_seconds() // 86400)
+    age_days = max(0, int((now - latest).total_seconds() // 86400))
     if latest > now + timedelta(hours=24):
         return "future-dated", latest.date().isoformat(), age_days
     if latest < now - timedelta(days=stale_after_days):
