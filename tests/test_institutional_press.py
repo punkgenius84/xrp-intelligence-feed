@@ -7,6 +7,7 @@ from discovery.institutional_press import (
     METHOD,
     InstitutionalPressDiscovery,
     _official_article,
+    _parse_sitemap_entries,
     _parse_article_detail,
     _index_request_id,
     _parse_page,
@@ -1659,3 +1660,74 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
     assert result.state_updates == {}
     assert any("malformed article on official index" in error for error in result.errors)
 
+
+
+def test_institutional_sitemap_collector_uses_official_detail_dates_and_never_lastmod():
+    from discovery.institutional_press import InstitutionalPressDiscovery
+
+    source_config = source(
+        source_id="citi-press-releases",
+        name="Citi",
+        source_url="https://www.citigroup.com/global/news",
+        sitemap_url="https://www.citigroup.com/global/sitemap.xml",
+        sitemap_detail_limit=2,
+        enabled=True,
+        allowed_hosts=["www.citigroup.com", "citigroup.com"],
+        article_path_regex=r"/global/news/press-release/\d{4}/[^/?#]+",
+        lookback_days=180,
+    )
+    sitemap = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url><loc>https://www.citigroup.com/global/news/press-release/2026/newest</loc><lastmod>2026-10-19</lastmod></url>
+      <url><loc>https://www.citigroup.com/global/news/press-release/2026/older</loc><lastmod>2026-10-18</lastmod></url>
+      <url><loc>https://attacker.example/global/news/press-release/2026/hostile</loc><lastmod>2026-10-20</lastmod></url>
+    </urlset>"""
+
+    class SitemapHttp:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, url, **kwargs):
+            self.calls.append(url)
+            if url.endswith("/sitemap.xml"):
+                return HttpResponse(200, {"content-type": "application/xml"}, sitemap, url)
+            if url.endswith("/newest"):
+                page = b"<html><h1>Newest Citi Announcement</h1><p>October 17, 2026</p></html>"
+            elif url.endswith("/older"):
+                page = b"<html><h1>Older Citi Announcement</h1><p>October 16, 2026</p></html>"
+            else:
+                raise AssertionError("unexpected URL")
+            return HttpResponse(200, {"content-type": "text/html"}, page, url)
+
+    http = SitemapHttp()
+    result = InstitutionalPressDiscovery(
+        source_config, http=http, now=lambda: STAMP
+    ).collect(source_state={})
+
+    assert result.status == "success"
+    assert [item.title for item in result.candidates] == [
+        "Newest Citi Announcement", "Older Citi Announcement"
+    ]
+    assert [item.published_at.isoformat() for item in result.candidates] == [
+        "2026-10-17T00:00:00+00:00", "2026-10-16T00:00:00+00:00"
+    ]
+    assert all("attacker.example" not in url for url in http.calls)
+    assert result.state_updates == {}
+    assert result.observations == []
+
+
+def test_sitemap_parser_rejects_untrusted_urls_and_malformed_xml():
+    from discovery.institutional_press import _parse_sitemap_entries
+
+    source_config = source(
+        allowed_hosts=["www.citigroup.com", "citigroup.com"],
+        article_path_regex=r"/global/news/press-release/\d{4}/[^/?#]+",
+    )
+    kind, entries = _parse_sitemap_entries(
+        source_config,
+        b'<urlset><url><loc>https://attacker.example/global/sitemap.xml</loc></url>'
+        b'<url><loc>https://www.citigroup.com/global/sitemap.xml</loc></url></urlset>',
+    )
+    assert kind == "urlset"
+    assert entries == [("https://www.citigroup.com/global/sitemap.xml", "")]
+    assert _parse_sitemap_entries(source_config, b"<broken") == ("invalid_xml", [])
