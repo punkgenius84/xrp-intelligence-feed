@@ -283,12 +283,11 @@ class FederalRegisterDiscovery:
                     if isinstance(payload, dict):
                         payload_keys = sorted(str(key) for key in payload)[:8]
                         response_shape = f"payload_keys={payload_keys!r}"
-                        api_message = payload.get("message")
-                        if not isinstance(api_message, str):
-                            api_message = payload.get("error")
-                        if isinstance(api_message, str):
-                            api_message = " ".join(api_message.split())[:120]
-                            response_shape += f", api_message={api_message!r}"
+                        for detail_key in ("message", "error", "description"):
+                            api_detail = payload.get(detail_key)
+                            if isinstance(api_detail, str):
+                                api_detail = " ".join(api_detail.split())[:120]
+                                response_shape += f", api_{detail_key}={api_detail!r}"
                     else:
                         response_shape = f"payload_type={type(payload).__name__}"
 
