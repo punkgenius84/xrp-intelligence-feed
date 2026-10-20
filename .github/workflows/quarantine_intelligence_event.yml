@@ -1,0 +1,74 @@
+name: Quarantine One Malformed Intelligence Event
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "Exact event ID copied from the read-only intelligence outbox preview"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xrp-intelligence-feed
+  cancel-in-progress: false
+
+jobs:
+  quarantine:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Restore persistent state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-main-v1-maintenance-restore
+          restore-keys: |
+            xrp-state-main-v1-
+      - name: Restore intelligence quarantine
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-main-v1-maintenance-restore
+          restore-keys: |
+            xrp-intelligence-quarantine-main-v1-
+      - name: Quarantine exact event (no publishing)
+        env:
+          EVENT_ID: ${{ inputs.event_id }}
+        run: >-
+          python scripts/quarantine_generic_intelligence_event.py
+          --event-id "$EVENT_ID"
+      - name: Save persistent state
+        if: success()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-main-v1-maintenance-${{ github.run_id }}-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+      - name: Save intelligence quarantine
+        if: success() && hashFiles('state/intelligence_quarantine.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-main-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
