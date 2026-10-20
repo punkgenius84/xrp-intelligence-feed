@@ -95,7 +95,7 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
                     normalized[key]
                     for key in (
                         "publishdate", "datepublished", "publishedat", "published_at",
-                        "publicationdate", "publication_date", "createdat", "created_at", "date",
+                        "publicationdate", "publication_date",
                     )
                     if isinstance(normalized.get(key), str)
                 ),
