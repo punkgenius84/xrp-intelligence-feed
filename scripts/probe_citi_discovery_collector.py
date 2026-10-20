@@ -21,7 +21,7 @@ def probe_citi_discovery_collector(http=None) -> str:
     )
     # The source remains disabled in configuration. This diagnostic override is local to
     # this process and proves whether the existing bounded detail fallback can parse it.
-    source = {**source, "enabled": True, "detail_fallback_limit": 2}
+    source = {**source, "source_url": "https://www.citigroup.com/global/news", "enabled": True, "detail_fallback_limit": 2}
     client = http or BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only Citi collector diagnostic)",
         timeout=(3.0, 8.0),
