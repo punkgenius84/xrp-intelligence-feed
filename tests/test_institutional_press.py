@@ -265,7 +265,8 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert citi["enabled"] is False  # Parked until the runner can read an official article index.
+    assert citi["enabled"] is True  # Validated through the official sitemap and article detail pages.
+    assert citi["sitemap_detail_limit"] == 10
     assert citi["detail_fallback_limit"] == 3
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
@@ -273,7 +274,8 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["enabled"] is False
+    assert citi["enabled"] is True
+    assert citi["sitemap_detail_limit"] == 10
     assert citi["detail_fallback_limit"] == 3
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
@@ -619,16 +621,34 @@ class SequenceHttp:
         return self.responses.pop(0)
 
 
-def test_citi_source_is_parked_without_network_requests():
+def test_citi_source_uses_bounded_official_sitemap_and_collects_grounded_detail():
     citi = next(item for item in load_discovery_sources() if item["source_id"] == "citi-press-releases")
-    http = SequenceHttp([])
+    sitemap_url = "https://www.citigroup.com/global/sitemap.xml"
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/configured-source-test"
+    sitemap = (
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"<url><loc>{article_url}</loc><lastmod>2026-10-19</lastmod></url></urlset>"
+    ).encode()
+    detail = b"<html><h1>Citi Configured Source Test</h1><p>October 18, 2026</p></html>"
+    http = SequenceHttp([
+        HttpResponse(200, {"content-type": "application/xml"}, sitemap, sitemap_url),
+        HttpResponse(200, {"content-type": "text/html"}, detail, article_url),
+    ])
 
-    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
+    result = InstitutionalPressDiscovery(
+        citi, http=http, now=lambda: datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
+    ).collect(source_state={})
 
-    assert citi["enabled"] is False
-    assert result.status == "not_configured"
-    assert result.candidates == []
-    assert http.calls == []
+    assert citi["enabled"] is True
+    assert citi["sitemap_url"] == sitemap_url
+    assert citi["sitemap_detail_limit"] == 10
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].title == "Citi Configured Source Test"
+    assert result.candidates[0].published_at.isoformat() == "2026-10-18T00:00:00+00:00"
+    assert result.state_updates == {}
+    assert result.observations == []
+    assert len(http.calls) == 2
 
 
 def test_citi_recovers_featured_release_but_keeps_source_partial():
