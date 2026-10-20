@@ -376,6 +376,54 @@ def _jsonld_article_metadata(source: dict, expected_url: str, content: bytes) ->
                 stack.extend(item)
     return list(rows.values())
 
+
+def _jsonld_shape_diagnostics(content: bytes) -> str:
+    """Summarize JSON-LD schema object shapes without printing article values."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return "jsonld_shapes=decode_error"
+    shapes = []
+    scripts_seen = 0
+    for match in re.finditer(
+        r"""<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>(?P<body>.*?)</script\s*>""",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        body = match.group("body")
+        if len(body) > 500000 or scripts_seen >= 3:
+            continue
+        scripts_seen += 1
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        stack = [payload]
+        visited = 0
+        while stack and visited < 10000 and len(shapes) < 6:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                normalized = {str(key).casefold(): value for key, value in item.items()}
+                if "@type" in normalized or any(key in normalized for key in ("headline", "datepublished")):
+                    raw_type = normalized.get("@type")
+                    types = raw_type if isinstance(raw_type, list) else [raw_type]
+                    type_names = sorted(str(value)[:60] for value in types if isinstance(value, str))
+                    fields = {}
+                    for field in ("headline", "name", "datepublished", "url", "@id", "mainentityofpage", "description"):
+                        value = normalized.get(field)
+                        if value is not None:
+                            fields[field] = type(value).__name__
+                    shapes.append({
+                        "types": type_names,
+                        "keys": sorted(str(key).casefold()[:40] for key in item.keys())[:20],
+                        "field_types": fields,
+                    })
+                stack.extend(item.values())
+            elif isinstance(item, list):
+                stack.extend(item)
+    return f"jsonld_shapes scripts={scripts_seen} objects={shapes}"
+
 def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
     """Probe at most two validated official detail pages; emit metadata counts only."""
     urls = _embedded_official_article_urls(source, content, limit=2)
@@ -434,7 +482,7 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
             f"  detail status=success path={final.path[:160]!r} bytes={len(response.content)} "
             f"h1_count={h1_count} title_tag_count={title_tag_count} time_datetime_count={time_count} "
             f"jsonld_scripts={jsonld_count} structured_candidates={len(structured_rows)} "
-            f"published_meta_tags={published_meta_count}"
+            f"published_meta_tags={published_meta_count} {_jsonld_shape_diagnostics(response.content)}"
         )
     return "\n".join(lines)
 

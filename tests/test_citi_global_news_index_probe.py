@@ -6,6 +6,7 @@ from scripts.probe_citi_global_news_index import (
     _embedded_official_article_urls,
     _embedded_record_shape_diagnostics,
     _jsonld_article_metadata,
+    _jsonld_shape_diagnostics,
     _next_data_candidates,
     probe_citi_global_news_index,
 )
@@ -329,3 +330,24 @@ def test_citi_jsonld_article_metadata_requires_explicit_date_and_matching_offici
         + "</script>"
     ).encode()
     assert _jsonld_article_metadata(source, article_url, missing_html) == []
+
+
+def test_citi_jsonld_shape_diagnostic_reports_schema_and_types_without_values():
+    payload = {
+        "@type": "NewsArticle",
+        "headline": "Private headline value must not be logged",
+        "datePublished": "2026-10-18",
+        "url": "https://www.citigroup.com/global/news/press-release/2026/example/",
+    }
+    html = (
+        '<script type="application/ld+json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    result = _jsonld_shape_diagnostics(html)
+
+    assert "NewsArticle" in result
+    assert "'headline': 'str'" in result
+    assert "Private headline value must not be logged" not in result
+    assert "2026-10-18" not in result
