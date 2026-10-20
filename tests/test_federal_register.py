@@ -187,12 +187,32 @@ def test_transient_api_schema_error_retries_same_page_once_without_poisoning_sta
     assert first_query["conditions[term]"] == retry_query["conditions[term]"] == ["digital assets"]
 
 
+def test_zero_count_envelope_without_results_is_a_valid_empty_page():
+    source = fr_source(search_terms=["stablecoin"])
+    http = FakeHttp([
+        api_response({
+            "count": 0,
+            "description": "Documents matching 'stablecoin', published on or after 09/17/2026",
+        }),
+    ])
+
+    result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "success"
+    assert result.candidates == []
+    assert result.errors == []
+    assert result.pagination["requests_made"] == 1
+    progress = result.pagination["federal_register_terms"]["stablecoin"]
+    assert progress["deep_page_hint"] == 3
+    assert progress["frontier_status"] == "active"
+
+
 def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
     source = fr_source(search_terms=["digital assets"])
     previous = fr_state("2026-00100", 3)
     http = FakeHttp([
-        api_response({"count": 0, "description": "temporary upstream error"}),
-        api_response({"count": 0, "description": "temporary upstream error"}),
+        api_response({"count": 1, "description": "temporary upstream error"}),
+        api_response({"count": 1, "description": "temporary upstream error"}),
     ])
 
     result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect(previous)
@@ -203,6 +223,7 @@ def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
         "term='digital assets'" in error
         and "page=1" in error
         and "payload_keys=['count', 'description']" in error
+        and "api_count=1" in error
         and "api_description='temporary upstream error'" in error
         for error in result.errors
     )
