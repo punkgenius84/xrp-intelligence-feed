@@ -280,7 +280,10 @@ class FederalRegisterDiscovery:
                         # or accept candidates until the expected schema is present.
                         continue
 
-                    errors.append("Federal Register API response must contain a results list")
+                    errors.append(
+                        "Federal Register API response must contain a results list "
+                        f"(term={term!r}, page={page}, attempts=2)"
+                    )
                     term_complete = False
                     return False
 
