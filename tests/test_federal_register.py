@@ -200,8 +200,15 @@ def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
     assert result.status == "failed"
     assert len(http.calls) == 2
     assert any("term='digital assets'" in error and "page=1" in error for error in result.errors)
-    saved = result.pagination["federal_register_terms"]["digital assets"]
-    assert saved == previous["sources"]["federal-register-api"]["pagination"]["federal_register_terms"]["digital assets"]
+    assert result.pagination["requests_made"] == 2
+    # No term pagination update is returned, so the caller must retain its prior frontier.
+    assert "federal_register_terms" not in result.pagination
+    assert previous["sources"]["federal-register-api"]["pagination"]["federal_register_terms"]["digital assets"] == {
+        "boundary_document_number": "2026-00100",
+        "deep_page_hint": 3,
+        "lookback_days": 7,
+        "frontier_status": "active",
+    }
 
 
 def test_pagination_is_bounded_even_when_api_claims_many_pages():
