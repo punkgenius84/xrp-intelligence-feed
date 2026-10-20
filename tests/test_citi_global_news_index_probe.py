@@ -145,3 +145,33 @@ def test_next_data_probe_ignores_malformed_json_and_oversized_payload():
 
     assert _next_data_candidates(source, malformed) == []
     assert _next_data_candidates(source, oversized) == []
+
+
+
+def test_next_data_probe_accepts_full_official_route_in_slug_field():
+    source = {
+        "source_url": NEWS_URL,
+        "allowed_hosts": ["www.citigroup.com", "citigroup.com"],
+        "article_path_regex": r"/global/news/press-release/\d{4}/[^/?#]+",
+        "numeric_date_order": "mdy",
+    }
+    payload = {
+        "items": [
+            {
+                "title": "Citi Token Services expands digital asset infrastructure",
+                "slug": "/global/news/press-release/2026/citi-token-services-expansion",
+                "publishDate": "2026-09-28",
+            }
+        ]
+    }
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    rows = _next_data_candidates(source, html)
+
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Citi Token Services expands digital asset infrastructure"
+    assert rows[0]["date"].isoformat() == "2026-09-28T00:00:00+00:00"
