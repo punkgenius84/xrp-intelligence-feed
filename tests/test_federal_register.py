@@ -191,8 +191,8 @@ def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
     source = fr_source(search_terms=["digital assets"])
     previous = fr_state("2026-00100", 3)
     http = FakeHttp([
-        api_response({"message": "temporary upstream error"}),
-        api_response({"message": "temporary upstream error"}),
+        api_response({"count": 0, "description": "temporary upstream error"}),
+        api_response({"count": 0, "description": "temporary upstream error"}),
     ])
 
     result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect(previous)
@@ -202,8 +202,8 @@ def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
     assert any(
         "term='digital assets'" in error
         and "page=1" in error
-        and "payload_keys=['message']" in error
-        and "api_message='temporary upstream error'" in error
+        and "payload_keys=['count', 'description']" in error
+        and "api_description='temporary upstream error'" in error
         for error in result.errors
     )
     assert result.pagination["requests_made"] == 2
