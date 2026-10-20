@@ -240,7 +240,7 @@ def test_citi_record_shape_diagnostics_report_nested_keys_and_types_only():
 
     result = _embedded_record_shape_diagnostics({}, html)
 
-    assert "info_nested_shapes=[{'depth': 0, 'keys': ['description', 'headline']}]" in result
+    assert "info_nested_shapes': [{'depth': 0, 'keys': ['description', 'headline']}]" in result
     assert "'info': 'dict'" in result
     assert "Do not log this headline" not in result
     assert "Do not log this body" not in result
