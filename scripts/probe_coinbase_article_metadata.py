@@ -41,6 +41,10 @@ def _normalize_date(value: object) -> str | None:
         parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
     except ValueError:
         return None
+    # An ISO calendar date is itself a valid official publication date; do not
+    # invent a time or timezone for it. Full timestamps require an explicit zone.
+    if len(candidate) == 10:
+        return parsed.date().isoformat()
     if parsed.tzinfo is None:
         return None
     return parsed.isoformat()
