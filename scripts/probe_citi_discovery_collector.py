@@ -12,16 +12,16 @@ from discovery.dispatch import load_discovery_sources
 from discovery.http import BoundedHttpClient
 from discovery.institutional_press import InstitutionalPressDiscovery
 
+HOME_URL = "https://www.citigroup.com/global"
+NEWS_URL = "https://www.citigroup.com/global/news"
+
 
 def probe_citi_discovery_collector(http=None) -> str:
-    """Exercise the production parser with Citi enabled in memory; never persist state."""
-    source = next(
+    """Compare two official Citi index pages with in-memory activation; never persist state."""
+    base_source = next(
         item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
         if item["source_id"] == "citi-press-releases"
     )
-    # The source remains disabled in configuration. This diagnostic override is local to
-    # this process and proves whether the existing bounded detail fallback can parse it.
-    source = {**source, "source_url": "https://www.citigroup.com/global/news", "enabled": True, "detail_fallback_limit": 2}
     client = http or BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only Citi collector diagnostic)",
         timeout=(3.0, 8.0),
@@ -29,23 +29,28 @@ def probe_citi_discovery_collector(http=None) -> str:
         max_redirects=2,
         max_attempts=1,
     )
-    result = InstitutionalPressDiscovery(
-        source,
-        http=client,
-        now=lambda: datetime.now(timezone.utc),
-    ).collect(source_state={})
-    lines = [
-        f"Citi collector diagnostic: status={result.status} candidates={len(result.candidates)} "
-        f"errors={len(result.errors)} state_updates={len(result.state_updates)} observations={len(result.observations)}"
-    ]
-    for candidate in result.candidates[:5]:
-        path = urlsplit(candidate.url).path[:180]
-        published = candidate.published_at.isoformat() if candidate.published_at else "missing"
+    lines = []
+    for index_name, index_url in (("global_news", NEWS_URL), ("home", HOME_URL)):
+        source = {**base_source, "source_url": index_url, "enabled": True, "detail_fallback_limit": 2}
+        result = InstitutionalPressDiscovery(
+            source,
+            http=client,
+            now=lambda: datetime.now(timezone.utc),
+        ).collect(source_state={})
         lines.append(
-            f"  candidate path={path!r} published_at={published} title_length={len(candidate.title)}"
+            f"Citi collector diagnostic index={index_name}: status={result.status} "
+            f"candidates={len(result.candidates)} errors={len(result.errors)} "
+            f"state_updates={len(result.state_updates)} observations={len(result.observations)}"
         )
-    for error in result.errors[:5]:
-        lines.append(f"  diagnostic_error={error[:240]!r}")
+        for candidate in result.candidates[:5]:
+            path = urlsplit(candidate.url).path[:180]
+            published = candidate.published_at.isoformat() if candidate.published_at else "missing"
+            lines.append(
+                f"  index={index_name} candidate path={path!r} published_at={published} "
+                f"title_length={len(candidate.title)}"
+            )
+        for error in result.errors[:3]:
+            lines.append(f"  index={index_name} diagnostic_error={error[:240]!r}")
     return "\n".join(lines)
 
 

@@ -402,7 +402,7 @@ def test_citi_index_date_and_detail_h1_must_be_present_and_validated():
 def test_citi_collector_probe_uses_temporary_enable_and_never_persists_state():
     from datetime import datetime, timezone
     from discovery.http import HttpResponse
-    from scripts.probe_citi_discovery_collector import probe_citi_discovery_collector
+    from scripts.probe_citi_discovery_collector import HOME_URL, probe_citi_discovery_collector
 
     index = (
         '<html><script id="__NEXT_DATA__" type="application/json">'
@@ -422,17 +422,18 @@ def test_citi_collector_probe_uses_temporary_enable_and_never_persists_state():
 
         def get(self, url, **kwargs):
             self.calls.append(url)
-            if url == NEWS_URL:
-                return HttpResponse(200, {"content-type": "text/html"}, index, NEWS_URL)
+            if url in {NEWS_URL, HOME_URL}:
+                return HttpResponse(200, {"content-type": "text/html"}, index, url)
             return HttpResponse(200, {"content-type": "text/html"}, detail, url)
 
     http = RouteAwareHttp()
     result = probe_citi_discovery_collector(http)
 
-    assert "status=partial candidates=1" in result
-    assert "state_updates=0 observations=0" in result
-    assert "published_at=2026-10-18T00:00:00+00:00" in result
-    assert len(http.calls) == 2
+    assert "index=global_news: status=partial candidates=1" in result
+    assert "index=home: status=partial candidates=1" in result
+    assert result.count("state_updates=0 observations=0") == 2
+    assert result.count("published_at=2026-10-18T00:00:00+00:00") == 2
+    assert len(http.calls) == 4
 
 
 def test_citi_next_data_urls_are_derived_from_bounded_official_bootstrap():
