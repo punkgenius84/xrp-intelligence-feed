@@ -37,16 +37,16 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-main-v1-restore
+          key: xrp-state-${{ github.ref_name }}-v1-restore
           restore-keys: |
-            xrp-state-main-v1-
+            xrp-state-${{ github.ref_name }}-v1-
       - name: Restore intelligence quarantine
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: state/intelligence_quarantine.json
-          key: xrp-intelligence-quarantine-main-v1-maintenance-restore
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-restore
           restore-keys: |
-            xrp-intelligence-quarantine-main-v1-
+            xrp-intelligence-quarantine-${{ github.ref_name }}-v1-
       - name: Quarantine exact event (no publishing)
         env:
           EVENT_ID: ${{ inputs.event_id }}
