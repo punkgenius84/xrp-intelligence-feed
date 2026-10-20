@@ -168,6 +168,25 @@ def test_malformed_api_response_and_missing_identity_are_reported():
     assert "document_number" in missing_identity.errors[0]
 
 
+def test_transient_api_schema_error_retries_same_page_once_without_poisoning_state():
+    source = fr_source(search_terms=["digital assets"])
+    http = FakeHttp([
+        api_response({"message": "temporary upstream error"}),
+        api_response(fr_payload(["2026-00101"], total_pages=1)),
+    ])
+
+    result = FederalRegisterDiscovery(source, http=http, now=lambda: STAMP).collect()
+
+    assert result.status == "success"
+    assert [item.source_native_id for item in result.candidates] == ["2026-00101"]
+    assert result.errors == []
+    assert len(http.calls) == 2
+    first_query = parse_qs(urlsplit(http.calls[0][0]).query)
+    retry_query = parse_qs(urlsplit(http.calls[1][0]).query)
+    assert first_query["page"] == retry_query["page"] == ["1"]
+    assert first_query["conditions[term]"] == retry_query["conditions[term]"] == ["digital assets"]
+
+
 def test_pagination_is_bounded_even_when_api_claims_many_pages():
     source = fr_source(search_terms=["digital assets", "stablecoin"])
     state = fr_state("2026-00101", 3)
