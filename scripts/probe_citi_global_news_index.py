@@ -424,13 +424,93 @@ def _jsonld_shape_diagnostics(content: bytes) -> str:
                 stack.extend(item)
     return f"jsonld_shapes scripts={scripts_seen} objects={shapes}"
 
+
+def _embedded_official_article_records(source: dict, content: bytes, limit: int = 2) -> list[dict]:
+    """Extract explicit route-owned publication dates from bounded official JSON records."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return []
+    route_keys = ("url", "href", "link", "path", "route", "slug", "nativeid", "canonicalurl", "canonical_url")
+    date_keys = ("publishdate", "publishdatestr", "datepublished", "publishedat", "published_at")
+    rows = {}
+    for script in re.finditer(
+        r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        attrs, body = script.group("attrs"), script.group("body")
+        if not re.search(
+            r"""\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__')|\btype\s*=\s*(?:"application/json"|'application/json')""",
+            attrs,
+            re.IGNORECASE,
+        ):
+            continue
+        if len(body) > 1500000:
+            continue
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        stack = [payload]
+        visited = 0
+        while stack and visited < 30000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                normalized = {str(key).casefold(): value for key, value in item.items()}
+                date_value = next(
+                    (normalized[key] for key in date_keys if isinstance(normalized.get(key), str)),
+                    None,
+                )
+                if date_value:
+                    published = _parse_date(date_value, source.get("numeric_date_order", "mdy"))
+                    if published is not None:
+                        for key in route_keys:
+                            value = normalized.get(key)
+                            if not isinstance(value, str):
+                                continue
+                            try:
+                                safe = _official_article(source, value)
+                            except (TypeError, ValueError):
+                                continue
+                            if safe is not None:
+                                rows.setdefault(
+                                    safe[1],
+                                    {"url": safe[0], "native_id": safe[1], "date": published},
+                                )
+                stack.extend(item.values())
+            elif isinstance(item, list):
+                stack.extend(item)
+    return [rows[key] for key in sorted(rows)[:limit]]
+
+
+def _article_detail_h1_candidate(record: dict, content: bytes) -> dict | None:
+    """Pair a route-owned index date with one clear h1 from that same official detail page."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None
+    matches = list(re.finditer(
+        r"<h1\b[^>]*>(?P<title>.*?)</h1\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if len(matches) != 1 or not record.get("date"):
+        return None
+    title = _clean(re.sub(r"<[^>]+>", " ", matches[0].group("title")))
+    if len(title) < 12 or title.casefold() in {"read more", "learn more", "press release", "news"}:
+        return None
+    return {**record, "title": title}
+
 def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
     """Probe at most two validated official detail pages; emit metadata counts only."""
-    urls = _embedded_official_article_urls(source, content, limit=2)
-    if not urls:
+    records = _embedded_official_article_records(source, content, limit=2)
+    if not records:
         return "article_detail_probe selected=0"
-    lines = [f"article_detail_probe selected={len(urls)}"]
-    for url in urls:
+    lines = [f"article_detail_probe selected={len(records)}"]
+    for record in records:
+        url = record["url"]
         requested = urlsplit(url)
         try:
             response = http.get(
@@ -472,7 +552,8 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
             page,
             re.IGNORECASE,
         ))
-        structured_rows = _jsonld_article_metadata(source, url, response.content)
+        jsonld_rows = _jsonld_article_metadata(source, url, response.content)
+        h1_row = _article_detail_h1_candidate(record, response.content)
         published_meta_count = len(re.findall(
             r"""<meta\b[^>]*(?:property|name)\s*=\s*["'](?:article:published_time|datepublished|publishdate)["']""",
             page,
@@ -481,7 +562,8 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
         lines.append(
             f"  detail status=success path={final.path[:160]!r} bytes={len(response.content)} "
             f"h1_count={h1_count} title_tag_count={title_tag_count} time_datetime_count={time_count} "
-            f"jsonld_scripts={jsonld_count} structured_candidates={len(structured_rows)} "
+            f"jsonld_scripts={jsonld_count} jsonld_candidates={len(jsonld_rows)} "
+            f"route_date_h1_candidates={int(h1_row is not None)} "
             f"published_meta_tags={published_meta_count} {_jsonld_shape_diagnostics(response.content)}"
         )
     return "\n".join(lines)
