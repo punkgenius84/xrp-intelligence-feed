@@ -84,6 +84,7 @@ def test_next_data_probe_extracts_only_records_with_same_object_title_url_and_da
                 "items": [
                     {
                         "title": "Citi and Coinbase Expand Collaboration",
+                        "url": "/global/news",
                         "link": "/global/news/press-release/2026/citi-and-coinbase-expand-collaboration",
                         "publishDate": "2026-09-28T12:00:00Z",
                     },
