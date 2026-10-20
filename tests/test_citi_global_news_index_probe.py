@@ -1,5 +1,11 @@
+import json
+
 from discovery.http import HttpResponse
-from scripts.probe_citi_global_news_index import NEWS_URL, probe_citi_global_news_index
+from scripts.probe_citi_global_news_index import (
+    NEWS_URL,
+    _next_data_candidates,
+    probe_citi_global_news_index,
+)
 
 
 class FakeHttp:
@@ -62,3 +68,73 @@ def test_citi_broader_news_index_rejects_wrong_content_type():
         "Citi broader news-index diagnostic: status=rejected reason=unexpected_content_type "
         "content_type=application/json"
     )
+
+
+
+def test_next_data_probe_extracts_only_records_with_same_object_title_url_and_date():
+    source = {
+        "source_url": NEWS_URL,
+        "allowed_hosts": ["www.citigroup.com", "citigroup.com"],
+        "article_path_regex": r"/global/news/press-release/\d{4}/[^/?#]+",
+        "numeric_date_order": "mdy",
+    }
+    payload = {
+        "props": {
+            "pageProps": {
+                "items": [
+                    {
+                        "title": "Citi and Coinbase Expand Collaboration",
+                        "link": "/global/news/press-release/2026/citi-and-coinbase-expand-collaboration",
+                        "publishDate": "2026-09-28T12:00:00Z",
+                    },
+                    {
+                        "title": "Undated official release should not borrow another date",
+                        "link": "/global/news/press-release/2026/undated-release",
+                    },
+                    {"publishDate": "2026-10-01T12:00:00Z"},
+                    {
+                        "title": "External page must be rejected",
+                        "url": "https://attacker.example/global/news/press-release/2026/attack",
+                        "publishDate": "2026-10-01T12:00:00Z",
+                    },
+                    {
+                        "title": "Malformed URL must be rejected without crashing",
+                        "url": "https://[invalid",
+                        "publishDate": "2026-10-01T12:00:00Z",
+                    },
+                ]
+            }
+        }
+    }
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    rows = _next_data_candidates(source, html)
+
+    assert len(rows) == 1
+    assert rows[0]["title"] == "Citi and Coinbase Expand Collaboration"
+    assert rows[0]["date"].isoformat() == "2026-09-28T12:00:00+00:00"
+    assert rows[0]["url"] == (
+        "https://www.citigroup.com/global/news/press-release/2026/"
+        "citi-and-coinbase-expand-collaboration/"
+    )
+
+
+def test_next_data_probe_ignores_malformed_json_and_oversized_payload():
+    source = {
+        "source_url": NEWS_URL,
+        "allowed_hosts": ["www.citigroup.com", "citigroup.com"],
+        "article_path_regex": r"/global/news/press-release/\d{4}/[^/?#]+",
+    }
+    malformed = b'<script id="__NEXT_DATA__" type="application/json">{broken</script>'
+    oversized = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + (" " * 300001)
+        + "</script>"
+    ).encode()
+
+    assert _next_data_candidates(source, malformed) == []
+    assert _next_data_candidates(source, oversized) == []
