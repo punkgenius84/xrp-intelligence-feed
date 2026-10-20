@@ -1708,7 +1708,7 @@ def test_institutional_sitemap_collector_uses_official_detail_dates_and_never_la
             elif url.rstrip("/").endswith("/older"):
                 page = b"<html><h1>Older Citi Announcement</h1><p>October 16, 2026</p></html>"
             else:
-                raise AssertionError("unexpected URL")
+                raise AssertionError(f"unexpected URL: {url!r}")
             return HttpResponse(200, {"content-type": "text/html"}, page, url)
 
     http = SitemapHttp()
