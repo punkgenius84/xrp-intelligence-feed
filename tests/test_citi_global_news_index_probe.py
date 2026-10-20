@@ -3,6 +3,8 @@ import json
 from discovery.http import HttpResponse
 from scripts.probe_citi_global_news_index import (
     NEWS_URL,
+    _article_detail_h1_candidate,
+    _embedded_official_article_records,
     _embedded_official_article_urls,
     _embedded_record_shape_diagnostics,
     _jsonld_article_metadata,
@@ -351,3 +353,46 @@ def test_citi_jsonld_shape_diagnostic_reports_schema_and_types_without_values():
     assert "'headline': 'str'" in result
     assert "Private headline value must not be logged" not in result
     assert "2026-10-18" not in result
+
+
+def test_citi_index_date_and_detail_h1_must_be_present_and_validated():
+    from discovery.dispatch import load_discovery_sources
+    from scripts.probe_citi_global_news_index import ROOT
+
+    source = next(
+        item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+        if item["source_id"] == "citi-press-releases"
+    )
+    source = {**source, "source_url": NEWS_URL}
+    index_payload = {
+        "items": [
+            {
+                "url": "/global/news/press-release/2026/citi-example-release",
+                "publishDate": "2026-10-18",
+            },
+            {
+                "url": "/global/news/press-release/2026/no-date",
+            },
+        ]
+    }
+    index_html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(index_payload)
+        + "</script>"
+    ).encode()
+
+    records = _embedded_official_article_records(source, index_html, limit=2)
+
+    assert len(records) == 1
+    assert records[0]["date"].isoformat() == "2026-10-18T00:00:00+00:00"
+    page = b"<html><h1>Citi Announces Example Release</h1></html>"
+    candidate = _article_detail_h1_candidate(records[0], page)
+    assert candidate is not None
+    assert candidate["title"] == "Citi Announces Example Release"
+
+    assert _article_detail_h1_candidate(records[0], b"<h1>Read More</h1>") is None
+    assert _article_detail_h1_candidate({**records[0], "date": None}, page) is None
+    assert _embedded_official_article_records(
+        source,
+        b'<script id="__NEXT_DATA__" type="application/json">{"items":[{"url":"https://attacker.example/global/news/press-release/2026/nope","publishDate":"2026-10-18"}]}</script>',
+    ) == []
