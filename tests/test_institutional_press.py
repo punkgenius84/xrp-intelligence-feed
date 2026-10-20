@@ -658,8 +658,6 @@ def test_citi_recovers_featured_release_but_keeps_source_partial():
     citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
-    citi.pop("sitemap_url", None)
-    citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial"
@@ -690,8 +688,6 @@ def test_citi_detail_fallback_can_use_validated_route_in_embedded_page_data():
     citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
-    citi.pop("sitemap_url", None)
-    citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
 
     assert result.status == "partial", result.errors
@@ -720,8 +716,6 @@ def test_citi_detail_fallback_rejects_missing_date_and_official_metadata():
         if item["source_id"] == "citi-press-releases"
     )
     citi = {**citi, "enabled": True}  # Exercise legacy HTML fallback independently of the sitemap path.
-    citi.pop("sitemap_url", None)
-    citi.pop("sitemap_detail_limit", None)
     citi.pop("sitemap_url", None)
     citi.pop("sitemap_detail_limit", None)
     result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect()
