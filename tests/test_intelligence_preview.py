@@ -78,6 +78,11 @@ def test_preview_labels_stale_undated_and_generic_title_evidence(tmp_path):
                 "Event with no parseable evidence date",
                 published_at="not-a-date",
             ),
+            _event(
+                "evt-near-future",
+                "Event with an allowed near-future timestamp",
+                published_at=datetime(2026, 10, 21, 0, tzinfo=timezone.utc),
+            ),
         ],
         queued_at=STAMP,
     )
@@ -92,6 +97,7 @@ def test_preview_labels_stale_undated_and_generic_title_evidence(tmp_path):
     assert "evidence_freshness=stale latest_evidence_date=2026-08-01 age_days=80" in output
     assert "generic_evidence_titles_only=true" in output
     assert "evidence_freshness=undated latest_evidence_date=none" in output
+    assert "evidence_freshness=fresh latest_evidence_date=2026-10-21 age_days=0" in output
     assert "generic_evidence_titles_only=false" in output
 
 
