@@ -6,6 +6,7 @@ from html import unescape
 from html.parser import HTMLParser
 import json
 import re
+import xml.etree.ElementTree as ET
 from typing import Any, Callable
 from urllib.parse import parse_qs, urljoin, urlsplit
 
@@ -1082,6 +1083,56 @@ def _official_links_from_index(source: dict[str, Any], text: str) -> dict[str, s
     return links
 
 
+
+_SITEMAP_MAX_BYTES = 2_000_000
+_SITEMAP_MAX_FILES = 3
+_SITEMAP_MAX_DETAIL_PAGES = 50
+
+
+def _safe_sitemap_url(source: dict[str, Any], value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    parts = urlsplit(value.strip())
+    allowed_hosts = {
+        str(host).casefold()
+        for host in source.get("allowed_hosts", [])
+        if isinstance(host, str)
+    }
+    if (
+        parts.scheme.casefold() != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() not in allowed_hosts
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or not parts.path.startswith("/global/")
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    return value.strip()
+
+
+def _parse_sitemap_entries(source: dict[str, Any], content: bytes) -> tuple[str, list[tuple[str, str]]]:
+    if len(content) > _SITEMAP_MAX_BYTES:
+        return "oversize", []
+    try:
+        root = ET.fromstring(content)
+    except (ET.ParseError, ValueError):
+        return "invalid_xml", []
+    kind = root.tag.rsplit("}", 1)[-1].casefold()
+    if kind not in {"urlset", "sitemapindex"}:
+        return "unexpected_root", []
+    entries = []
+    for node in list(root)[:20000]:
+        fields = {}
+        for child in list(node):
+            fields[child.tag.rsplit("}", 1)[-1].casefold()] = (child.text or "").strip()
+        url = _safe_sitemap_url(source, fields.get("loc"))
+        if url:
+            entries.append((url, fields.get("lastmod", "")))
+    return kind, entries
+
 def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> dict[str, Any] | None:
     """Extract one dated item from an official article page reached through an allowlisted index link."""
     safe = _official_article(source, href)
@@ -1216,6 +1267,112 @@ class InstitutionalPressDiscovery:
             rows.append(row)
         return rows
 
+
+    def _collect_sitemap(self, fetched_at: datetime, cutoff: datetime) -> DiscoveryResult:
+        """Collect a bounded set of official article details discovered through a configured sitemap."""
+        sitemap_url = _safe_sitemap_url(self.source, self.source.get("sitemap_url"))
+        if sitemap_url is None:
+            return DiscoveryResult(
+                self.source["source_id"], METHOD, "failed", fetched_at=fetched_at,
+                errors=[f"{self.source['name']}: configured sitemap URL is not allowlisted"],
+            )
+        sitemap_queue = [sitemap_url]
+        visited: set[str] = set()
+        article_entries: list[tuple[str, str]] = []
+        errors: list[str] = []
+        while sitemap_queue and len(visited) < _SITEMAP_MAX_FILES:
+            url = sitemap_queue.pop(0)
+            if url in visited:
+                continue
+            visited.add(url)
+            try:
+                response = self.http.get(
+                    url,
+                    expected_content_types=("application/xml", "text/xml", "application/octet-stream"),
+                )
+            except DiscoveryHttpError as exc:
+                errors.append(
+                    f"{self.source['name']}: sitemap fetch failed"
+                    + (f" (HTTP {exc.status_code})" if exc.status_code else f" ({exc.kind})")
+                )
+                continue
+            if response.status_code != 200 or _safe_sitemap_url(self.source, response.url) is None:
+                errors.append(f"{self.source['name']}: sitemap returned an invalid status or final URL")
+                continue
+            kind, entries = _parse_sitemap_entries(self.source, response.content)
+            if kind not in {"urlset", "sitemapindex"}:
+                errors.append(f"{self.source['name']}: sitemap XML was {kind}")
+                continue
+            if kind == "sitemapindex":
+                for child_url, _ in entries:
+                    if child_url not in visited and child_url not in sitemap_queue:
+                        sitemap_queue.append(child_url)
+                        if len(visited) + len(sitemap_queue) >= _SITEMAP_MAX_FILES:
+                            break
+            else:
+                article_entries.extend(entries)
+
+        if not article_entries:
+            errors.append(f"{self.source['name']}: sitemap contained no allowlisted article URLs")
+            return DiscoveryResult(
+                self.source["source_id"], METHOD, "failed", fetched_at=fetched_at, errors=errors,
+            )
+
+        unique: dict[str, tuple[str, str]] = {}
+        for url, lastmod in article_entries:
+            safe = _official_article(self.source, url)
+            if safe is not None:
+                unique.setdefault(safe[1], (safe[0], lastmod))
+        detail_limit = self.source.get("sitemap_detail_limit", 10)
+        if not isinstance(detail_limit, int) or isinstance(detail_limit, bool):
+            detail_limit = 10
+        detail_limit = max(1, min(detail_limit, _SITEMAP_MAX_DETAIL_PAGES))
+        selected = sorted(
+            unique.values(),
+            key=lambda item: (item[1], item[0]),
+            reverse=True,
+        )[:detail_limit]
+        if not selected:
+            errors.append(f"{self.source['name']}: sitemap had no allowlisted article routes")
+        rows: list[dict[str, Any]] = []
+        for url, _lastmod in selected:
+            try:
+                response = self.http.get(
+                    url, expected_content_types=("text/html", "application/xhtml+xml")
+                )
+            except DiscoveryHttpError as exc:
+                errors.append(
+                    f"{self.source['name']}: article detail fetch failed"
+                    + (f" (HTTP {exc.status_code})" if exc.status_code else f" ({exc.kind})")
+                )
+                continue
+            if response.status_code != 200 or _official_article(self.source, response.url) is None:
+                errors.append(f"{self.source['name']}: article detail returned an invalid status or final URL")
+                continue
+            row = _parse_article_detail(self.source, url, response.content)
+            if row is None:
+                errors.append(f"{self.source['name']}: official sitemap article lacked grounded title/date metadata")
+                continue
+            if row["date"].astimezone(timezone.utc) > fetched_at.astimezone(timezone.utc) + timedelta(days=1):
+                errors.append(f"{self.source['name']}: rejected future-dated sitemap article")
+                continue
+            if row["date"] >= cutoff:
+                rows.append(row)
+
+        candidates = [self._candidate(row, fetched_at) for row in rows]
+        candidates.sort(
+            key=lambda item: (item.published_at or fetched_at, item.source_native_id),
+            reverse=True,
+        )
+        status = "partial" if errors and candidates else "failed" if errors else (
+            "empty" if not candidates else "success"
+        )
+        return DiscoveryResult(
+            self.source["source_id"], METHOD, status,
+            candidates=candidates[:self.source["max_items"]],
+            fetched_at=fetched_at, errors=errors,
+        )
+
     def collect(self, source_state: dict[str, Any] | None = None) -> DiscoveryResult:
         fetched_at = self.now()
         if fetched_at.tzinfo is None:
@@ -1225,6 +1382,8 @@ class InstitutionalPressDiscovery:
                                    fetched_at=fetched_at)
 
         cutoff = fetched_at.astimezone(timezone.utc) - timedelta(days=self.source["lookback_days"])
+        if self.source.get("sitemap_url"):
+            return self._collect_sitemap(fetched_at, cutoff)
         state = source_state if isinstance(source_state, dict) else {}
         index_request_id = _index_request_id(self.source["source_url"])
         validators = JsonDiscoveryState.request_validators(state, self.source["source_id"], index_request_id)
