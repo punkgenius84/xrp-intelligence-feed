@@ -10,6 +10,7 @@ from scripts.probe_citi_global_news_index import (
     _jsonld_article_metadata,
     _jsonld_shape_diagnostics,
     _next_data_candidates,
+    _next_data_request_urls,
     probe_citi_global_news_index,
 )
 
@@ -432,3 +433,24 @@ def test_citi_collector_probe_uses_temporary_enable_and_never_persists_state():
     assert "state_updates=0 observations=0" in result
     assert "published_at=2026-10-18T00:00:00+00:00" in result
     assert len(http.calls) == 2
+
+
+def test_citi_next_data_urls_are_derived_from_bounded_official_bootstrap():
+    payload = {
+        "buildId": "build-2026_10",
+        "assetPrefix": "/global/citigroup-ui/akpublic",
+        "page": "/[...params]",
+    }
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+
+    urls = _next_data_request_urls(html, NEWS_URL)
+
+    assert urls == [
+        "https://www.citigroup.com/global/citigroup-ui/akpublic/_next/data/build-2026_10/global/news.json",
+        "https://www.citigroup.com/_next/data/build-2026_10/global/news.json",
+    ]
+    assert _next_data_request_urls(html, "https://attacker.example/global/news") == []
