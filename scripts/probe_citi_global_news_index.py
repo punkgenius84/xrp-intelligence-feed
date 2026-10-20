@@ -78,15 +78,15 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
             )
             href_values = [
                 normalized[key]
-                for key in ("url", "href", "link", "path", "route")
+                for key in ("url", "href", "link", "path", "route", "slug", "nativeid", "canonicalurl", "canonical_url")
                 if isinstance(normalized.get(key), str)
             ]
-            for key in ("url", "href", "link"):
+            for key in ("url", "href", "link", "canonicalurl", "canonical_url"):
                 candidate = normalized.get(key)
                 if isinstance(candidate, dict):
                     href_values.extend(
                         candidate[subkey]
-                        for subkey in ("url", "href", "path")
+                        for subkey in ("url", "href", "path", "slug", "route")
                         if isinstance(candidate.get(subkey), str)
                     )
             date_value = next(
