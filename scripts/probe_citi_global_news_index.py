@@ -174,7 +174,7 @@ def _embedded_record_shape_diagnostics(source: dict, content: bytes) -> str:
             re.IGNORECASE,
         ):
             continue
-        if len(body) > 300000 or inspected >= 3:
+        if len(body) > 1500000 or inspected >= 3:
             continue
         inspected += 1
         try:
