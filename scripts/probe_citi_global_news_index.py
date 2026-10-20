@@ -264,7 +264,7 @@ def _embedded_official_article_urls(source: dict, content: bytes, limit: int = 2
             continue
         stack = [payload]
         visited = 0
-        while stack and visited < 30000 and len(urls) < limit:
+        while stack and visited < 30000:
             item = stack.pop()
             visited += 1
             if isinstance(item, dict):
@@ -277,7 +277,7 @@ def _embedded_official_article_urls(source: dict, content: bytes, limit: int = 2
                         safe = _official_article(source, value)
                     except (TypeError, ValueError):
                         continue
-                    if safe is not None:
+                    if safe is not None and (safe[1] in urls or len(urls) < 100):
                         urls.setdefault(safe[1], safe[0])
                 stack.extend(item.values())
             elif isinstance(item, list):
