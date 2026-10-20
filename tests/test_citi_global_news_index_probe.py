@@ -452,7 +452,9 @@ def test_citi_next_data_urls_are_derived_from_bounded_official_bootstrap():
 
     assert urls == [
         "https://www.citigroup.com/global/citigroup-ui/akpublic/_next/data/build-2026_10/global/news.json",
+        "https://www.citigroup.com/global/citigroup-ui/akpublic/_next/data/build-2026_10/global/news/index.json",
         "https://www.citigroup.com/_next/data/build-2026_10/global/news.json",
+        "https://www.citigroup.com/_next/data/build-2026_10/global/news/index.json",
     ]
     assert _next_data_request_urls(html, "https://attacker.example/global/news") == []
 
