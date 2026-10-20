@@ -197,11 +197,37 @@ def _embedded_record_shape_diagnostics(source: dict, content: bytes) -> str:
             route_date += int(has_date)
             route_title_date += int(has_title and has_date)
             if len(shapes) < 4:
+                field_types = {}
+                for field in ("info", "subtitle", "newstags", "category", "publishdatestr", "year", "month"):
+                    value = normalized.get(field)
+                    if value is not None:
+                        field_types[field] = type(value).__name__
+                        if isinstance(value, str):
+                            field_types[field + "_length"] = len(value)
+                info = normalized.get("info")
+                info_nested_shapes = []
+                nested_stack = [(info, 0)]
+                nested_seen = 0
+                while nested_stack and nested_seen < 100:
+                    nested, depth = nested_stack.pop()
+                    nested_seen += 1
+                    if isinstance(nested, dict):
+                        if depth <= 3 and len(info_nested_shapes) < 3:
+                            info_nested_shapes.append({
+                                "depth": depth,
+                                "keys": sorted(str(key).casefold()[:40] for key in nested.keys())[:18],
+                            })
+                        if depth < 3:
+                            nested_stack.extend((value, depth + 1) for value in nested.values())
+                    elif isinstance(nested, list) and depth < 3:
+                        nested_stack.extend((value, depth + 1) for value in nested[:20])
                 shapes.append({
                     "keys": sorted(str(key).casefold()[:40] for key in item.keys())[:18],
                     "route_keys": found_route_keys,
                     "title_keys": sorted(key for key in title_keys if isinstance(normalized.get(key), str)),
                     "date_keys": sorted(key for key in date_keys if isinstance(normalized.get(key), str)),
+                    "field_types": field_types,
+                    "info_nested_shapes": info_nested_shapes,
                 })
     return (
         f"embedded_record_shapes scripts={inspected} objects={objects} route_objects={route_objects} "
