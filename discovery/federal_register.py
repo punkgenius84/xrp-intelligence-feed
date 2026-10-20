@@ -274,6 +274,20 @@ class FederalRegisterDiscovery:
 
                     if isinstance(payload, dict) and isinstance(payload.get("results"), list):
                         break
+                    description = payload.get("description") if isinstance(payload, dict) else None
+                    if (
+                        isinstance(payload, dict)
+                        and type(payload.get("count")) is int
+                        and payload["count"] == 0
+                        and isinstance(description, str)
+                        and description.strip().startswith("Documents matching ")
+                        and f"'{term}'" in description
+                    ):
+                        # Some zero-match API responses omit results/total_pages.
+                        # Accept only an explicit zero count with a description for
+                        # this exact term; never infer that a nonzero result set is empty.
+                        payload = {**payload, "results": [], "total_pages": 0}
+                        break
                     if attempt == 0:
                         # The API has occasionally returned a JSON error object with
                         # HTTP 200. Retry this exact page once; never advance pagination
@@ -283,6 +297,9 @@ class FederalRegisterDiscovery:
                     if isinstance(payload, dict):
                         payload_keys = sorted(str(key) for key in payload)[:8]
                         response_shape = f"payload_keys={payload_keys!r}"
+                        api_count = payload.get("count")
+                        if type(api_count) is int:
+                            response_shape += f", api_count={api_count}"
                         for detail_key in ("message", "error", "description"):
                             api_detail = payload.get(detail_key)
                             if isinstance(api_detail, str):
