@@ -48,8 +48,8 @@ def _safe_sitemap_url(source: dict[str, Any], value: object) -> str | None:
 
 
 def _parse_sitemap(content: bytes, source: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
-    if len(content) > MAX_SITEMAP_BYTES:
-        return "oversize", []
+    if len(content) > MAX_SITEMAP_BYTES or b"<!DOCTYPE" in content.upper() or b"<!ENTITY" in content.upper():
+        return "oversize_or_unsafe_xml", []
     try:
         root = ET.fromstring(content)
     except (ET.ParseError, ValueError):
@@ -208,6 +208,7 @@ class InstitutionalPressSitemapDiscovery:
             )
 
         sitemap_urls = [(response.url, response.content)]
+        sitemap_content_parts = [response.content]
         visited = {response.url}
         article_entries: list[tuple[str, str]] = []
         for sitemap_url, content in sitemap_urls:
@@ -239,6 +240,7 @@ class InstitutionalPressSitemapDiscovery:
                 if child.status_code != 200 or _safe_sitemap_url(self.source, child.url) is None:
                     errors.append(f"{self.source['name']}: child sitemap returned invalid status or final URL")
                     continue
+                sitemap_content_parts.append(child.content)
                 child_kind, child_entries = _parse_sitemap(child.content, self.source)
                 if child_kind == "urlset":
                     article_entries.extend(child_entries)
@@ -247,7 +249,7 @@ class InstitutionalPressSitemapDiscovery:
                 if len(visited) >= MAX_SITEMAPS:
                     break
 
-        digest = hashlib.sha256(response.content).hexdigest()
+        digest = hashlib.sha256(b"\n".join(sitemap_content_parts)).hexdigest()
         if previous_digest == digest and not errors:
             return DiscoveryResult(
                 self.source["source_id"], METHOD, "empty", fetched_at=fetched_at,
