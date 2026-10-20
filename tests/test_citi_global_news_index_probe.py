@@ -99,6 +99,12 @@ def test_next_data_probe_extracts_only_records_with_same_object_title_url_and_da
                         "publishDate": "2026-10-01T12:00:00Z",
                     },
                     {
+                        "title": "Ambiguous official routes must be rejected",
+                        "url": "/global/news/press-release/2026/route-one",
+                        "link": "/global/news/press-release/2026/route-two",
+                        "publishDate": "2026-10-01T12:00:00Z",
+                    },
+                    {
                         "title": "Malformed URL must be rejected without crashing",
                         "url": "https://[invalid",
                         "publishDate": "2026-10-01T12:00:00Z",
