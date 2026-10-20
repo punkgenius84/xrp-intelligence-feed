@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 import pytest
 
@@ -619,6 +620,43 @@ class SequenceHttp:
     def get(self, url, **kwargs):
         self.calls.append((url, kwargs))
         return self.responses.pop(0)
+
+
+def test_unchanged_citi_sitemap_is_healthy_and_skips_detail_fetches():
+    sitemap_url = "https://www.citigroup.com/global/sitemap.xml"
+    article_url = "https://www.citigroup.com/global/news/press-release/2026/unchanged-article"
+    sitemap = (
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"<url><loc>{article_url}</loc><lastmod>2026-10-19</lastmod></url></urlset>"
+    ).encode()
+    citi = source(
+        source_id="citi-press-releases",
+        name="Citi",
+        source_url="https://www.citigroup.com/global/news",
+        sitemap_url=sitemap_url,
+        sitemap_detail_limit=2,
+        allowed_hosts=["www.citigroup.com", "citigroup.com"],
+        article_path_regex=r"/global/news/press-release/\d{4}/[^/?#]+",
+    )
+    state = {
+        "sources": {
+            "citi-press-releases": {
+                "pagination": {"citi_sitemap_sha256": hashlib.sha256(sitemap).hexdigest()}
+            }
+        }
+    }
+    http = SequenceHttp([
+        HttpResponse(200, {"content-type": "application/xml"}, sitemap, sitemap_url),
+    ])
+
+    result = InstitutionalPressDiscovery(
+        citi, http=http, now=lambda: datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
+    ).collect(source_state=state)
+
+    assert result.status == "success"
+    assert result.candidates == []
+    assert result.errors == []
+    assert len(http.calls) == 1
 
 
 def test_citi_source_uses_bounded_official_sitemap_and_collects_grounded_detail():
