@@ -396,3 +396,39 @@ def test_citi_index_date_and_detail_h1_must_be_present_and_validated():
         source,
         b'<script id="__NEXT_DATA__" type="application/json">{"items":[{"url":"https://attacker.example/global/news/press-release/2026/nope","publishDate":"2026-10-18"}]}</script>',
     ) == []
+
+
+def test_citi_collector_probe_uses_temporary_enable_and_never_persists_state():
+    from datetime import datetime, timezone
+    from discovery.http import HttpResponse
+    from scripts.probe_citi_discovery_collector import probe_citi_discovery_collector
+
+    index = (
+        '<html><script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps({
+            "items": [{
+                "url": "/global/news/press-release/2026/citi-example-release",
+                "publishDate": "2026-10-18",
+            }]
+        })
+        + "</script></html>"
+    ).encode()
+    detail = b"<html><h1>Citi Announces Example Release</h1><p>October 18, 2026</p></html>"
+
+    class RouteAwareHttp:
+        def __init__(self):
+            self.calls = []
+
+        def get(self, url, **kwargs):
+            self.calls.append(url)
+            if url.rstrip("/").endswith("/global/news/press-release"):
+                return HttpResponse(200, {"content-type": "text/html"}, index, url)
+            return HttpResponse(200, {"content-type": "text/html"}, detail, url)
+
+    http = RouteAwareHttp()
+    result = probe_citi_discovery_collector(http)
+
+    assert "status=partial candidates=1" in result
+    assert "state_updates=0 observations=0" in result
+    assert "published_at=2026-10-18T00:00:00+00:00" in result
+    assert len(http.calls) == 2
