@@ -770,9 +770,7 @@ def publish_intelligence_events(
             "only empty or generic navigation titles; full records preserved for review"
         )
     url_valid_pending = [item for item in pending if item not in invalid_pending]
-    publishable_pending = [
-        item for item in url_valid_pending if item not in generic_title_pending
-    ]
+    publishable_pending = url_valid_pending
     if invalid_pending:
         for item in invalid_pending:
             out(
@@ -782,12 +780,6 @@ def publish_intelligence_events(
         if not url_valid_pending:
             raise SystemExit(
                 "Intelligence publish refused: every pending event lacks an evidence URL"
-            )
-    if generic_title_pending:
-        for item in generic_title_pending:
-            out(
-                f"::warning::Intelligence event held from publication because all evidence "
-                f"titles are empty or generic navigation text: {item.event.event_id}"
             )
 
     limit = max(1, int(getattr(discord_settings, "max_posts", 5)))
