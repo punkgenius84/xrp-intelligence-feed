@@ -76,20 +76,19 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
                 (normalized[key] for key in ("title", "headline", "name") if isinstance(normalized.get(key), str)),
                 None,
             )
-            href_value = next(
-                (normalized[key] for key in ("url", "href", "link", "path", "route") if isinstance(normalized.get(key), str)),
-                None,
-            )
-            if href_value is None:
-                for key in ("url", "href", "link"):
-                    candidate = normalized.get(key)
-                    if isinstance(candidate, dict):
-                        href_value = next(
-                            (candidate.get(subkey) for subkey in ("url", "href", "path") if isinstance(candidate.get(subkey), str)),
-                            None,
-                        )
-                        if href_value:
-                            break
+            href_values = [
+                normalized[key]
+                for key in ("url", "href", "link", "path", "route")
+                if isinstance(normalized.get(key), str)
+            ]
+            for key in ("url", "href", "link"):
+                candidate = normalized.get(key)
+                if isinstance(candidate, dict):
+                    href_values.extend(
+                        candidate[subkey]
+                        for subkey in ("url", "href", "path")
+                        if isinstance(candidate.get(subkey), str)
+                    )
             date_value = next(
                 (
                     normalized[key]
@@ -101,17 +100,25 @@ def _next_data_candidates(source: dict, content: bytes) -> list[dict]:
                 ),
                 None,
             )
-            if not title_value or not href_value or not date_value:
+            if not title_value or not href_values or not date_value:
                 continue
             title = _clean(re.sub(r"<[^>]+>", " ", title_value))
             if len(title) < 12 or title.casefold() in {"read more", "learn more", "view more", "press release"}:
                 continue
-            try:
-                safe = _official_article(source, href_value)
-            except (TypeError, ValueError):
+            valid_urls = {}
+            for href_value in href_values:
+                try:
+                    safe = _official_article(source, href_value)
+                except (TypeError, ValueError):
+                    continue
+                if safe is not None:
+                    valid_urls.setdefault(safe[1], safe)
+            # Multiple different official routes in one object are ambiguous; do not guess.
+            if len(valid_urls) != 1:
                 continue
+            safe = next(iter(valid_urls.values()))
             published = _parse_date(date_value, source.get("numeric_date_order", "mdy"))
-            if safe is None or published is None:
+            if published is None:
                 continue
             rows.setdefault(
                 safe[1],
