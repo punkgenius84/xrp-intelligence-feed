@@ -166,8 +166,11 @@ def test_intelligence_publish_uses_outbox_and_removes_successful(tmp_path, monke
     assert store.load() == []
 
 
-def test_generic_evidence_title_is_held_without_blocking_valid_events(tmp_path, monkeypatch, capsys):
+def test_generic_evidence_title_is_quarantined_without_blocking_valid_events(
+    tmp_path, monkeypatch, capsys
+):
     from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    from storage.intelligence_quarantine import JsonIntelligenceQuarantineState
 
     monkeypatch.setattr(
         main, "JsonIntelligenceDeliveryHistory",
@@ -184,6 +187,7 @@ def test_generic_evidence_title_is_held_without_blocking_valid_events(tmp_path, 
     )]
     valid = event(event_id="evt-valid-title")
     store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    quarantine = JsonIntelligenceQuarantineState(tmp_path / "intelligence_quarantine.json")
     store.enqueue([generic, valid])
     settings = SimpleNamespace(
         dry_run=False,
@@ -201,11 +205,48 @@ def test_generic_evidence_title_is_held_without_blocking_valid_events(tmp_path, 
 
     monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
     assert main.publish_intelligence_events(
-        [], settings, publish_enabled=True, outbox_store=store
+        [], settings, publish_enabled=True, outbox_store=store,
+        quarantine_store=quarantine,
     ) == 1
     assert len(sent) == 1
-    assert [item.event.event_id for item in store.load()] == ["evt-generic-title"]
-    assert "all evidence titles are empty or generic navigation text" in capsys.readouterr().out
+    assert [item.event.event_id for item in store.load()] == []
+    held = quarantine.load()
+    assert [item.event.event_id for item in held] == ["evt-generic-title"]
+    assert held[0].event.evidence[0].title == "Read More"
+    assert held[0].reason == "all evidence titles are empty or generic navigation text"
+    assert "quarantined 1 malformed event(s)" in capsys.readouterr().out
+
+
+def test_generic_title_event_stays_queued_if_quarantine_fails(tmp_path):
+    from storage.intelligence_quarantine import IntelligenceQuarantineError
+
+    generic = event(event_id="evt-generic-quarantine-failure")
+    generic.evidence = [Evidence(
+        source_id="source-navigation",
+        source="XRP Ledger Community",
+        url="https://example.com/article",
+        published_at=datetime.now(timezone.utc).isoformat(),
+        title="Read More",
+        source_quality="primary",
+    )]
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    store.enqueue([generic])
+
+    class BrokenQuarantine:
+        def quarantine(self, items, *, reason, quarantined_at=None):
+            raise IntelligenceQuarantineError("disk unavailable")
+
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    with pytest.raises(SystemExit, match="active outbox was not changed"):
+        main.publish_intelligence_events(
+            [], settings, publish_enabled=True, outbox_store=store,
+            quarantine_store=BrokenQuarantine(),
+        )
+    assert [item.event.event_id for item in store.load()] == ["evt-generic-quarantine-failure"]
 
 
 def test_intelligence_outbox_capacity_overflow_refuses_to_drop(tmp_path):
