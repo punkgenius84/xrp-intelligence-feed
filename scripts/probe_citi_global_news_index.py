@@ -235,6 +235,116 @@ def _embedded_record_shape_diagnostics(source: dict, content: bytes) -> str:
         f"route_with_title_and_date={route_title_date} key_shapes={shapes}"
     )
 
+
+def _embedded_official_article_urls(source: dict, content: bytes, limit: int = 2) -> list[str]:
+    """Find a tiny bounded set of official article routes, even when title fields are absent."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return []
+    route_keys = ("url", "href", "link", "path", "route", "slug", "nativeid", "canonicalurl", "canonical_url")
+    urls = {}
+    for script in re.finditer(
+        r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        attrs, body = script.group("attrs"), script.group("body")
+        if not re.search(
+            r"""\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__')|\btype\s*=\s*(?:"application/json"|'application/json')""",
+            attrs,
+            re.IGNORECASE,
+        ):
+            continue
+        if len(body) > 1500000 or len(urls) >= limit:
+            continue
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        stack = [payload]
+        visited = 0
+        while stack and visited < 30000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                normalized = {str(key).casefold(): value for key, value in item.items()}
+                for key in route_keys:
+                    value = normalized.get(key)
+                    if not isinstance(value, str):
+                        continue
+                    try:
+                        safe = _official_article(source, value)
+                    except (TypeError, ValueError):
+                        continue
+                    if safe is not None and (safe[1] in urls or len(urls) < 100):
+                        urls.setdefault(safe[1], safe[0])
+                stack.extend(item.values())
+            elif isinstance(item, list):
+                stack.extend(item)
+    return [urls[key] for key in sorted(urls)[:limit]]
+
+
+def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
+    """Probe at most two validated official detail pages; emit metadata counts only."""
+    urls = _embedded_official_article_urls(source, content, limit=2)
+    if not urls:
+        return "article_detail_probe selected=0"
+    lines = [f"article_detail_probe selected={len(urls)}"]
+    for url in urls:
+        requested = urlsplit(url)
+        try:
+            response = http.get(
+                url,
+                expected_content_types=("text/html", "application/xhtml+xml"),
+            )
+        except DiscoveryHttpError as exc:
+            suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+            lines.append(f"  detail status=unavailable reason={exc.kind}{suffix}")
+            continue
+        final = urlsplit(response.url)
+        if (
+            response.status_code != 200
+            or not _official_final_url(response.url)
+            or final.path.rstrip("/") != requested.path.rstrip("/")
+        ):
+            lines.append(
+                f"  detail status=rejected http_status={response.status_code} "
+                f"final_path={final.path[:160]!r}"
+            )
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type not in {"text/html", "application/xhtml+xml"}:
+            lines.append(
+                f"  detail status=rejected reason=unexpected_content_type "
+                f"content_type={content_type or 'missing'}"
+            )
+            continue
+        try:
+            page = response.content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            lines.append("  detail status=rejected reason=decode_error")
+            continue
+        h1_count = len(re.findall(r"<h1\b", page, re.IGNORECASE))
+        title_tag_count = len(re.findall(r"<title\b", page, re.IGNORECASE))
+        time_count = len(re.findall(r"<time\b[^>]*\bdatetime\s*=", page, re.IGNORECASE))
+        jsonld_count = len(re.findall(
+            r"""<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|'application/ld\+json'))""",
+            page,
+            re.IGNORECASE,
+        ))
+        published_meta_count = len(re.findall(
+            r"""<meta\b[^>]*(?:property|name)\s*=\s*["'](?:article:published_time|datepublished|publishdate)["']""",
+            page,
+            re.IGNORECASE,
+        ))
+        lines.append(
+            f"  detail status=success path={final.path[:160]!r} bytes={len(response.content)} "
+            f"h1_count={h1_count} title_tag_count={title_tag_count} time_datetime_count={time_count} "
+            f"jsonld_scripts={jsonld_count} published_meta_tags={published_meta_count}"
+        )
+    return "\n".join(lines)
+
 def probe_citi_global_news_index(http=None) -> str:
     """Read-only probe of Citi's broader official news index; no state writes or activation."""
     client = http or BoundedHttpClient(
@@ -294,6 +404,7 @@ def probe_citi_global_news_index(http=None) -> str:
             f"  {_html_resource_diagnostics(response.content)}",
             f"  {_embedded_json_diagnostics(response.content)}",
             f"  {_embedded_record_shape_diagnostics(source, response.content)}",
+            f"  {_probe_citi_article_details(client, source, response.content)}",
             f"  {_probe_citi_js_assets(client, response.content, response.url)}",
         ])
         return "\n".join(lines)
