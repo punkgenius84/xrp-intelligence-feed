@@ -612,6 +612,8 @@ def _next_data_request_urls(content: bytes, page_url: str) -> list[str]:
             break
     if not build_id:
         return []
+    if not _official_final_url(page_url):
+        return []
     page_path = urlsplit(page_url).path.rstrip("/")
     if not page_path.startswith("/global/news"):
         return []
