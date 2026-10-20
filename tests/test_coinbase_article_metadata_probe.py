@@ -95,3 +95,14 @@ def test_article_probe_reports_http_errors_without_raising():
         FakeHttp(_response(b"Forbidden", status=403, content_type="text/plain"))
     )
     assert result == "status=unavailable reason=unexpected_http_status http_status=403"
+
+
+
+def test_article_probe_accepts_official_calendar_date_without_inventing_time_or_zone():
+    html = (
+        '<meta property="article:published_time" content="2026-02-24">'
+    ).encode()
+
+    assert probe_coinbase_article_metadata(FakeHttp(_response(html))) == (
+        "status=official_metadata_date date=2026-02-24"
+    )
