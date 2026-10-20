@@ -37,7 +37,7 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-main-v1-maintenance-restore
+          key: xrp-state-main-v1-restore
           restore-keys: |
             xrp-state-main-v1-
       - name: Restore intelligence quarantine
@@ -71,4 +71,4 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-main-v1-maintenance-${{ github.run_id }}-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+          key: xrp-state-main-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
