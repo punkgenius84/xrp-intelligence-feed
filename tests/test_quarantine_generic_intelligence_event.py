@@ -106,7 +106,7 @@ def test_quarantine_write_failure_leaves_active_queue_unchanged(tmp_path, monkey
     def fail(*args, **kwargs):
         raise IntelligenceQuarantineError("simulated disk failure")
 
-    monkeypatch.setattr(quarantine, "quarantine", fail)
+    monkeypatch.setattr(JsonIntelligenceQuarantineState, "quarantine", fail)
     with pytest.raises(IntelligenceQuarantineError, match="simulated disk failure"):
         quarantine_event(
             "evt-generic",
@@ -126,7 +126,7 @@ def test_outbox_removal_failure_keeps_audited_copy_and_active_event(tmp_path, mo
     def fail(*args, **kwargs):
         raise RuntimeError("simulated outbox write failure")
 
-    monkeypatch.setattr(outbox, "remove", fail)
+    monkeypatch.setattr(JsonIntelligenceOutboxState, "remove", fail)
     with pytest.raises(RuntimeError, match="simulated outbox write failure"):
         quarantine_event(
             "evt-generic",
