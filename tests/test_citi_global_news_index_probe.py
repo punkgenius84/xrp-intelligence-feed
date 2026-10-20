@@ -3,6 +3,7 @@ import json
 from discovery.http import HttpResponse
 from scripts.probe_citi_global_news_index import (
     NEWS_URL,
+    _embedded_official_article_urls,
     _embedded_record_shape_diagnostics,
     _next_data_candidates,
     probe_citi_global_news_index,
@@ -245,3 +246,36 @@ def test_citi_record_shape_diagnostics_report_nested_keys_and_types_only():
     assert "Do not log this headline" not in result
     assert "Do not log this body" not in result
     assert "Do not log this subtitle" not in result
+
+
+def test_citi_embedded_official_routes_are_bounded_and_allowlisted():
+    payload = {
+        "items": [
+            {"url": "/global/news/press-release/2026/first-release"},
+            {"url": "https://attacker.example/global/news/press-release/2026/unsafe"},
+            {"url": "/global/news/press-release/2026/second-release"},
+            {"url": "/global/news/press-release/2026/third-release"},
+        ]
+    }
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps(payload)
+        + "</script>"
+    ).encode()
+    from discovery.dispatch import load_discovery_sources
+    from pathlib import Path
+
+    from scripts.probe_citi_global_news_index import ROOT
+
+    source = next(
+        item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+        if item["source_id"] == "citi-press-releases"
+    )
+    source = {**source, "source_url": NEWS_URL}
+
+    result = _embedded_official_article_urls(source, html, limit=2)
+
+    assert result == [
+        "https://www.citigroup.com/global/news/press-release/2026/first-release",
+        "https://www.citigroup.com/global/news/press-release/2026/second-release",
+    ]
