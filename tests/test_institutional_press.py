@@ -262,7 +262,7 @@ def test_registered_institutional_sources_are_bounded():
     # The article detail route returns HTTP 403 in Actions; do not retry it on every poll.
     assert "detail_fallback_limit" not in coinbase_blog
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["source_url"] == "https://www.citigroup.com/global/news/press-release"
+    assert citi["source_url"] == "https://www.citigroup.com/global/news"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
     assert citi["enabled"] is False  # Parked until the runner can read an official article index.
     assert citi["detail_fallback_limit"] == 3
