@@ -199,7 +199,13 @@ def test_persistent_schema_error_names_term_and_page_and_preserves_frontier():
 
     assert result.status == "failed"
     assert len(http.calls) == 2
-    assert any("term='digital assets'" in error and "page=1" in error for error in result.errors)
+    assert any(
+        "term='digital assets'" in error
+        and "page=1" in error
+        and "payload_keys=['message']" in error
+        and "api_message='temporary upstream error'" in error
+        for error in result.errors
+    )
     assert result.pagination["requests_made"] == 2
     # No term pagination update is returned, so the caller must retain its prior frontier.
     assert "federal_register_terms" not in result.pagination
