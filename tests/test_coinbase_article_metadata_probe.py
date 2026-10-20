@@ -2,7 +2,10 @@ from discovery.http import HttpResponse
 from scripts.probe_coinbase_article_metadata import (
     TARGET_PATH,
     URL,
+    LOCALIZED_URL,
+    LOCALIZED_TARGET_PATH,
     probe_coinbase_article_metadata,
+    probe_coinbase_localized_article_metadata,
 )
 
 
@@ -105,4 +108,41 @@ def test_article_probe_accepts_official_calendar_date_without_inventing_time_or_
 
     assert probe_coinbase_article_metadata(FakeHttp(_response(html))) == (
         "status=official_metadata_date date=2026-02-24"
+    )
+
+
+def test_localized_article_probe_accepts_only_exact_official_route_and_owned_date():
+    html = (
+        '<meta property="article:published_time" content="2026-02-24">'
+        '<time datetime="2026-10-18">unrelated page date</time>'
+    ).encode()
+    http = FakeHttp(_response(html, url=LOCALIZED_URL))
+
+    assert probe_coinbase_localized_article_metadata(http) == (
+        "status=localized_official_metadata_date date=2026-02-24"
+    )
+    assert len(http.calls) == 1
+    assert http.calls[0][0] == LOCALIZED_URL
+
+
+def test_localized_article_probe_rejects_unrelated_official_article_redirect():
+    other = "https://www.coinbase.com/en-ca/blog/another-article"
+    result = probe_coinbase_localized_article_metadata(
+        FakeHttp(_response(b"<meta property='article:published_time' content='2026-02-24'>", url=other))
+    )
+    assert result == "status=rejected reason=non_official_final_url"
+
+
+def test_jsonld_can_identify_the_exact_localized_article_route():
+    html = f"""
+    <script type="application/ld+json">
+    {{
+      "@type": "BlogPosting",
+      "url": "{LOCALIZED_URL}",
+      "datePublished": "2026-02-24"
+    }}
+    </script>
+    """.encode()
+    assert probe_coinbase_localized_article_metadata(FakeHttp(_response(html, url=LOCALIZED_URL))) == (
+        "status=localized_official_metadata_date date=2026-02-24"
     )
