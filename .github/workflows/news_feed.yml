@@ -70,11 +70,11 @@ jobs:
         if: github.event_name == 'push'
         run: python scripts/probe_swift_press_index.py
       - name: Probe Citi official press index (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_citi_index.py
       - name: Probe Citi broader official news index (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_citi_global_news_index.py
-        if: github.event_name == 'push'
-        run: python scripts/probe_citi_index.py
       - name: Restore persistent state
         id: state_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
