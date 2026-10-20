@@ -54,6 +54,9 @@ jobs:
       - name: Probe Coinbase article-owned publication metadata (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_article_metadata.py
+      - name: Probe Coinbase official sitemap (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_coinbase_official_sitemap.py
       - name: Probe Coinbase official RSS (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_coinbase_blog_rss.py
