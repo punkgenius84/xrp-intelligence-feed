@@ -73,7 +73,7 @@ def _safe_citi_url_sample(value: str) -> str:
 
 
 def _official_script_asset_urls(content: bytes, base_url: str = URL) -> list[str]:
-    """Select at most two same-host Next.js bundles; never follow arbitrary script hosts."""
+    """Select at most four same-host Next.js bundles; never follow arbitrary script hosts."""
     try:
         html = content.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -108,10 +108,12 @@ def _official_script_asset_urls(content: bytes, base_url: str = URL) -> list[str
         selected,
         key=lambda value: (
             0 if "/chunks/pages/%5b" in value.casefold() or "/chunks/pages/[" in value else
-            1 if "/chunks/main-" in value.casefold() else 2,
+            1 if "/chunks/main-" in value.casefold() else
+            2 if "/chunks/pages/_app-" in value.casefold() else
+            3 if "/chunks/webpack-" in value.casefold() else 4,
             value,
         ),
-    )[:2]
+    )[:4]
 
 
 def _inspect_citi_js_asset(content: bytes, url: str) -> str:
