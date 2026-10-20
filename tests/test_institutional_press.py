@@ -636,7 +636,7 @@ def test_unchanged_citi_sitemap_is_healthy_and_skips_detail_fetches():
         sitemap_url=sitemap_url,
         sitemap_detail_limit=2,
         allowed_hosts=["www.citigroup.com", "citigroup.com"],
-        article_path_regex=r"/global/news/press-release/\\d{4}/[^/?#]+",
+        article_path_regex=r"/global/news/press-release/\d{4}/[^/?#]+",
     )
     state = {
         "sources": {
