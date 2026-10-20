@@ -568,6 +568,120 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
         )
     return "\n".join(lines)
 
+
+def _next_data_request_urls(content: bytes, page_url: str) -> list[str]:
+    """Derive at most two same-host Next.js data URLs from official page bootstrap metadata."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return []
+    build_id = asset_prefix = None
+    for match in re.finditer(
+        r"<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script\s*>",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        attrs, body = match.group("attrs"), match.group("body")
+        if not re.search(
+            r"""\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__')|\btype\s*=\s*(?:"application/json"|'application/json')""",
+            attrs,
+            re.IGNORECASE,
+        ):
+            continue
+        if len(body) > 1500000:
+            continue
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        candidate_build = payload.get("buildId")
+        candidate_prefix = payload.get("assetPrefix")
+        if isinstance(candidate_build, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,120}", candidate_build):
+            build_id = candidate_build
+        if isinstance(candidate_prefix, str):
+            prefix = urlsplit(candidate_prefix)
+            if (
+                not prefix.scheme and not prefix.netloc and prefix.path.startswith("/")
+                and not prefix.query and not prefix.fragment and ".." not in prefix.path.split("/")
+                and not prefix.path.startswith("//")
+            ):
+                asset_prefix = prefix.path.rstrip("/")
+        if build_id and asset_prefix:
+            break
+    if not build_id:
+        return []
+    page_path = urlsplit(page_url).path.rstrip("/")
+    if not page_path.startswith("/global/news"):
+        return []
+    candidates = []
+    if asset_prefix:
+        candidates.append(f"https://www.citigroup.com{asset_prefix}/_next/data/{build_id}{page_path}.json")
+    candidates.append(f"https://www.citigroup.com/_next/data/{build_id}{page_path}.json")
+    safe = []
+    for candidate in candidates:
+        parts = urlsplit(candidate)
+        if _official_final_url(candidate) and parts.path.startswith("/"):
+            if candidate not in safe:
+                safe.append(candidate)
+    return safe[:2]
+
+
+def _probe_citi_next_data(client, content: bytes, page_url: str) -> str:
+    """Probe only Next.js data URLs derived from official bootstrap metadata."""
+    urls = _next_data_request_urls(content, page_url)
+    if not urls:
+        return "next_data_probe selected=0"
+    lines = [f"next_data_probe selected={len(urls)}"]
+    for url in urls:
+        try:
+            response = client.get(
+                url,
+                expected_content_types=("application/json", "text/plain", "text/html", "application/octet-stream"),
+            )
+        except DiscoveryHttpError as exc:
+            suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+            lines.append(f"  next_data status=unavailable reason={exc.kind}{suffix}")
+            continue
+        if response.status_code != 200:
+            lines.append(f"  next_data status=unavailable http_status={response.status_code}")
+            continue
+        if not _official_final_url(response.url):
+            lines.append("  next_data status=rejected reason=non_official_final_url")
+            continue
+        try:
+            payload = json.loads(response.content.decode("utf-8-sig"))
+        except (UnicodeDecodeError, ValueError):
+            lines.append(
+                f"  next_data status=non_json content_type={response.headers.get('content-type', '').split(';', 1)[0]!r} "
+                f"bytes={len(response.content)}"
+            )
+            continue
+        visited = 0
+        route_values = 0
+        date_fields = 0
+        stack = [payload]
+        while stack and visited < 30000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                for key, value in item.items():
+                    key_norm = str(key).casefold()
+                    if isinstance(value, str) and _ROUTE_RE.search(value):
+                        route_values += 1
+                    if key_norm in {"publishdate", "publishdatestr", "datepublished", "publishedat", "published_at"}:
+                        date_fields += 1
+                    stack.append(value)
+            elif isinstance(item, list):
+                stack.extend(item)
+        top_keys = sorted(str(key)[:50] for key in payload.keys())[:20] if isinstance(payload, dict) else []
+        lines.append(
+            f"  next_data status=success bytes={len(response.content)} visited_nodes={visited} "
+            f"top_keys={top_keys} official_route_values={route_values} date_fields={date_fields}"
+        )
+    return "\n".join(lines)
+
 def probe_citi_global_news_index(http=None) -> str:
     """Read-only probe of Citi's broader official news index; no state writes or activation."""
     client = http or BoundedHttpClient(
@@ -629,6 +743,7 @@ def probe_citi_global_news_index(http=None) -> str:
             f"  {_embedded_record_shape_diagnostics(source, response.content)}",
             f"  {_probe_citi_article_details(client, source, response.content)}",
             f"  {_probe_citi_js_assets(client, response.content, response.url)}",
+            f"  {_probe_citi_next_data(client, response.content, response.url)}",
         ])
         return "\n".join(lines)
 
