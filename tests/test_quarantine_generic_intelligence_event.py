@@ -159,6 +159,12 @@ def test_maintenance_workflow_is_manual_nonpublishing_and_saves_audit_first():
     assert workflow.index("name: Save intelligence quarantine") < workflow.index(
         "name: Save persistent state"
     )
+    assert "id: quarantine" in workflow
+    assert "steps.quarantine.outcome == 'success' || steps.quarantine.outcome == 'failure'" in workflow
+    state_save_block = workflow.split("name: Save persistent state", 1)[1].split(
+        "name: Save intelligence quarantine", 1
+    )[0]
+    assert "if: success()" in state_save_block
     assert "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9" in workflow
     assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in workflow
     assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in workflow
