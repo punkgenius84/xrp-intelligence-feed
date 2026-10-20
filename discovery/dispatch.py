@@ -9,6 +9,7 @@ from discovery.bny_rss import BNYRSSDiscovery, validate_bny_source
 from discovery.bis_media_releases import BISMediaReleasesDiscovery, validate_bis_source
 from discovery.cftc_rss import CFTCRSSDiscovery, validate_cftc_source
 from discovery.institutional_press import InstitutionalPressDiscovery, validate_institutional_source
+from discovery.institutional_sitemap import InstitutionalPressSitemapDiscovery, validate_institutional_sitemap_source
 from discovery.federal_register import (FederalRegisterDiscovery,
                                          validate_federal_register_source)
 from discovery.federal_reserve_rss import FederalReserveRSSDiscovery, validate_federal_reserve_source
@@ -49,6 +50,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
         method = source.get("discovery_method")
         validator = {
             "institutional_press_html": validate_institutional_source,
+            "institutional_press_sitemap": validate_institutional_sitemap_source,
             "bny_rss": validate_bny_source,
             "sec_submissions": validate_sec_source,
             "sec_press_releases_rss": validate_sec_press_source,
@@ -92,6 +94,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
     method = source.get("discovery_method")
     if method == "institutional_press_html":
         return InstitutionalPressDiscovery(source, **kwargs)
+    if method == "institutional_press_sitemap":
+        return InstitutionalPressSitemapDiscovery(source, **kwargs)
     if method == "bny_rss":
         return BNYRSSDiscovery(source, **kwargs)
     if method == "sec_submissions":
