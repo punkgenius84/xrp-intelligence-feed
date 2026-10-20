@@ -274,7 +274,8 @@ def test_registered_institutional_sources_are_bounded():
     assert coinbase_ir["detail_fallback_limit"] == 1
     assert jpmorgan["detail_fallback_limit"] == 1
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
-    assert citi["enabled"] is False
+    assert citi["enabled"] is True
+    assert citi["sitemap_detail_limit"] == 10
     assert citi["detail_fallback_limit"] == 3
     swift_registry = next(item for item in sources if item["source_id"] == "swift-press-releases")
     assert swift_registry["source_url"] == "https://www.swift.com/about-us/media-centre/press-releases"
