@@ -1379,6 +1379,18 @@ class InstitutionalPressDiscovery:
                 self.source["source_id"], METHOD, "failed", fetched_at=fetched_at, errors=errors,
             )
 
+        digest = hashlib.sha256(b"\\n".join(sitemap_content_parts)).hexdigest()
+        if previous_digest == digest and not errors:
+            header_updates = {
+                key: root_response.headers[key]
+                for key in ("etag", "last_modified") if root_response.headers.get(key)
+            }
+            return DiscoveryResult(
+                self.source["source_id"], METHOD, "empty", fetched_at=fetched_at,
+                state_updates={request_id: header_updates} if header_updates else {},
+                pagination={"citi_sitemap_sha256": digest},
+            )
+
         unique: dict[str, tuple[str, str]] = {}
         for url, lastmod in article_entries:
             safe = _official_article(self.source, url)
