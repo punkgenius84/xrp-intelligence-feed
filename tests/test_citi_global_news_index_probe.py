@@ -276,6 +276,6 @@ def test_citi_embedded_official_routes_are_bounded_and_allowlisted():
     result = _embedded_official_article_urls(source, html, limit=2)
 
     assert result == [
-        "https://www.citigroup.com/global/news/press-release/2026/first-release",
-        "https://www.citigroup.com/global/news/press-release/2026/second-release",
+        "https://www.citigroup.com/global/news/press-release/2026/first-release/",
+        "https://www.citigroup.com/global/news/press-release/2026/second-release/",
     ]
