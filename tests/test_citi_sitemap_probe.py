@@ -47,6 +47,7 @@ def test_citi_sitemap_candidate_order_uses_lastmod_only_for_bounded_fetch_priori
         ("https://www.citigroup.com/global/news/perspectives/2026/not-a-release", "2026-10-20"),
     ]
     assert _candidate_article_urls(source, entries) == [
-        "https://www.citigroup.com/global/news/press-release/2026/newer",
-        "https://www.citigroup.com/global/news/press-release/2026/older",
+        "https://www.citigroup.com/global/news/press-release/2026/newer/",
+        "https://www.citigroup.com/global/news/press-release/2026/older/",
+        "https://www.citigroup.com/global/news/press-release/2026/undated/",
     ]
