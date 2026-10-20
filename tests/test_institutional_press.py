@@ -265,7 +265,8 @@ def test_registered_institutional_sources_are_bounded():
     citi = next(item for item in sources if item["source_id"] == "citi-press-releases")
     assert citi["source_url"] == "https://www.citigroup.com/global/news"
     assert citi["article_path_regex"] == r"/global/news/press-release/\d{4}/[^/?#]+"
-    assert citi["enabled"] is False  # Parked until the runner can read an official article index.
+    assert citi["enabled"] is True  # Validated through the official sitemap and article detail pages.
+    assert citi["sitemap_detail_limit"] == 10
     assert citi["detail_fallback_limit"] == 3
     coinbase_ir = next(item for item in sources if item["source_id"] == "coinbase-investor-news")
     assert coinbase_ir["enabled"] is False  # Static IR index has no runner-readable dated article cards.
@@ -633,7 +634,9 @@ def test_citi_source_uses_bounded_official_sitemap_and_collects_grounded_detail(
         HttpResponse(200, {"content-type": "text/html"}, detail, article_url),
     ])
 
-    result = InstitutionalPressDiscovery(citi, http=http, now=lambda: STAMP).collect(source_state={})
+    result = InstitutionalPressDiscovery(
+        citi, http=http, now=lambda: datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
+    ).collect(source_state={})
 
     assert citi["enabled"] is True
     assert citi["sitemap_url"] == sitemap_url
