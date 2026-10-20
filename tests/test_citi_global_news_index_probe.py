@@ -1,3 +1,5 @@
+import json
+
 from discovery.http import HttpResponse
 from scripts.probe_citi_global_news_index import (
     NEWS_URL,
@@ -101,7 +103,7 @@ def test_next_data_probe_extracts_only_records_with_same_object_title_url_and_da
     }
     html = (
         '<script id="__NEXT_DATA__" type="application/json">'
-        + __import__("json").dumps(payload)
+        + json.dumps(payload)
         + "</script>"
     ).encode()
 
