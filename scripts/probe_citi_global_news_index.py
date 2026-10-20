@@ -285,6 +285,97 @@ def _embedded_official_article_urls(source: dict, content: bytes, limit: int = 2
     return [urls[key] for key in sorted(urls)[:limit]]
 
 
+
+def _jsonld_article_metadata(source: dict, expected_url: str, content: bytes) -> list[dict]:
+    """Extract only explicit JSON-LD article title/date tied to the exact official detail URL."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return []
+    try:
+        expected = _official_article(source, expected_url)
+    except (TypeError, ValueError):
+        return []
+    if expected is None:
+        return []
+    expected_native_id = expected[1]
+    rows = {}
+    for match in re.finditer(
+        r"""<script\b(?=[^>]*\btype\s*=\s*(?:"application/ld\+json"|'application/ld\+json'|application/ld\+json(?:\s|/|>)))[^>]*>(?P<body>.*?)</script\s*>""",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        body = match.group("body")
+        if len(body) > 500000 or len(rows) >= 3:
+            continue
+        try:
+            payload = json.loads(body.strip())
+        except (TypeError, ValueError):
+            continue
+        stack = [payload]
+        visited = 0
+        while stack and visited < 10000:
+            item = stack.pop()
+            visited += 1
+            if isinstance(item, dict):
+                normalized = {str(key).casefold(): value for key, value in item.items()}
+                raw_type = normalized.get("@type")
+                types = raw_type if isinstance(raw_type, list) else [raw_type]
+                normalized_types = {
+                    str(value).casefold() for value in types if isinstance(value, str)
+                }
+                if not normalized_types.intersection({
+                    "article", "newsarticle", "pressrelease", "blogposting",
+                }):
+                    stack.extend(item.values())
+                    continue
+                title_value = normalized.get("headline")
+                if not isinstance(title_value, str):
+                    title_value = normalized.get("name")
+                published_value = normalized.get("datepublished")
+                if not isinstance(title_value, str) or not isinstance(published_value, str):
+                    stack.extend(item.values())
+                    continue
+                url_values = []
+                for key in ("url", "@id"):
+                    value = normalized.get(key)
+                    if isinstance(value, str):
+                        url_values.append(value)
+                for key in ("mainentityofpage", "main_entity_of_page"):
+                    value = normalized.get(key)
+                    if isinstance(value, str):
+                        url_values.append(value)
+                    elif isinstance(value, dict):
+                        for subkey in ("@id", "url"):
+                            nested_url = value.get(subkey)
+                            if isinstance(nested_url, str):
+                                url_values.append(nested_url)
+                matching_url = False
+                for value in url_values:
+                    try:
+                        safe = _official_article(source, value)
+                    except (TypeError, ValueError):
+                        continue
+                    if safe is not None and safe[1] == expected_native_id:
+                        matching_url = True
+                        break
+                title = _clean(re.sub(r"<[^>]+>", " ", title_value))
+                published = _parse_date(published_value, source.get("numeric_date_order", "mdy"))
+                if matching_url and len(title) >= 12 and published is not None:
+                    rows.setdefault(
+                        expected_native_id,
+                        {
+                            "url": expected[0],
+                            "native_id": expected_native_id,
+                            "title": title,
+                            "date": published,
+                        },
+                    )
+                stack.extend(item.values())
+            elif isinstance(item, list):
+                stack.extend(item)
+    return list(rows.values())
+
 def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
     """Probe at most two validated official detail pages; emit metadata counts only."""
     urls = _embedded_official_article_urls(source, content, limit=2)
@@ -333,6 +424,7 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
             page,
             re.IGNORECASE,
         ))
+        structured_rows = _jsonld_article_metadata(source, url, response.content)
         published_meta_count = len(re.findall(
             r"""<meta\b[^>]*(?:property|name)\s*=\s*["'](?:article:published_time|datepublished|publishdate)["']""",
             page,
@@ -341,7 +433,8 @@ def _probe_citi_article_details(http, source: dict, content: bytes) -> str:
         lines.append(
             f"  detail status=success path={final.path[:160]!r} bytes={len(response.content)} "
             f"h1_count={h1_count} title_tag_count={title_tag_count} time_datetime_count={time_count} "
-            f"jsonld_scripts={jsonld_count} published_meta_tags={published_meta_count}"
+            f"jsonld_scripts={jsonld_count} structured_candidates={len(structured_rows)} "
+            f"published_meta_tags={published_meta_count}"
         )
     return "\n".join(lines)
 
