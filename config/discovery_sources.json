@@ -213,7 +213,7 @@
       "source_url": "https://www.citigroup.com/global/news",
       "sitemap_url": "https://www.citigroup.com/global/sitemap.xml",
       "sitemap_detail_limit": 10,
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
