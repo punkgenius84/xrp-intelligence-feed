@@ -32,7 +32,6 @@ def test_production_workflow_verifies_pinned_ollama_archive_before_extracting():
     assert "curl --connect-timeout 15 --max-time 120 -fsSL https://ollama.com/install.sh | sh" not in workflow
 
 
-
 def test_headline_evaluation_workflow_is_manual_and_nonpublishing():
     workflow = (WORKFLOW_DIR / "intelligence_evaluation.yml").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow
@@ -57,14 +56,14 @@ def test_headline_evaluation_workflow_does_not_escape_shell_or_github_expression
     assert "${{ github.workspace }}" in workflow
     assert "${{ runner.os }}" in workflow
 
+
 def test_production_inference_smoke_test_allows_slow_cold_model_startup():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
     assert "timeout_seconds=90" in workflow
     assert 'OllamaProvider(model="qwen2.5:3b", timeout=90)' in workflow
 
 
-
-def test_citi_diagnostic_steps_are_independent_and_push_only():
+def test_only_current_citi_production_probe_runs_in_push_diagnostics():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
     lines = workflow.splitlines()
 
@@ -76,12 +75,15 @@ def test_citi_diagnostic_steps_are_independent_and_push_only():
         )
         return "\n".join(lines[start:end])
 
-    official = step_block("name: Probe Citi official press index")
-    broader = step_block("name: Probe Citi broader official news index")
+    current = step_block("name: Probe Citi production sitemap collector")
+    assert "if: github.event_name == 'push'" in current
+    assert "run: python scripts/probe_citi_production_sitemap_collector.py" in current
 
-    assert "if: github.event_name == 'push'" in official
-    assert "run: python scripts/probe_citi_index.py" in official
-    assert "if: github.event_name == 'push'" in broader
-    assert "run: python scripts/probe_citi_global_news_index.py" in broader
-    assert "probe_citi_global_news_index.py" not in official
-    assert "probe_citi_index.py" not in broader
+    obsolete_markers = (
+        "name: Probe Citi official press index",
+        "name: Probe Citi broader official news index",
+        "name: Probe Citi institutional collector fallback",
+        "name: Probe Citi official sitemap (read-only diagnostic)",
+    )
+    for marker in obsolete_markers:
+        assert marker not in workflow, f"superseded diagnostic step remains: {marker}"
