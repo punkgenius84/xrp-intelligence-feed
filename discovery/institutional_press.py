@@ -772,24 +772,9 @@ def _parse_page(
             native_id for native_id in unresolved_incomplete_ids
             if not _route_month_is_before_cutoff(native_id, lookback_cutoff)
         }
-    # An opted-in undated observation is deliberately not a publishable article.
-    # When its official title and route are known and the date is the *only*
-    # missing field, retain the observation for change detection without treating
-    # this expected, fail-closed exclusion as a broken index. Missing titles,
-    # conflicting duplicates, and all other incomplete routes remain errors.
-    if source.get("track_undated_observations") is True:
-        observation_only_ids = {
-            item.get("native_id")
-            for item in undated_observations
-            if isinstance(item, dict) and isinstance(item.get("native_id"), str)
-        }
-        unresolved_incomplete_ids = {
-            native_id for native_id in unresolved_incomplete_ids
-            if not (
-                native_id in observation_only_ids
-                and incomplete_reasons.get(native_id) == {"date"}
-            )
-        }
+    # An opted-in undated observation remains an incomplete route: keep it
+    # available for change detection, but do not suppress the source's partial
+    # health status. Observation tracking is not publication-date evidence.
     if diagnostics is not None:
         diagnostics["incomplete_native_ids"] = sorted(unresolved_incomplete_ids)
         diagnostics["incomplete_reasons"] = {
