@@ -15,10 +15,7 @@ from discovery.http import BoundedHttpClient, DiscoveryHttpError
 
 RSS_URL = "https://www.coinbase.com/blog/rss.xml"
 OFFICIAL_HOSTS = {"www.coinbase.com", "coinbase.com"}
-TARGET_PATH = (
-    "/blog/coinbase-and-thunes-connect-stablecoin-infrastructure"
-
-)
+TARGET_PATH = "/blog/coinbase-and-thunes-connect-stablecoin-infrastructure"
 _ALLOWED_CONTENT_TYPES = {"application/rss+xml", "application/xml", "text/xml"}
 
 
