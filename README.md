@@ -222,6 +222,18 @@ Preview the quarantined records locally without changing state or posting to Dis
 
 Use `--path` to inspect a copied quarantine JSON file. The preview command is read-only and limits output to five evidence records per event.
 
+### Stale-only queue quarantine (manual, production-cache aware)
+
+Use the **Quarantine Stale Intelligence Queue Items** workflow to archive only queued events whose latest trustworthy evidence is older than 30 days. The workflow is read-only by default.
+
+- Run the workflow with `apply_quarantine=false` first and inspect the preview. It reports the stale count without changing either state store.
+- Only when the stale items are intentionally being held out of the active launch queue, set `apply_quarantine=true` and enter the exact confirmation `QUARANTINE-STALE-INTELLIGENCE`.
+- It requires a restored production state cache and shares the production feed concurrency lock. It archives the stale records to the existing quarantine store before removing only those stale keys from the active outbox.
+- Fresh, undated, and future-dated events remain active. If the quarantine write, collision check, or active queue update fails, the workflow fails closed; delivery history, source pagination, `seen.json`, and deduplication state are not reset.
+- This workflow never publishes to Discord. It is separate from the full pre-launch reset below, which archives and clears every queued item.
+
+Do not apply stale-only quarantine automatically or treat the preview recommendation as editorial approval.
+
 ### Pre-launch queue reset (manual, production-cache aware)
 
 The active intelligence outbox is persisted in GitHub Actions caches, so running the Python cleanup script only in a local clone does **not** reset the production queue. Use the manual **Clean Intelligence Launch Queue** workflow from the Actions tab when the launch reset is intentionally approved.
