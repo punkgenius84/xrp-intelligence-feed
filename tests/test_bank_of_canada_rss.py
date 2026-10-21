@@ -179,13 +179,13 @@ def test_feed_item_limit_does_not_save_validator():
 
 def test_bank_of_canada_entity_and_relevance_use_existing_pipeline():
     news = NewsItem(
-        title="Bank of Canada announces stablecoin rules for cross-border payments",
+        title="Bank of Canada discusses XRP and cross-border payments",
         url="https://www.bankofcanada.ca/2026/09/fad-press-release-2026-09-02/",
         source="Bank of Canada",
         source_id=SOURCE_ID,
         authority_tier=1,
         category="regulatory",
-        summary="Bank of Canada announces new digital asset and stablecoin oversight requirements.",
+        summary="Bank of Canada discusses XRP, Ripple and cross-border payments.",
     )
     detect_entities(news)
     classify_source_quality(news)
