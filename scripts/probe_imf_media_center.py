@@ -156,12 +156,25 @@ def probe_public_endpoints(http=None) -> str:
             continue
         content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
         body = response.content.lstrip()
+        if response.status_code != 200:
+            lines.append(
+                f"IMF endpoint: url={url} status=unusable reason=unexpected_http_status"
+                f" http_status={response.status_code} content_type={content_type or 'missing'}"
+                f" bytes={len(response.content)}"
+            )
+            continue
+        if not body:
+            lines.append(
+                f"IMF endpoint: url={url} status=unusable reason=empty_body"
+                f" http_status={response.status_code} content_type={content_type or 'missing'}"
+            )
+            continue
         signature = "xml" if body.startswith(b"<?xml") or b"<rss" in body[:500].lower() or b"<feed" in body[:500].lower() else "html_or_other"
         lines.append(
             f"IMF endpoint: url={url} status=reachable http_status={response.status_code}"
             f" content_type={content_type or 'missing'} bytes={len(response.content)} body_signature={signature}"
         )
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def main() -> int:
