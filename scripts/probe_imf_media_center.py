@@ -71,7 +71,7 @@ def public_probe_routes() -> list[dict[str, object]]:
             "lookback_days": 365,
             "max_items": 50,
             "allowed_hosts": ["www.imf.org", "imf.org"],
-            "article_path_regex": r"/en/news/articles/\\d{4}/\\d{2}/\\d{2}/[^/?#]+",
+            "article_path_regex": r"/en/news/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
         },
         {
             "source_id": "imf-blogs-canonical-runner-probe",
@@ -84,7 +84,7 @@ def public_probe_routes() -> list[dict[str, object]]:
             "lookback_days": 180,
             "max_items": 50,
             "allowed_hosts": ["www.imf.org", "imf.org"],
-            "article_path_regex": r"/en/blogs/articles/\\d{4}/\\d{2}/\\d{2}/[^/?#]+",
+            "article_path_regex": r"/en/blogs/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
         },
         {
             "source_id": "imf-gfsr-runner-probe",
