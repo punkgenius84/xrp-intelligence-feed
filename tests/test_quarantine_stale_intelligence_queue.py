@@ -166,9 +166,4 @@ def test_duplicate_active_keys_fail_closed(tmp_path):
         key="duplicate", event=event("evt", "2026-09-01T00:00:00+00:00"), queued_at=QUEUED_AT
     )
     with pytest.raises(ValueError, match="duplicate keys"):
-        quarantine_stale_queue(
-            outbox_path=outbox_path,
-            quarantine_path=quarantine_path,
-            apply=False,
-            now=NOW,
-        ) if False else find_stale_items([item, item], now=NOW)
+        find_stale_items([item, item], now=NOW)
