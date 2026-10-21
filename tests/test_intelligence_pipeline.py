@@ -23,6 +23,33 @@ def item(score, candidate):
     )
 
 
+def test_evidence_does_not_substitute_collection_time_for_publication_time():
+    from datetime import timedelta
+    from intelligence.evidence import evidence_from_item
+
+    collected_at = datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
+    undated = NewsItem(
+        title="Undated official announcement",
+        url="https://example.test/undated",
+        source="Example",
+        collected_at=collected_at,
+    )
+
+    evidence = evidence_from_item(undated)
+
+    assert evidence.published_at == ""
+
+    published_at = collected_at - timedelta(days=2)
+    dated = NewsItem(
+        title="Dated official announcement",
+        url="https://example.test/dated",
+        source="Example",
+        collected_at=collected_at,
+        published_at=published_at,
+    )
+    assert evidence_from_item(dated).published_at == published_at.isoformat()
+
+
 def test_select_items_is_bounded_and_score_ordered():
     config = load_intelligence_config()
     config = config.__class__(
