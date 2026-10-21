@@ -173,13 +173,13 @@ def test_feed_item_limit_does_not_save_validator():
 
 def test_ecb_entity_detection_and_relevance_use_existing_pipeline():
     news = NewsItem(
-        title="European Central Bank publishes digital euro settlement update",
+        title="European Central Bank discusses XRP and cross-border payments",
         url="https://www.ecb.europa.eu/press/pr/2026/html/ecb.pr261021_1.en.html",
         source="European Central Bank",
         source_id=SOURCE_ID,
         authority_tier=1,
         category="regulatory",
-        summary="European Central Bank official press feed discusses digital euro and cross-border payments.",
+        summary="European Central Bank official press feed discusses XRP, Ripple, and cross-border payments.",
     )
     detect_entities(news)
     classify_source_quality(news)
