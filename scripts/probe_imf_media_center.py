@@ -26,8 +26,10 @@ PUBLIC_ENDPOINT_URLS = (
     "https://www.imf.org/en/Blogs/rss?language=eng",
     "https://www.imf.org/external/sitemap.htm",
     "https://www.imf.org/en/Publications/WEO",
+    # Official IMF Data news listing; narrower than the general IMF News feed.
+    "https://data.imf.org/news",
 )
-PUBLIC_ENDPOINT_HOSTS = {"www.imf.org", "imf.org", "mediacenter.imf.org"}
+PUBLIC_ENDPOINT_HOSTS = {"www.imf.org", "imf.org", "mediacenter.imf.org", "data.imf.org"}
 PUBLIC_CONTENT_TYPES = (
     "text/html",
     "application/xhtml+xml",
