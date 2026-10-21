@@ -414,6 +414,17 @@
         "mediacenter.imf.org"
       ],
       "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    },
+    {
+      "source_id": "ecb-press-releases",
+      "name": "European Central Bank",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "ecb_rss",
+      "source_url": "https://www.ecb.europa.eu/rss/press.html",
+      "enabled": true,
+      "lookback_days": 90,
+      "max_items": 50
     }
   ]
 }
