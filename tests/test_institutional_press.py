@@ -1706,9 +1706,9 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
         coinbase_blog, http=http, now=lambda: datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
     ).collect()
 
-    # The index was parsed successfully for publishable dated articles. The
-    # undated route remains observation-only and does not poison source health.
-    assert result.status == "success"
+    # Dated candidates remain usable, but the unresolved official route keeps
+    # source health partial. Tracking the route is not evidence of its publication date.
+    assert result.status == "partial"
     assert any(item.url == "https://www.coinbase.com/blog/known-official-article/" for item in result.candidates)
     assert len(http.calls) == 1
     assert http.calls[0][0] == index_url
@@ -1722,11 +1722,9 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
     assert result.observations[0]["title"] == (
         "Coinbase Opens Stock Trading to Everyone in the US Partners with Yahoo Finance to Power Discovery"
     )
-    # The official title/route remains observable, but never becomes a candidate.
-    # Since no unresolved publishable-card parse error remains, index validators may
-    # advance normally; the observation is still updated only from trusted index data.
-    assert result.state_updates == {_index_request_id(index_url): {}}
-    assert not any("malformed article on official index" in error for error in result.errors)
+    # Do not advance validators while the index still contains an unresolved route.
+    assert result.state_updates == {}
+    assert any("malformed article on official index" in error for error in result.errors)
 
 
 
