@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from scripts.probe_imf_media_center import public_probe_routes
+from scripts.probe_imf_media_center import public_probe_routes, public_rss_routes
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,3 +34,17 @@ def test_imf_public_routes_are_probed_but_remain_disabled_in_production_config()
         assert route["source_url"].startswith("https://www.imf.org/")
         assert set(route["allowed_hosts"]) <= {"www.imf.org", "imf.org"}
         assert re.search(route["article_path_regex"], samples[source_id])
+
+
+
+def test_imf_rss_routes_are_official_and_diagnostic_only():
+    config = json.loads((ROOT / "config" / "discovery_sources.json").read_text(encoding="utf-8"))
+    configured = {item["source_id"]: item for item in config["sources"]}
+    assert configured["imf-blogs"]["enabled"] is False
+    assert configured["imf-global-financial-stability-report"]["enabled"] is False
+    routes = {item["label"]: item["url"] for item in public_rss_routes()}
+    assert routes == {
+        "official IMF News RSS": "https://www.imf.org/en/News/rss?language=eng",
+        "official IMF Blogs RSS": "https://www.imf.org/en/Blogs/rss?language=eng",
+    }
+    assert all(url.startswith("https://www.imf.org/") for url in routes.values())
