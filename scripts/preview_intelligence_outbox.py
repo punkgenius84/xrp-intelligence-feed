@@ -43,6 +43,19 @@ def _evidence_freshness(event, now: datetime, stale_after_days: int) -> tuple[st
     return "fresh", latest.date().isoformat(), age_days
 
 
+def _recommended_action(freshness: str, generic_titles_only: bool) -> str:
+    # Read-only guidance aligned with the publisher's fail-closed checks.
+    if freshness == "future-dated":
+        return "hold_future_dated_evidence"
+    if freshness == "undated":
+        return "hold_missing_or_invalid_date"
+    if freshness == "stale":
+        return "quarantine_stale_before_publish"
+    if generic_titles_only:
+        return "quarantine_generic_evidence_titles"
+    return "editorial_review_before_launch"
+
+
 def render_preview(
     path: str | Path = "state/intelligence_outbox.json",
     *,
@@ -75,10 +88,13 @@ def render_preview(
         lines.append(f"   summary: {_one_line(event.summary, 300)}")
         lines.append(f"   significance: {_one_line(event.significance, 300)}")
         freshness, latest_date, age_days = _evidence_freshness(event, current, stale_after_days)
+        generic_titles_only = has_only_generic_evidence_titles(event)
+        action = _recommended_action(freshness, generic_titles_only)
         age_label = f" age_days={age_days}" if age_days is not None else ""
         lines.append(
             f"   review: evidence_freshness={freshness} latest_evidence_date={latest_date}"
-            f"{age_label} generic_evidence_titles_only={str(has_only_generic_evidence_titles(event)).lower()}"
+            f"{age_label} generic_evidence_titles_only={str(generic_titles_only).lower()}"
+            f" recommended_action={action}"
         )
         if not event.evidence:
             lines.append("   evidence: NONE")
