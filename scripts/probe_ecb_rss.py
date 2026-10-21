@@ -18,7 +18,8 @@ def probe_ecb_rss() -> str:
         item for item in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
         if item["source_id"] == "ecb-press-releases"
     )
-    # In-memory activation only. The production registry remains disabled until this passes.
+    configured_enabled = source["enabled"]
+    # The probe explicitly enables the adapter in memory, regardless of production config.
     source = {**source, "enabled": True}
     client = BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only official ECB RSS diagnostic)",
@@ -44,7 +45,10 @@ def probe_ecb_rss() -> str:
         )
     for error in result.errors[:5]:
         lines.append(f"  diagnostic_error={error[:240]!r}")
-    lines.append("  persistent_state_saved=false publishing=disabled source_enabled_in_production=false")
+    lines.append(
+        f"  persistent_state_saved=false publishing=disabled "
+        f"production_registry_enabled={str(configured_enabled).lower()}"
+    )
     return "\n".join(lines)
 
 
