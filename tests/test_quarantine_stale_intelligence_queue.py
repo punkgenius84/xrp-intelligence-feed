@@ -77,7 +77,7 @@ def test_apply_archives_and_removes_only_stale_events(tmp_path):
     outbox.enqueue([
         event("evt-stale", "2026-09-01T00:00:00+00:00"),
         event("evt-fresh", "2026-10-10T00:00:00+00:00"),
-        event("evt-undated", None),
+        event("evt-undated", ""),
         event("evt-future", "2026-11-22T00:00:00+00:00"),
     ], queued_at=QUEUED_AT)
 
