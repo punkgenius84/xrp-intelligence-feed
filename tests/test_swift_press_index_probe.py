@@ -41,7 +41,8 @@ def test_swift_probe_reports_valid_official_index_and_dated_article():
     assert "dated_items=1" in result
     assert "2026-10-08T12:00:00+00:00" in result
     assert len(http.calls) == len(INDEX_URLS) + len(ALTERNATE_URLS) + len(SITEMAP_URLS)
-    assert all(call[1]["expected_content_types"] == ("text/html", "application/xhtml+xml") for call in http.calls)
+    assert all(call[1]["expected_content_types"] == ("text/html", "application/xhtml+xml") for call in http.calls[:len(INDEX_URLS) + len(ALTERNATE_URLS)])
+    assert all("application/xml" in call[1]["expected_content_types"] for call in http.calls[-len(SITEMAP_URLS):])
 
 
 def test_swift_probe_reports_http_failure_without_raising():
@@ -52,7 +53,8 @@ def test_swift_probe_reports_http_failure_without_raising():
 
     result = probe_swift_indexes(http)
 
-    assert result.count("status=unavailable") == len(INDEX_URLS) + len(ALTERNATE_URLS) + len(SITEMAP_URLS)
+    assert result.count("status=unavailable") == len(INDEX_URLS) + len(ALTERNATE_URLS)
+    assert result.count("status=unusable reason=unexpected_http_status") == len(SITEMAP_URLS)
     assert "http_status=403" in result
     assert len(http.calls) == len(INDEX_URLS) + len(ALTERNATE_URLS) + len(SITEMAP_URLS)
 
@@ -62,6 +64,7 @@ def test_swift_probe_rejects_non_official_redirect_and_wrong_content_type():
         response(b"<html></html>", url="https://attacker.example/news-events/press-releases"),
         response(b'{"error":"not html"}', content_type="application/json", url=INDEX_URLS[1]),
         *[response(b"<html></html>", url=url) for url in (*INDEX_URLS[2:], *ALTERNATE_URLS)],
+        *[response(b"<html></html>", url=url) for url in SITEMAP_URLS],
     ])
 
     result = probe_swift_indexes(http)
