@@ -82,8 +82,8 @@ def test_swift_probe_rejects_unrecognized_official_listing_shape():
 
 def test_swift_sitemap_routes_accept_only_official_xml_and_report_loc_count():
     responses = [
-        response(b'<?xml version="1.0"?><urlset><url><loc>https://www.swift.com/insights/news</loc></url><url><loc>https://www.swift.com/about-us/media-centre/press-releases</loc></url></urlset>', content_type="application/xml", url=url)
-        for url in SITEMAP_URLS
+        *[response(b"<html><body><main><article><time datetime=\"2026-10-08T12:00:00Z\">8 October 2026</time><a href=\"/news-events/press-releases/sample\">Sample</a></article></main></body></html>", url=url) for url in (*INDEX_URLS, *ALTERNATE_URLS)],
+        *[response(b'<?xml version="1.0"?><urlset><url><loc>https://www.swift.com/insights/news</loc></url><url><loc>https://www.swift.com/about-us/media-centre/press-releases</loc></url></urlset>', content_type="application/xml", url=url) for url in SITEMAP_URLS],
     ]
     result = probe_swift_indexes(FakeHttp(responses))
     assert result.count("status=valid_xml") == len(SITEMAP_URLS)
@@ -92,10 +92,10 @@ def test_swift_sitemap_routes_accept_only_official_xml_and_report_loc_count():
 
 def test_swift_sitemap_routes_reject_html_body_and_empty_success():
     responses = [
+        *[response(b"<html></html>", url=url) for url in (*INDEX_URLS, *ALTERNATE_URLS)],
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[0]),
         response(b"", content_type="application/xml", url=SITEMAP_URLS[1]),
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[2]),
-        *[response(b"<html></html>", url=url) for url in (*INDEX_URLS, *ALTERNATE_URLS)],
     ]
     result = probe_swift_indexes(FakeHttp(responses))
     assert "sitemap=" + SITEMAP_URLS[0] + " status=unusable reason=not_recognized_as_xml" in result
