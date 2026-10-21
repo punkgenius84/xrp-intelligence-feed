@@ -55,7 +55,19 @@ def _identity(value: object) -> tuple[str, str] | None:
         port = parts.port
     except ValueError:
         return None
+    path = parts.path
+    # The official ECB feed currently emits URLs with one extra slash before /press.
+    # Normalize only that exact leading form; reject duplicate slashes elsewhere.
+    if path.startswith("//press/"):
+        path = path[1:]
     if (
+        parts.scheme.casefold() != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() not in HOSTS
+        or port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+        or not re.fullmatch(r"/press/[A-Za-z0-9._~!    if (
         parts.scheme.casefold() != "https"
         or parts.hostname is None
         or parts.hostname.casefold() not in HOSTS
@@ -68,7 +80,13 @@ def _identity(value: object) -> tuple[str, str] | None:
         or parts.path.endswith("/..")
     ):
         return None
-    path = parts.path.rstrip("/")
+    path = parts.path.rstrip("/")'()*+,;=:@%/-]+", path)
+        or "//" in path
+        or "/../" in path
+        or path.endswith("/..")
+    ):
+        return None
+    path = path.rstrip("/")
     if not path:
         return None
     return path.casefold(), f"https://www.ecb.europa.eu{path}"
