@@ -2,7 +2,13 @@ import json
 import re
 from pathlib import Path
 
-from scripts.probe_imf_media_center import public_probe_routes
+from discovery.http import DiscoveryHttpError, HttpResponse
+from scripts.probe_imf_media_center import (
+    PUBLIC_ENDPOINT_HOSTS,
+    PUBLIC_ENDPOINT_URLS,
+    probe_public_endpoints,
+    public_probe_routes,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,3 +40,48 @@ def test_imf_public_routes_are_probed_but_remain_disabled_in_production_config()
         assert route["source_url"].startswith("https://www.imf.org/")
         assert set(route["allowed_hosts"]) <= {"www.imf.org", "imf.org"}
         assert re.search(route["article_path_regex"], samples[source_id])
+
+
+
+class FakeEndpointHttp:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+
+def test_additional_imf_endpoint_probes_are_official_and_read_only():
+    assert len(PUBLIC_ENDPOINT_URLS) >= 7
+    for url in PUBLIC_ENDPOINT_URLS:
+        from urllib.parse import urlsplit
+        parts = urlsplit(url)
+        assert parts.scheme == "https"
+        assert parts.hostname in PUBLIC_ENDPOINT_HOSTS
+
+    responses = [
+        HttpResponse(200, {"content-type": "text/html"}, b"<html><body>official listing</body></html>", url)
+        for url in PUBLIC_ENDPOINT_URLS
+    ]
+    http = FakeEndpointHttp(responses)
+    output = probe_public_endpoints(http)
+    assert output.count("status=reachable") == len(PUBLIC_ENDPOINT_URLS)
+    assert len(http.calls) == len(PUBLIC_ENDPOINT_URLS)
+    assert all(call[1]["expected_content_types"] for call in http.calls)
+
+
+def test_additional_imf_endpoint_probes_report_forbidden_routes_without_raising():
+    errors = [
+        DiscoveryHttpError("HTTP status 403", kind="http_error", status_code=403)
+        for _ in PUBLIC_ENDPOINT_URLS
+    ]
+    http = FakeEndpointHttp(errors)
+    output = probe_public_endpoints(http)
+    assert output.count("status=unavailable") == len(PUBLIC_ENDPOINT_URLS)
+    assert output.count("http_status=403") == len(PUBLIC_ENDPOINT_URLS)
+    assert len(http.calls) == len(PUBLIC_ENDPOINT_URLS)
