@@ -137,6 +137,15 @@ def test_official_article_url_validation_fails_closed(bad_url):
     assert result.state_updates == {}
 
 
+def test_official_ecb_double_slash_links_are_canonicalized_safely():
+    raw = item(link="https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261021~abc123.en.html")
+    result, _ = run(rss(raw))
+    assert result.status == "success"
+    assert result.candidates[0].url == (
+        "https://www.ecb.europa.eu/press/key/date/2026/html/ecb.sp261021~abc123.en.html"
+    )
+
+
 def test_success_saves_validators_and_304_preserves_them():
     result, http = run(rss(item()))
     assert result.status == "success"
