@@ -160,6 +160,54 @@ def test_intelligence_publish_holds_event_with_future_dated_evidence(monkeypatch
     assert any("future" in message.lower() and "held" in message.lower() for message in messages)
 
 
+def test_intelligence_publish_holds_undated_evidence(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from intelligence.events import IntelligenceEvent
+    from intelligence.evidence import Evidence
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+    from storage.intelligence_outbox import JsonIntelligenceOutboxState
+
+    monkeypatch.setattr(
+        main, "JsonIntelligenceDeliveryHistory",
+        lambda: JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json"),
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    event = IntelligenceEvent(
+        event_id="evt-undated",
+        event_type="announcement",
+        summary="Undated source must not be treated as fresh",
+        significance="Publication time is unknown",
+        evidence=[
+            Evidence(
+                source_id="source-1",
+                source="Official source",
+                url="https://example.com/undated",
+                published_at="",
+                title="Official announcement",
+                source_quality="primary",
+            )
+        ],
+    )
+    settings = SimpleNamespace(dry_run=False, webhook_url="https://discord.com/api/webhooks/test/token")
+    outbox = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    messages = []
+
+    assert main.publish_intelligence_events(
+        [event], settings, publish_enabled=True, outbox_store=outbox, out=messages.append,
+    ) == 0
+    assert sent == []
+    assert len(outbox.load()) == 1
+    assert any("timestamp" in message.lower() and "held" in message.lower() for message in messages)
+
+
 def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
     from intelligence.events import IntelligenceEvent
     from intelligence.evidence import Evidence
