@@ -1,0 +1,38 @@
+name: SWIFT Official Listing Runner Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/swift_official_listing_probe.yml"
+      - "scripts/probe_swift_press_index.py"
+      - "discovery/institutional_press.py"
+      - "discovery/http.py"
+      - "config/discovery_sources.json"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/swift_official_listing_probe.yml"
+      - "scripts/probe_swift_press_index.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swift-official-listing-runner-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Probe official SWIFT listing routes without state writes or publishing
+        run: python scripts/probe_swift_press_index.py
