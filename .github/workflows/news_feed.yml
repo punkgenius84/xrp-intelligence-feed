@@ -72,6 +72,9 @@ jobs:
       - name: Probe Swift official press indexes (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_swift_press_index.py
+      - name: Probe IMF public indexes (read-only diagnostic)
+        if: github.event_name == 'push'
+        run: python scripts/probe_imf_media_center.py
       - name: Probe Citi production sitemap collector (read-only diagnostic)
         if: github.event_name == 'push'
         run: python scripts/probe_citi_production_sitemap_collector.py
