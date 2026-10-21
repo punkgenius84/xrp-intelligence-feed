@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 
 
-URL = "https://www.coinbase.com/blog/coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
+URL = "https://www.coinbase.com/blog/coinbase-and-thunes-connect-stablecoin-infrastructure"
 TARGET_PATH = urlsplit(URL).path
 LOCALIZED_URL = "https://www.coinbase.com/en-ca" + TARGET_PATH
 LOCALIZED_TARGET_PATH = urlsplit(LOCALIZED_URL).path
