@@ -27,6 +27,17 @@ ALTERNATE_URLS = (
     "https://www.swift.com/news-events/news?news_type=hot",
     "https://www.swift.com/about-us/media-centre",
 )
+# User-discovered official sitemap endpoints. Treat XML as sitemap diagnostics only;
+# do not infer news events from sitemap URLs without validating linked pages.
+SITEMAP_URLS = (
+    "https://www.swift.com/sitemap.xml?page=1",
+    "https://www.swift.com/sitemap.xml?page=2",
+    "https://www.swift.com/sitemap.xml",
+)
+SITEMAP_CONTENT_TYPES = (
+    "application/xml", "text/xml", "application/xhtml+xml", "text/html",
+    "application/octet-stream",
+)
 ALLOWED_HOSTS = {"www.swift.com", "swift.com"}
 
 
@@ -120,6 +131,48 @@ def probe_swift_indexes(http=None) -> str:
             lines.append(f"alternate={url} status=unusable reason=empty_body http_status={response.status_code}")
             continue
         lines.append(f"alternate={url} status=reachable http_status={response.status_code} content_type={content_type} bytes={len(response.content)}")
+    # Sitemap pages supplied by the project owner. XML is probed separately from
+    # HTML index pages so a valid sitemap response is not misclassified as HTML.
+    for url in SITEMAP_URLS:
+        try:
+            response = client.get(url, expected_content_types=SITEMAP_CONTENT_TYPES)
+        except DiscoveryHttpError as exc:
+            suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+            lines.append(f"sitemap={url} status=unavailable reason={exc.kind}{suffix}")
+            continue
+        if not _official_final_url(response.url):
+            lines.append(f"sitemap={url} status=rejected reason=non_official_final_url")
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        body = response.content.lstrip()
+        if response.status_code != 200:
+            lines.append(
+                f"sitemap={url} status=unusable reason=unexpected_http_status "
+                f"http_status={response.status_code} content_type={content_type or 'missing'} "
+                f"bytes={len(response.content)}"
+            )
+            continue
+        if not body:
+            lines.append(f"sitemap={url} status=unusable reason=empty_body http_status=200")
+            continue
+        looks_xml = (
+            body.startswith(b"<?xml")
+            or b"<urlset" in body[:1000].lower()
+            or b"<sitemapindex" in body[:1000].lower()
+        )
+        if not looks_xml:
+            lines.append(
+                f"sitemap={url} status=unusable reason=not_recognized_as_xml "
+                f"content_type={content_type or 'missing'} bytes={len(response.content)}"
+            )
+            continue
+        # Report only sitemap shape/count; do not crawl linked URLs in this probe.
+        loc_count = body.lower().count(b"<loc>")
+        lines.append(
+            f"sitemap={url} status=valid_xml http_status=200 "
+            f"content_type={content_type or 'missing'} bytes={len(response.content)} "
+            f"loc_entries={loc_count}"
+        )
     return "\n".join(lines)
 
 
