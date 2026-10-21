@@ -95,6 +95,10 @@
     ],
     "BIS": [
       "Bank for International Settlements"
+    ],
+    "ECB": [
+      "ECB",
+      "European Central Bank"
     ]
   },
   "government": {
