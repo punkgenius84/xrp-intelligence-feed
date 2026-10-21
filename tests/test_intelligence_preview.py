@@ -96,8 +96,11 @@ def test_preview_labels_stale_undated_and_generic_title_evidence(tmp_path):
 
     assert "evidence_freshness=stale latest_evidence_date=2026-08-01 age_days=80" in output
     assert "generic_evidence_titles_only=true" in output
+    assert "recommended_action=quarantine_stale_before_publish" in output
     assert "evidence_freshness=undated latest_evidence_date=none" in output
+    assert "recommended_action=hold_missing_or_invalid_date" in output
     assert "evidence_freshness=fresh latest_evidence_date=2026-10-21 age_days=0" in output
+    assert "recommended_action=editorial_review_before_launch" in output
     assert "generic_evidence_titles_only=false" in output
 
 
