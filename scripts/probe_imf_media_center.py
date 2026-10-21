@@ -61,6 +61,32 @@ def public_probe_routes() -> list[dict[str, object]]:
             "article_path_regex": r"/en/blogs/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
         },
         {
+            "source_id": "imf-public-news-canonical-runner-probe",
+            "name": "International Monetary Fund — Public News (canonical-case route)",
+            "authority_tier": 1,
+            "category": "institutional",
+            "discovery_method": "institutional_press_html",
+            "source_url": "https://www.imf.org/en/News",
+            "enabled": True,
+            "lookback_days": 365,
+            "max_items": 50,
+            "allowed_hosts": ["www.imf.org", "imf.org"],
+            "article_path_regex": r"/en/news/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
+        },
+        {
+            "source_id": "imf-blogs-canonical-runner-probe",
+            "name": "International Monetary Fund — Blogs (canonical listing route)",
+            "authority_tier": 1,
+            "category": "institutional",
+            "discovery_method": "institutional_press_html",
+            "source_url": "https://www.imf.org/en/Blogs?path=Blogs",
+            "enabled": True,
+            "lookback_days": 180,
+            "max_items": 50,
+            "allowed_hosts": ["www.imf.org", "imf.org"],
+            "article_path_regex": r"/en/blogs/articles/\d{4}/\d{2}/\d{2}/[^/?#]+",
+        },
+        {
             "source_id": "imf-gfsr-runner-probe",
             "name": "International Monetary Fund — Global Financial Stability Report",
             "authority_tier": 1,
@@ -87,7 +113,7 @@ def main() -> int:
 
     report_probe("official IMF Media Center", media_center)
 
-    # Probe public IMF News, blogs, and GFSR routes using temporary definitions.
+    # Probe legacy and canonical public IMF News/blog routes plus GFSR using temporary definitions.
     # None of these sources is enabled in normal discovery configuration.
     for route in public_probe_routes():
         report_probe(route["name"], route)

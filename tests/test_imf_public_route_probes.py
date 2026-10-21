@@ -18,11 +18,15 @@ def test_imf_public_routes_are_probed_but_remain_disabled_in_production_config()
     assert set(routes) == {
         "imf-public-news-runner-probe",
         "imf-blogs-runner-probe",
+        "imf-public-news-canonical-runner-probe",
+        "imf-blogs-canonical-runner-probe",
         "imf-gfsr-runner-probe",
     }
     samples = {
         "imf-public-news-runner-probe": "/en/news/articles/2026/10/21/sample-news",
         "imf-blogs-runner-probe": "/en/blogs/articles/2026/10/21/sample-blog",
+        "imf-public-news-canonical-runner-probe": "/en/news/articles/2026/10/21/sample-news",
+        "imf-blogs-canonical-runner-probe": "/en/blogs/articles/2026/10/21/sample-blog",
         "imf-gfsr-runner-probe": "/en/Publications/GFSR/Issues/2026/10/21/sample-report",
     }
     for source_id, route in routes.items():
