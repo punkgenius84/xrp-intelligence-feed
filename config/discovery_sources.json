@@ -425,6 +425,17 @@
       "enabled": true,
       "lookback_days": 90,
       "max_items": 50
+    },
+    {
+      "source_id": "bank-of-canada-press-releases",
+      "name": "Bank of Canada",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "bank_of_canada_rss",
+      "source_url": "https://www.bankofcanada.ca/content_type/press-releases/feed/",
+      "enabled": false,
+      "lookback_days": 180,
+      "max_items": 50
     }
   ]
 }
