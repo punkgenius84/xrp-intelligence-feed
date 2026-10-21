@@ -12,7 +12,7 @@ from discovery.http import BoundedHttpClient, DiscoveryHttpError
 from discovery.institutional_press import _parse_page
 
 URL = "https://www.coinbase.com/en-gb/blog/landing"
-TARGET_PATH = "/blog/coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
+TARGET_PATH = "/blog/coinbase-and-thunes-connect-stablecoin-infrastructure"
 HOSTS = {"www.coinbase.com", "coinbase.com"}
 
 
