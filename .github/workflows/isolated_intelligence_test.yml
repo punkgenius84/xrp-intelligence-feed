@@ -17,7 +17,7 @@ concurrency:
 jobs:
   one-event-test:
     # Deleting the marker after the test must not start another publishing attempt.
-    if: contains(github.event.head_commit.added, 'test/isolated_intelligence_test.trigger')
+    if: github.event.head_commit.message == 'Trigger isolated DriveWealth Ripple one-event intelligence test'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
