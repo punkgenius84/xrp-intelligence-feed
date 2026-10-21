@@ -161,7 +161,8 @@ class ECBRSSDiscovery:
                 if not title:
                     raise ValueError("missing title")
                 if identity is None:
-                    raise ValueError("missing official ECB press article URL")
+                    raw_link = entry.get("link")
+                    raise ValueError(f"missing official ECB press article URL: {str(raw_link)[:240]!r}")
                 published = _published(entry)
                 if published > fetched_at + timedelta(hours=24):
                     raise ValueError("publication date is in the future")
