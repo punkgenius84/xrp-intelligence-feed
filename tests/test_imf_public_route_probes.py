@@ -85,3 +85,15 @@ def test_additional_imf_endpoint_probes_report_forbidden_routes_without_raising(
     assert output.count("status=unavailable") == len(PUBLIC_ENDPOINT_URLS)
     assert output.count("http_status=403") == len(PUBLIC_ENDPOINT_URLS)
     assert len(http.calls) == len(PUBLIC_ENDPOINT_URLS)
+
+
+
+def test_additional_imf_endpoint_probes_do_not_treat_empty_202_as_usable():
+    responses = [
+        HttpResponse(202, {"content-type": "text/html"}, b"", url)
+        for url in PUBLIC_ENDPOINT_URLS
+    ]
+    http = FakeEndpointHttp(responses)
+    output = probe_public_endpoints(http)
+    assert output.count("status=unusable reason=unexpected_http_status") == len(PUBLIC_ENDPOINT_URLS)
+    assert output.count("http_status=202") == len(PUBLIC_ENDPOINT_URLS)
