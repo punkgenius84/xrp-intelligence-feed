@@ -223,7 +223,7 @@ def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
     feed_save = _step_block(feed, "name: Save persistent state")
 
     def paths(section):
-        return re.search(r"path: \\|\n((?:\s+state/\S+\n)+)", section).group(1).split()
+        return re.search(r"path: \|\n((?:\s+state/\S+\n)+)", section).group(1).split()
 
     assert paths(restore) == paths(feed_restore)
     assert paths(save) == paths(feed_save)
