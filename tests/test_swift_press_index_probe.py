@@ -103,3 +103,15 @@ def test_swift_sitemap_routes_reject_html_body_and_empty_success():
     result = probe_swift_indexes(FakeHttp(responses))
     assert "sitemap=" + SITEMAP_URLS[0] + " status=unusable reason=not_recognized_as_xml" in result
     assert "sitemap=" + SITEMAP_URLS[1] + " status=unusable reason=empty_body" in result
+
+def test_swift_insights_pagination_routes_are_official_and_read_only():
+    from urllib.parse import urlsplit
+
+    insights = [url for url in ALTERNATE_URLS if "/insights?page=" in url]
+    assert insights == [
+        "https://www.swift.com/insights?page=1&type=evo_news",
+        "https://www.swift.com/insights?page=2&type=evo_news",
+        "https://www.swift.com/insights?page=3&type=evo_news",
+    ]
+    assert all(urlsplit(url).scheme == "https" and urlsplit(url).hostname == "www.swift.com" for url in insights)
+
