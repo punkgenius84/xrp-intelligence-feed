@@ -67,20 +67,7 @@ def _identity(value: object) -> tuple[str, str] | None:
         or port not in (None, 443)
         or parts.username is not None
         or parts.password is not None
-        or not re.fullmatch(r"/press/[A-Za-z0-9._~!    if (
-        parts.scheme.casefold() != "https"
-        or parts.hostname is None
-        or parts.hostname.casefold() not in HOSTS
-        or port not in (None, 443)
-        or parts.username is not None
-        or parts.password is not None
-        or not re.fullmatch(r"/press/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+", parts.path)
-        or "//" in parts.path
-        or "/../" in parts.path
-        or parts.path.endswith("/..")
-    ):
-        return None
-    path = parts.path.rstrip("/")'()*+,;=:@%/-]+", path)
+        or not re.fullmatch(r"/press/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+", path)
         or "//" in path
         or "/../" in path
         or path.endswith("/..")
@@ -90,7 +77,6 @@ def _identity(value: object) -> tuple[str, str] | None:
     if not path:
         return None
     return path.casefold(), f"https://www.ecb.europa.eu{path}"
-
 
 def _published(entry: Any) -> datetime:
     # feedparser normalizes recognized RSS/Atom date tuples to UTC.
