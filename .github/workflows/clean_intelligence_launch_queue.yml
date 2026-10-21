@@ -1,0 +1,139 @@
+name: Clean Intelligence Launch Queue
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_reset:
+        description: "Apply the pre-launch reset after reviewing the read-only preview"
+        type: boolean
+        default: false
+        required: true
+      confirmation:
+        description: "Required only when apply_reset is true: CLEAN-INTELLIGENCE-QUEUE"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+
+# Share the production feed's lock: never restore/overwrite state while a feed run is active.
+concurrency:
+  group: xrp-intelligence-feed
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+      # Keep the shared cache path list and key pattern identical to news_feed.yml.
+      - name: Restore persistent state
+        id: state_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-state-${{ github.ref_name }}-v1-
+
+      - name: Restore intelligence delivery history
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-
+
+      - name: Restore intelligence quarantine
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-quarantine-${{ github.ref_name }}-v1-
+
+      - name: Refuse apply without restored production state
+        if: inputs.apply_reset && steps.state_cache.outputs.cache-matched-key == ''
+        run: |
+          echo "::error::No persistent production state cache was restored; refusing to reset an empty local view."
+          exit 1
+
+      - name: Preview current launch queue
+        run: python scripts/clean_intelligence_launch_queue.py
+
+      - name: Archive and clear active queue
+        id: clean_queue
+        if: inputs.apply_reset
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          python scripts/clean_intelligence_launch_queue.py --apply --confirm "$CONFIRMATION"
+
+      - name: Verify empty active queue
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
+        run: python scripts/clean_intelligence_launch_queue.py
+
+      # Save the exact shared-state cache shape used by the production feed. No
+      # delivery, source, or dedup history is reset by the cleanup script.
+      - name: Save persistent state
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+
+      - name: Check intelligence delivery history
+        id: delivery_history
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
+        run: |
+          if [ -f state/intelligence_delivery_history.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save intelligence delivery history
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.delivery_history.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
+
+      - name: Check intelligence quarantine
+        id: quarantine
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
+        run: |
+          if [ -f state/intelligence_quarantine.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save intelligence quarantine
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.quarantine.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
