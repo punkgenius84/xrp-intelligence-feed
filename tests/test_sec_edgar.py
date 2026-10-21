@@ -88,6 +88,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "imf-blogs",
         "imf-global-financial-stability-report",
         "imf-media-center-news",
+        "ecb-press-releases",
     }
 
 
