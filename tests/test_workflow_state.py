@@ -232,3 +232,6 @@ def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
     assert "state/intelligence_delivery_history.json" in workflow
     assert "state/intelligence_quarantine.json" in workflow
     assert "steps.clean_queue.outcome == 'success'" in save
+    assert workflow.index("name: Count restored queue entries") < workflow.index("name: Archive and clear active queue")
+    assert workflow.index("name: Save intelligence quarantine") < workflow.index("name: Save persistent state")
+    assert "steps.queue_preflight.outputs.pending != '0'" in save
