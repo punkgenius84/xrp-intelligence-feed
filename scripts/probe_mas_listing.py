@@ -18,7 +18,7 @@ SOURCE = {
     "authority_tier": 1,
     "category": "institutional",
     "discovery_method": "institutional_press_html",
-    "source_url": "https://www.mas.gov.sg/news",
+    "source_url": "https://www.mas.gov.sg/news?content_type=Enforcement+Actions+Media+Releases&content_type=Media+Releases&page=1",
     "enabled": True,
     "lookback_days": 180,
     "max_items": 50,
