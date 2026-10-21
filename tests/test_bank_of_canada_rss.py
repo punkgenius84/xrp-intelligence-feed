@@ -73,14 +73,13 @@ def run(body, *, config=None, state=None):
     return result, http
 
 
-def test_bank_of_canada_feed_is_registered_but_disabled_until_live_probe():
+def test_bank_of_canada_feed_is_registered_and_enabled_after_live_probe():
     configured = load_discovery_sources()
     row = next(item for item in configured if item["source_id"] == SOURCE_ID)
     assert row["source_url"] == FEED_URL
     assert row["discovery_method"] == METHOD
-    assert row["enabled"] is False
+    assert row["enabled"] is True
     assert validate_bank_of_canada_source(row) == row
-
 
 def test_disabled_source_makes_no_requests():
     http = FakeHttp([])
