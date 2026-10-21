@@ -22,6 +22,8 @@ PUBLIC_ENDPOINT_URLS = (
     "https://mediacenter.imf.org/newslisting?category=features",
     "https://mediacenter.imf.org/newslisting?category=news&page=2",
     "https://www.imf.org/en/news?cid=ca-com-compd-bkstfooter",
+    "https://www.imf.org/en/News/rss?language=eng",
+    "https://www.imf.org/en/Blogs/rss?language=eng",
     "https://www.imf.org/external/sitemap.htm",
     "https://www.imf.org/en/Publications/WEO",
 )
