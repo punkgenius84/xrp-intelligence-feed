@@ -1,0 +1,41 @@
+name: Bank of Canada Official RSS Runner Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/bank_of_canada_rss_probe.yml"
+      - "discovery/bank_of_canada_rss.py"
+      - "discovery/dispatch.py"
+      - "config/discovery_sources.json"
+      - "scripts/probe_bank_of_canada_rss.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/bank_of_canada_rss_probe.yml"
+      - "discovery/bank_of_canada_rss.py"
+      - "discovery/dispatch.py"
+      - "config/discovery_sources.json"
+      - "scripts/probe_bank_of_canada_rss.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bank-of-canada-rss-runner-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Probe official Bank of Canada RSS without state writes or publishing
+        run: python scripts/probe_bank_of_canada_rss.py
