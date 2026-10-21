@@ -1,0 +1,130 @@
+name: Quarantine Stale Intelligence Queue Items
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_quarantine:
+        description: "Archive stale-evidence items and remove only those items from the active queue"
+        type: boolean
+        default: false
+        required: true
+      confirmation:
+        description: "Required only when applying: QUARANTINE-STALE-INTELLIGENCE"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+
+# Share the production feed's lock so cache state cannot race a scheduled feed run.
+concurrency:
+  group: xrp-intelligence-feed
+  cancel-in-progress: false
+
+jobs:
+  quarantine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+      - name: Restore persistent state
+        id: state_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-state-${{ github.ref_name }}-v1-
+
+      - name: Restore intelligence quarantine
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-quarantine-${{ github.ref_name }}-v1-
+
+      - name: Refuse apply without restored production state
+        if: inputs.apply_quarantine && steps.state_cache.outputs.cache-matched-key == ''
+        run: |
+          echo "::error::No persistent production state cache was restored; refusing to mutate an empty local view."
+          exit 1
+
+      - name: Count restored queue and stale items
+        id: queue_preflight
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime, timezone
+          from storage.intelligence_outbox import JsonIntelligenceOutboxState
+          from scripts.quarantine_stale_intelligence_queue import find_stale_items
+
+          queued = JsonIntelligenceOutboxState().load()
+          stale = find_stale_items(queued, now=datetime.now(timezone.utc), stale_after_days=30)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"pending={len(queued)}\n")
+              output.write(f"stale_count={len(stale)}\n")
+          print(f"Queue preflight: pending={len(queued)} stale_evidence={len(stale)}")
+          PY
+
+      - name: Preview stale-evidence items
+        run: python scripts/quarantine_stale_intelligence_queue.py --stale-after-days 30
+
+      - name: Archive and remove stale-evidence items only
+        id: quarantine_stale
+        if: inputs.apply_quarantine
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          python scripts/quarantine_stale_intelligence_queue.py --apply --confirm "$CONFIRMATION" --stale-after-days 30
+
+      - name: Verify remaining active queue
+        if: inputs.apply_quarantine && steps.quarantine_stale.outcome == 'success'
+        run: python scripts/quarantine_stale_intelligence_queue.py --stale-after-days 30
+
+      - name: Check intelligence quarantine
+        id: quarantine_file
+        if: inputs.apply_quarantine && steps.quarantine_stale.outcome == 'success' && steps.queue_preflight.outputs.stale_count != '0'
+        run: |
+          if [ -f state/intelligence_quarantine.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Expected quarantine audit file was not created."
+            exit 1
+          fi
+
+      # Persist the audit copy first. If this fails, the active queue cache is not advanced.
+      - name: Save intelligence quarantine
+        if: inputs.apply_quarantine && steps.quarantine_stale.outcome == 'success' && steps.queue_preflight.outputs.stale_count != '0' && steps.quarantine_file.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
+
+      - name: Save persistent state with only stale items removed
+        if: inputs.apply_quarantine && steps.quarantine_stale.outcome == 'success' && steps.queue_preflight.outputs.stale_count != '0'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
