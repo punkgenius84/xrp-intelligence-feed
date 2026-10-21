@@ -60,6 +60,40 @@ def main() -> int:
     }
     report_probe("official public IMF News index", public_news)
 
+    # Probe the public IMF blog and GFSR indexes with the production parser,
+    # but only through in-memory source definitions. Do not activate these
+    # sources until runner-side candidate quality has been reviewed.
+    public_routes = [
+        {
+            "source_id": "imf-blogs-runner-probe",
+            "name": "International Monetary Fund — Blogs",
+            "authority_tier": 1,
+            "category": "institutional",
+            "discovery_method": "institutional_press_html",
+            "source_url": "https://www.imf.org/en/blogs",
+            "enabled": True,
+            "lookback_days": 180,
+            "max_items": 50,
+            "allowed_hosts": ["www.imf.org", "imf.org"],
+            "article_path_regex": r"/en/blogs/articles/\\d{4}/\\d{2}/\\d{2}/[^/?#]+",
+        },
+        {
+            "source_id": "imf-gfsr-runner-probe",
+            "name": "International Monetary Fund — Global Financial Stability Report",
+            "authority_tier": 1,
+            "category": "institutional",
+            "discovery_method": "institutional_press_html",
+            "source_url": "https://www.imf.org/en/Publications/GFSR",
+            "enabled": True,
+            "lookback_days": 365,
+            "max_items": 50,
+            "allowed_hosts": ["www.imf.org", "imf.org"],
+            "article_path_regex": r"/en/Publications/GFSR/Issues/\\d{4}/\\d{2}/\\d{2}/[^/?#]+",
+        },
+    ]
+    for route in public_routes:
+        report_probe(route["name"], route)
+
     # Observational only: keep the workflow green while exposing each actual
     # HTTP/parser result in logs. This script never publishes or persists state.
     return 0
