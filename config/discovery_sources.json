@@ -422,7 +422,7 @@
       "category": "regulatory",
       "discovery_method": "ecb_rss",
       "source_url": "https://www.ecb.europa.eu/rss/press.html",
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 90,
       "max_items": 50
     }
