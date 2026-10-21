@@ -57,7 +57,7 @@ class FakeEndpointHttp:
 
 
 def test_additional_imf_endpoint_probes_are_official_and_read_only():
-    assert len(PUBLIC_ENDPOINT_URLS) >= 7
+    assert len(PUBLIC_ENDPOINT_URLS) >= 9
     for url in PUBLIC_ENDPOINT_URLS:
         from urllib.parse import urlsplit
         parts = urlsplit(url)
