@@ -198,3 +198,40 @@ def test_intelligence_delivery_history_uses_separate_cache_without_invalidating_
     assert "state/intelligence_delivery_history.json" in ledger_save
     assert "xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-restore" in ledger_restore
     assert "xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-" in ledger_save
+
+
+def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/clean_intelligence_launch_queue.yml").read_text(encoding="utf-8")
+    feed = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "apply_reset:" in workflow
+    assert "default: false" in workflow
+    assert "CLEAN-INTELLIGENCE-QUEUE" in workflow
+    assert "if: inputs.apply_reset && steps.state_cache.outputs.cache-matched-key == ''" in workflow
+    assert "group: xrp-intelligence-feed" in workflow
+    assert "cancel-in-progress: false" in workflow
+    assert "python scripts/clean_intelligence_launch_queue.py" in workflow
+    assert "python main.py" not in workflow
+    assert "DISCORD_WEBHOOK_URL" not in workflow
+
+    restore = _step_block(workflow, "name: Restore persistent state")
+    save = _step_block(workflow, "name: Save persistent state")
+    feed_restore = _step_block(feed, "name: Restore persistent state")
+    feed_save = _step_block(feed, "name: Save persistent state")
+
+    def paths(section):
+        return re.search(r"path: \|\n((?:\s+state/\S+\n)+)", section).group(1).split()
+
+    assert paths(restore) == paths(feed_restore)
+    assert paths(save) == paths(feed_save)
+    assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in restore
+    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
+    assert "state/intelligence_delivery_history.json" in workflow
+    assert "state/intelligence_quarantine.json" in workflow
+    assert "steps.clean_queue.outcome == 'success'" in save
+    assert workflow.index("name: Count restored queue entries") < workflow.index("name: Archive and clear active queue")
+    assert workflow.index("name: Save intelligence quarantine") < workflow.index("name: Save persistent state")
+    assert "steps.queue_preflight.outputs.pending != '0'" in save
