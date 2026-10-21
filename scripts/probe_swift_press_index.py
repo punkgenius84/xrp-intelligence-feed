@@ -11,9 +11,15 @@ from discovery.dispatch import load_discovery_sources
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 from discovery.institutional_press import _parse_page
 
+# Probe multiple official pagination and legacy routes. These remain index-only requests.
 INDEX_URLS = (
+    "https://www.swift.com/about-us/media-centre/press-releases",
     "https://www.swift.com/about-us/media-centre/press-releases?page=0",
+    "https://www.swift.com/about-us/media-centre/press-releases?page=1",
+    "https://www.swift.com/news-events/press-releases",
     "https://www.swift.com/news-events/press-releases?page=0",
+    "https://www.swift.com/news-events/press-releases?page=1",
+    "https://www.swift.com/news-events/migrated-news/press-releases?page=0",
 )
 ALLOWED_HOSTS = {"www.swift.com", "swift.com"}
 
@@ -34,7 +40,7 @@ def _official_final_url(value: str) -> bool:
 
 
 def probe_swift_indexes(http=None) -> str:
-    """Probe two official Swift index routes without state writes or detail requests."""
+    """Probe official Swift press-index route variants without state writes or detail requests."""
     client = http or BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only Swift index diagnostic)",
         timeout=(3.0, 8.0),
