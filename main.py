@@ -683,6 +683,8 @@ def publish_intelligence_events(
     cutoff = now - timedelta(days=stale_after_days)
     stale_keys: set[str] = set()
     undated_keys: set[str] = set()
+    future_dated_keys: set[str] = set()
+    future_cutoff = now + timedelta(days=1)
     for item in pending:
         if not item.event.evidence:
             continue  # Existing evidence-URL validation below handles this case.
@@ -700,6 +702,10 @@ def publish_intelligence_events(
                 continue
         if not evidence_dates:
             undated_keys.add(item.key)
+        elif any(stamp > future_cutoff for stamp in evidence_dates):
+            # A single implausibly future-dated citation makes the event unsafe to
+            # publish, even if another citation has a plausible timestamp.
+            future_dated_keys.add(item.key)
         elif max(evidence_dates) < cutoff:
             stale_keys.add(item.key)
 
@@ -729,7 +735,15 @@ def publish_intelligence_events(
             f"::warning::Intelligence: held {len(undated_keys)} queued event(s) "
             "because evidence timestamps are missing or invalid"
         )
-    pending = [item for item in pending if item.key not in stale_keys | undated_keys]
+    if future_dated_keys:
+        out(
+            f"::warning::Intelligence: held {len(future_dated_keys)} queued event(s) "
+            "because at least one evidence timestamp is more than 24 hours in the future"
+        )
+    pending = [
+        item for item in pending
+        if item.key not in stale_keys | undated_keys | future_dated_keys
+    ]
     if not pending:
         return 0
 
