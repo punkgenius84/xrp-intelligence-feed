@@ -13,8 +13,10 @@ class Evidence:
     source_quality: str
 
 def evidence_from_item(item: NewsItem) -> Evidence:
-    published = item.published_at or item.collected_at
-    return Evidence(source_id=item.source_id, source=item.source, url=item.url, published_at=published.isoformat(), title=item.title, source_quality=item.source_quality)
+    # Publication time is evidence metadata; collection time must never masquerade as it.
+    # An empty value deliberately lets downstream freshness gates hold undated events.
+    published = item.published_at.isoformat() if item.published_at is not None else ""
+    return Evidence(source_id=item.source_id, source=item.source, url=item.url, published_at=published, title=item.title, source_quality=item.source_quality)
 
 def build_evidence_bundle(items: list[NewsItem]) -> list[Evidence]:
     seen: set[tuple[str, str]] = set()
