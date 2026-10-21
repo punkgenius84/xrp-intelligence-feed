@@ -433,7 +433,7 @@
       "category": "regulatory",
       "discovery_method": "bank_of_canada_rss",
       "source_url": "https://www.bankofcanada.ca/content_type/press-releases/feed/",
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 180,
       "max_items": 50
     }
