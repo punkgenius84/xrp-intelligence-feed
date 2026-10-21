@@ -98,7 +98,7 @@ def test_apply_archives_and_removes_only_stale_events(tmp_path):
     }
     archived = quarantine.load()
     assert [item.event.event_id for item in archived] == ["evt-stale"]
-    assert archived[0].reason == REASON
+    assert archived[0].reason == REASON.format(days=30)
     assert archived[0].queued_at == QUEUED_AT
 
 
