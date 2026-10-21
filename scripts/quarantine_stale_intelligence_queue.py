@@ -14,7 +14,7 @@ from storage.intelligence_quarantine import JsonIntelligenceQuarantineState
 
 
 CONFIRMATION = "QUARANTINE-STALE-INTELLIGENCE"
-REASON = "latest evidence is older than the 30-day publication window; held out of active queue for editorial refresh"
+REASON = "latest evidence is older than the {days}-day publication window; held out of active queue for editorial refresh"
 
 
 def _utc(value: datetime) -> datetime:
@@ -109,7 +109,7 @@ def quarantine_stale_queue(
     if not apply or not stale:
         return result
 
-    quarantine.quarantine(stale, reason=REASON, quarantined_at=current_time)
+    quarantine.quarantine(stale, reason=REASON.format(days=stale_after_days), quarantined_at=current_time)
     outbox.remove({item.key for item in stale})
     remaining = outbox.load()
     result["pending_after"] = len(remaining)
