@@ -70,17 +70,20 @@ def run(body, *, config=None, state=None):
     return result, http
 
 
-def test_official_ecb_feed_is_registered_but_parked_until_live_probe():
+def test_official_ecb_feed_is_registered_and_enabled_after_live_probe():
     configured = load_discovery_sources()
     ecb = next(row for row in configured if row["source_id"] == SOURCE_ID)
     assert ecb["source_url"] == FEED_URL
     assert ecb["discovery_method"] == METHOD
-    assert ecb["enabled"] is False
+    assert ecb["enabled"] is True
+    assert validate_ecb_source(ecb) == ecb
+
+
+def test_disabled_ecb_source_makes_no_requests():
     http = FakeHttp([])
-    result = collect_source(ecb, http=http, now=lambda: STAMP)
+    result = collect_source(source(enabled=False), http=http, now=lambda: STAMP)
     assert result.status == "not_configured"
     assert http.calls == []
-
 
 def test_registry_and_strategy_accept_exact_official_contract():
     assert validate_ecb_source(source()) == source()
