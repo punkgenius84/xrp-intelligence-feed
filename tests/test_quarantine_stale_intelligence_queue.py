@@ -15,7 +15,7 @@ NOW = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
 QUEUED_AT = datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
 
 
-def event(event_id: str, published_at: str | None = "2026-10-20T11:00:00+00:00") -> IntelligenceEvent:
+def event(event_id: str, published_at: str = "2026-10-20T11:00:00+00:00") -> IntelligenceEvent:
     return IntelligenceEvent(
         event_id=event_id,
         event_type="announcement",
@@ -50,7 +50,7 @@ def test_preview_identifies_stale_items_without_changing_either_store(tmp_path):
     outbox.enqueue([
         event("evt-stale", "2026-09-01T00:00:00+00:00"),
         event("evt-fresh", "2026-10-10T00:00:00+00:00"),
-        event("evt-undated", None),
+        event("evt-undated", ""),
     ], queued_at=QUEUED_AT)
 
     result = quarantine_stale_queue(
@@ -151,7 +151,7 @@ def test_future_and_undated_evidence_are_not_misclassified_as_stale():
         key="future", event=event("future", "2026-11-22T00:00:00+00:00"), queued_at=QUEUED_AT
     )
     undated = QueuedIntelligence(
-        key="undated", event=event("undated", None), queued_at=QUEUED_AT
+        key="undated", event=event("undated", ""), queued_at=QUEUED_AT
     )
 
     assert evidence_freshness(stale, NOW)[0] == "stale"
