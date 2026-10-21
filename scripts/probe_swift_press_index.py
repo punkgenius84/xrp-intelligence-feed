@@ -21,6 +21,12 @@ INDEX_URLS = (
     "https://www.swift.com/news-events/press-releases?page=1",
     "https://www.swift.com/news-events/migrated-news/press-releases?page=0",
 )
+# Additional official news/media landing pages; status-only because article URL patterns differ.
+ALTERNATE_URLS = (
+    "https://www.swift.com/insights/news",
+    "https://www.swift.com/news-events/news?news_type=hot",
+    "https://www.swift.com/about-us/media-centre",
+)
 ALLOWED_HOSTS = {"www.swift.com", "swift.com"}
 
 
@@ -92,6 +98,28 @@ def probe_swift_indexes(http=None) -> str:
             lines.append(
                 f"  date={row['date'].isoformat()} title={row['title'][:180]!r} url={row['url']}"
             )
+    # Probe alternate official news/media landing pages without article-detail requests.
+    for url in ALTERNATE_URLS:
+        try:
+            response = client.get(url, expected_content_types=("text/html", "application/xhtml+xml"))
+        except DiscoveryHttpError as exc:
+            suffix = f" http_status={exc.status_code}" if exc.status_code else ""
+            lines.append(f"alternate={url} status=unavailable reason={exc.kind}{suffix}")
+            continue
+        if response.status_code != 200:
+            lines.append(f"alternate={url} status=unavailable reason=unexpected_http_status http_status={response.status_code}")
+            continue
+        if not _official_final_url(response.url):
+            lines.append(f"alternate={url} status=rejected reason=non_official_final_url")
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if content_type not in {"text/html", "application/xhtml+xml"}:
+            lines.append(f"alternate={url} status=rejected reason=unexpected_content_type content_type={content_type}")
+            continue
+        if not response.content:
+            lines.append(f"alternate={url} status=unusable reason=empty_body http_status={response.status_code}")
+            continue
+        lines.append(f"alternate={url} status=reachable http_status={response.status_code} content_type={content_type} bytes={len(response.content)}")
     return "\n".join(lines)
 
 
