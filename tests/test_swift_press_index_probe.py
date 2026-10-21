@@ -38,10 +38,10 @@ def test_swift_probe_reports_valid_official_index_and_dated_article():
 
     result = probe_swift_indexes(http)
 
-    assert result.count("status=valid_index") == 2
+    assert result.count("status=valid_index") == len(INDEX_URLS)
     assert "dated_items=1" in result
     assert "2026-10-08T12:00:00+00:00" in result
-    assert len(http.calls) == 2
+    assert len(http.calls) == len(INDEX_URLS)
     assert all(call[1]["expected_content_types"] == ("text/html", "application/xhtml+xml") for call in http.calls)
 
 
@@ -53,7 +53,7 @@ def test_swift_probe_reports_http_failure_without_raising():
 
     result = probe_swift_indexes(http)
 
-    assert result.count("status=unavailable") == 2
+    assert result.count("status=unavailable") == len(INDEX_URLS)
     assert "http_status=403" in result
     assert len(http.calls) == 2
 
