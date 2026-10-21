@@ -222,6 +222,17 @@ Preview the quarantined records locally without changing state or posting to Dis
 
 Use `--path` to inspect a copied quarantine JSON file. The preview command is read-only and limits output to five evidence records per event.
 
+### Pre-launch queue reset (manual, production-cache aware)
+
+The active intelligence outbox is persisted in GitHub Actions caches, so running the Python cleanup script only in a local clone does **not** reset the production queue. Use the manual **Clean Intelligence Launch Queue** workflow from the Actions tab when the launch reset is intentionally approved.
+
+- First run it with `apply_reset=false` (the default) and review the read-only queue preview.
+- Only at the agreed launch-preparation point, set `apply_reset=true` and enter the exact confirmation `CLEAN-INTELLIGENCE-QUEUE`.
+- The workflow refuses to apply if it cannot restore a production state cache. It archives every active queued event to the separate quarantine cache before saving the empty outbox, and shares the production feed's concurrency lock to avoid racing a scheduled run.
+- The workflow does not post to Discord and does not reset delivery history, `seen.json`, source pagination, or deduplication state. If archiving or saving the audit copy fails, it does not advance the active queue cache.
+
+Do not run the apply mode until the first-live-post plan is approved; routine intelligence publishing remains disabled.
+
 ## Undated official-source observations
 
 Some official index pages expose a reliable headline and URL but no publication date. The Coinbase adapter records these routes only for change detection; they are never published as news candidates without a trustworthy publication date. The state records when the feed first and most recently observed a route, which is acquisition timing—not the article's publication date. When a headline changes, the previous and current titles are logged and the latest previous title is retained in state for review.
@@ -235,6 +246,6 @@ Omit `--source-id` to inspect observations from all opted-in sources. Use `--pat
 ## Source availability notes
 
 - **Swift press releases are temporarily parked.** Read-only probes from the GitHub Actions runner returned HTTP 403 from both official index routes (`/about-us/media-centre/press-releases?page=0` and `/news-events/press-releases?page=0`). The public pages may be visible in ordinary browsing, but that does not establish runner access. Do not re-enable the collector until an official endpoint returns valid, dated article cards from the runner; the diagnostic probe is run on push-triggered dry runs and never fetches article details or changes source activation.
-- **Citi press releases are temporarily parked.** The GitHub Actions runner receives a large HTML shell without allowlisted official release links or embedded article routes. The parser fails closed rather than inventing releases. Re-enable the source only after an official machine-readable listing/feed is verified; fixture tests continue to exercise the parser and bounded detail fallback.
+- **Citi press releases are enabled and the production collector is healthy.** The latest read-only sitemap probe found three allowlisted candidates with no errors; the scheduled collector can correctly report zero new candidates when the saved sitemap digest is unchanged. That is a no-change result, not a parked source. The separate probe is read-only and does not update production state.
 - **IMF web endpoints are temporarily parked.** GitHub Actions receives HTTP 403 from the IMF Blogs and GFSR pages and HTTP 202 from the official Media Center listing. No access-control workaround is used. Re-enable after an official RSS/API endpoint is verified to be readable by the runner; parser fixtures remain covered.
 - **Push-triggered feed runs are source-diagnostic dry runs.** They skip Ollama setup, live inference smoke testing, and full per-headline enrichment to shorten feedback cycles. Scheduled and manual runs still perform the real model inference smoke test and full intelligence layer in shadow mode.
