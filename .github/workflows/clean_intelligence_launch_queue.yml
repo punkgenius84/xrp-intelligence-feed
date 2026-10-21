@@ -73,6 +73,19 @@ jobs:
           echo "::error::No persistent production state cache was restored; refusing to reset an empty local view."
           exit 1
 
+      - name: Count restored queue entries
+        id: queue_preflight
+        run: |
+          python - <<'PY'
+          import os
+          from storage.intelligence_outbox import JsonIntelligenceOutboxState
+
+          pending = len(JsonIntelligenceOutboxState().load())
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"pending={pending}\\n")
+          print(f"Launch queue preflight: pending={pending}")
+          PY
+
       - name: Preview current launch queue
         run: python scripts/clean_intelligence_launch_queue.py
 
@@ -88,10 +101,45 @@ jobs:
         if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
         run: python scripts/clean_intelligence_launch_queue.py
 
-      # Save the exact shared-state cache shape used by the production feed. No
-      # delivery, source, or dedup history is reset by the cleanup script.
+      # Save quarantine first: if audit persistence fails, the active queue cache is not advanced.
+      - name: Check intelligence quarantine
+        id: quarantine
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.queue_preflight.outputs.pending != '0'
+        run: |
+          if [ -f state/intelligence_quarantine.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save intelligence quarantine
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.queue_preflight.outputs.pending != '0' && steps.quarantine.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
+
+      - name: Check intelligence delivery history
+        id: delivery_history
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.queue_preflight.outputs.pending != '0'
+        run: |
+          if [ -f state/intelligence_delivery_history.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save intelligence delivery history
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.queue_preflight.outputs.pending != '0' && steps.delivery_history.outputs.present == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
+
+      # Save the exact shared-state cache shape used by the production feed last.
+      # No delivery, source, or dedup history is reset by the cleanup script.
       - name: Save persistent state
-        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
+        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.queue_preflight.outputs.pending != '0'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -103,37 +151,3 @@ jobs:
             state/outbox.json
             state/delivery_history.json
           key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
-
-      - name: Check intelligence delivery history
-        id: delivery_history
-        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
-        run: |
-          if [ -f state/intelligence_delivery_history.json ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Save intelligence delivery history
-        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.delivery_history.outputs.present == 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: state/intelligence_delivery_history.json
-          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
-
-      - name: Check intelligence quarantine
-        id: quarantine
-        if: inputs.apply_reset && steps.clean_queue.outcome == 'success'
-        run: |
-          if [ -f state/intelligence_quarantine.json ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Save intelligence quarantine
-        if: inputs.apply_reset && steps.clean_queue.outcome == 'success' && steps.quarantine.outputs.present == 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: state/intelligence_quarantine.json
-          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
