@@ -54,7 +54,7 @@ def test_swift_probe_reports_http_failure_without_raising():
 
     assert result.count("status=unavailable") == len(INDEX_URLS) + len(ALTERNATE_URLS)
     assert "http_status=403" in result
-    assert len(http.calls) == len(INDEX_URLS)
+    assert len(http.calls) == len(INDEX_URLS) + len(ALTERNATE_URLS)
 
 
 def test_swift_probe_rejects_non_official_redirect_and_wrong_content_type():
@@ -68,12 +68,12 @@ def test_swift_probe_rejects_non_official_redirect_and_wrong_content_type():
 
     assert "status=rejected reason=non_official_final_url" in result
     assert "status=rejected reason=unexpected_content_type content_type=application/json" in result
-    assert len(http.calls) == len(INDEX_URLS)
+    assert len(http.calls) == len(INDEX_URLS) + len(ALTERNATE_URLS)
 
 
 def test_swift_probe_rejects_unrecognized_official_listing_shape():
     body = b'<html><body><main><a href="/news-events/press-releases">Press releases</a></main></body></html>'
-    result = probe_swift_indexes(FakeHttp([response(body, url=url) for url in INDEX_URLS]))
+    result = probe_swift_indexes(FakeHttp([response(body, url=url) for url in (*INDEX_URLS, *ALTERNATE_URLS)]))
 
     assert result.count("status=invalid_page") == len(INDEX_URLS)
     assert result.count("status=reachable") == len(ALTERNATE_URLS)
