@@ -24,6 +24,9 @@ INDEX_URLS = (
 # Additional official news/media landing pages; status-only because article URL patterns differ.
 ALTERNATE_URLS = (
     "https://www.swift.com/insights/news",
+    "https://www.swift.com/insights?page=1&type=evo_news",
+    "https://www.swift.com/insights?page=2&type=evo_news",
+    "https://www.swift.com/insights?page=3&type=evo_news",
     "https://www.swift.com/news-events/news?news_type=hot",
     "https://www.swift.com/about-us/media-centre",
 )
