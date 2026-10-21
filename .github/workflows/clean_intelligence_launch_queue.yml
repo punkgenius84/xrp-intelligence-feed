@@ -82,7 +82,7 @@ jobs:
 
           pending = len(JsonIntelligenceOutboxState().load())
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"pending={pending}\\n")
+              output.write(f"pending={pending}\n")
           print(f"Launch queue preflight: pending={pending}")
           PY
 
