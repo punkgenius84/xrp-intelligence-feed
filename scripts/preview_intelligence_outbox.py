@@ -87,7 +87,7 @@ def render_preview(
         )
         lines.append(f"   summary: {_one_line(event.summary, 300)}")
         lines.append(f"   significance: {_one_line(event.significance, 300)}")
-            freshness, latest_date, age_days = _evidence_freshness(event, current, stale_after_days)
+        freshness, latest_date, age_days = _evidence_freshness(event, current, stale_after_days)
         generic_titles_only = has_only_generic_evidence_titles(event)
         action = _recommended_action(freshness, generic_titles_only)
         age_label = f" age_days={age_days}" if age_days is not None else ""
