@@ -99,6 +99,7 @@ def test_swift_sitemap_routes_reject_html_body_and_empty_success():
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[0]),
         response(b"", content_type="application/xml", url=SITEMAP_URLS[1]),
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[2]),
+        response(b"<html>challenge page</html>", url=SITEMAP_URLS[3]),
     ]
     result = probe_swift_indexes(FakeHttp(responses))
     assert "sitemap=" + SITEMAP_URLS[0] + " status=unusable reason=not_recognized_as_xml" in result
