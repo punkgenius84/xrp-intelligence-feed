@@ -57,36 +57,9 @@ jobs:
       # CI/test tooling lives in the development requirements file; runtime requirements stay lean.
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
-      - name: Probe Coinbase article-owned publication metadata (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_article_metadata.py
-      - name: Probe Coinbase official sitemap (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_official_sitemap.py
-      - name: Probe Coinbase official RSS (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_blog_rss.py
-      - name: Probe Coinbase official dated index (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_landing_index.py
-      - name: Probe Coinbase official product index (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_product_index.py
-      - name: Probe Coinbase Yahoo Finance route in official indexes (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_yahoo_index.py
-      - name: Probe Coinbase investor-news index (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_coinbase_investor_news.py
-      - name: Probe Swift official press indexes (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_swift_press_index.py
-      - name: Probe IMF public indexes (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_imf_media_center.py
-      - name: Probe Citi production sitemap collector (read-only diagnostic)
-        if: github.event_name == 'push'
-        run: python scripts/probe_citi_production_sitemap_collector.py
+      # Source-specific parser/access probes are intentionally parked while launch work
+      # focuses on relevance and publishing safety. Their scripts remain available for
+      # a future explicit diagnostic run; ordinary pushes do not execute them.
       - name: Restore persistent state
         id: state_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -209,11 +182,6 @@ jobs:
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
           PY
-      - name: Preview persisted Coinbase undated observations (read-only)
-        # Confirm the cache carries title/URL fingerprints across runs without
-        # treating first_seen_time as a publication date or changing state.
-        if: github.event_name == 'push'
-        run: python scripts/preview_discovery_observations.py --source-id coinbase-blog --limit 20
       - name: Preview queued intelligence events (read-only)
         # Push runs are diagnostic dry runs: they never publish or save persistent state.
         # Preview there so queue review does not depend on remembering a manual checkbox.
