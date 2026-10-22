@@ -25,6 +25,7 @@ from discovery.sec_press_releases import SECPressReleasesRSSDiscovery, validate_
 from discovery.doj_news_api import DOJNewsAPIDiscovery, validate_doj_source
 from discovery.ecb_rss import ECBRSSDiscovery, validate_ecb_source
 from discovery.bank_of_canada_rss import BankOfCanadaRSSDiscovery, validate_bank_of_canada_source
+from discovery.bank_of_england_rss import BankOfEnglandRSSDiscovery, validate_bank_of_england_source
 from discovery.ripple_press_center import RipplePressCenterDiscovery, validate_ripple_source
 from discovery.xrpl_blog import XRPLBlogDiscovery, validate_xrpl_source
 from discovery.white_house_actions import WhiteHouseActionsDiscovery, validate_white_house_source
@@ -54,6 +55,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "bny_rss": validate_bny_source,
             "ecb_rss": validate_ecb_source,
             "bank_of_canada_rss": validate_bank_of_canada_source,
+            "bank_of_england_rss": validate_bank_of_england_source,
             "sec_submissions": validate_sec_source,
             "sec_press_releases_rss": validate_sec_press_source,
             "federal_register_api": validate_federal_register_source,
@@ -102,6 +104,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return ECBRSSDiscovery(source, **kwargs)
     if method == "bank_of_canada_rss":
         return BankOfCanadaRSSDiscovery(source, **kwargs)
+    if method == "bank_of_england_rss":
+        return BankOfEnglandRSSDiscovery(source, **kwargs)
     if method == "sec_submissions":
         return SECEdgarDiscovery(source, **kwargs)
     if method == "sec_press_releases_rss":
