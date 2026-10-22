@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from scripts.probe_coinbase_landing_index import probe_landing_index
 from scripts.probe_coinbase_product_index import probe_product_index
 
