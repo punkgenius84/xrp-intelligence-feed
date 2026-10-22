@@ -156,7 +156,7 @@ def test_success_saves_validators_and_304_preserves_them():
     assert http.calls[0][1]["expected_content_types"] == (
         "application/rss+xml", "application/xml", "text/xml", "application/atom+xml"
     )
-    state = {"sources": {SOURCE_ID: {"requests": {"news": {"etag": '"old"'}}}}
+    state = {"sources": {SOURCE_ID: {"requests": {"news": {"etag": '"old"'}}}}}
     unchanged, http = run([response(status=304, headers={})], state=state)
     assert unchanged.status == "not_modified"
     assert unchanged.candidates == []
