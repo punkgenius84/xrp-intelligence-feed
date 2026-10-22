@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from storage.outbox import publication_key
+
 MAX_HISTORY = 2_000
 RETENTION_DAYS = 35
 SCHEMA_VERSION = 1
@@ -97,14 +99,12 @@ class JsonDeliveryHistory:
         current = self.load()
         existing = {item.key for item in current}
         for item in items:
-            key = getattr(item, "candidate_id", "") or getattr(item, "fingerprint", "")
-            content_hash = getattr(item, "content_hash", "") or getattr(item, "fingerprint", "")
-            publication_key = f"discord|{key}|{content_hash}"
-            if publication_key not in posted_keys or publication_key in existing:
+            key = publication_key_for_item(item)
+            if key not in posted_keys or key in existing:
                 continue
             current.append(
                 PostedItem(
-                    key=publication_key,
+                    key=key,
                     source=str(item.source),
                     title=str(item.title),
                     url=str(item.url),
