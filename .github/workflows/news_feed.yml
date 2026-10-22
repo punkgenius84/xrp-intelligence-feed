@@ -342,6 +342,13 @@ jobs:
           fi
           echo "Request validated. Runtime must still verify unique queue match, freshness, evidence, and delivery history."
 
+      - name: Prepare selected event from quarantine if needed
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test
+        env:
+          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
+          TEST_CONFIRMATION: ${{ inputs.intelligence_test_confirmation }}
+        run: python scripts/prepare_quarantined_intelligence_test.py --event-id "$TEST_EVENT_ID" --confirm "$TEST_CONFIRMATION"
+
       - name: Run feed
         id: feed
         run: python main.py
