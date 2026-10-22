@@ -17,7 +17,7 @@ TARGET_PATH = "/blog/coinbase-and-thunes-connect-stablecoin-infrastructure"
 HOSTS = {"www.coinbase.com", "coinbase.com"}
 
 
-def probe_product_index(http=None) -> str:
+def probe_product_index(http=None, *, target_path: str = TARGET_PATH) -> str:
     """Read-only bounded probe; never changes active source configuration or state."""
     client = http or BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only Coinbase product-index diagnostic)",
@@ -66,14 +66,14 @@ def probe_product_index(http=None) -> str:
         if not isinstance(native_id, str):
             return False
         normalized = re.sub(r"^/[a-z]{2}-[a-z]{2}(?=/blog/)", "", native_id.casefold())
-        return normalized == TARGET_PATH.casefold()
+        return normalized == target_path.casefold()
 
     target = next((row for row in rows if target_route_matches(row.get("native_id"))), None)
     if target is not None:
         published = target.get("date")
         date_label = published.isoformat() if hasattr(published, "isoformat") else "missing"
         return f"status=valid_index target_route=present target_date={date_label} parsed_items={len(rows)}"
-    if TARGET_PATH.casefold() in page_text:
+    if target_path.casefold() in page_text:
         parse_status = "complete" if complete else "partial"
         return (
             f"status=valid_index target_route=present target_date=unresolved "
