@@ -90,6 +90,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "imf-media-center-news",
         "ecb-press-releases",
         "bank-of-canada-press-releases",
+        "bank-of-england-news",
     }
 
 
