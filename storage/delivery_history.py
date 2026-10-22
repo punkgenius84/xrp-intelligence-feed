@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from storage.outbox import publication_key
+from storage.outbox import publication_key as publication_key_for_item
 
 MAX_HISTORY = 2_000
 RETENTION_DAYS = 35
