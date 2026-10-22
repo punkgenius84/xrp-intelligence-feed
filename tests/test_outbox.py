@@ -37,6 +37,15 @@ def test_round_trip_and_deterministic_key(tmp_path):
     assert loaded[0].relevance_score == 50
 
 
+def test_queued_legacy_item_preserves_its_fingerprint_publication_key(tmp_path):
+    legacy = item(candidate_id="", content_hash="")
+    store = JsonOutboxState(tmp_path / "outbox.json")
+    queued = store.enqueue([legacy])
+
+    assert queued[0].key == publication_key(legacy)
+    assert publication_key(queued[0]) == queued[0].key
+
+
 def test_same_publication_is_updated_not_duplicated(tmp_path):
     store = JsonOutboxState(tmp_path / "outbox.json")
     store.enqueue([item(score=40)])
