@@ -123,7 +123,7 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
 
 def test_workflow_sets_intelligence_min_score_to_relevance_threshold():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    assert 'INTELLIGENCE_MIN_SCORE: "35"' in contents
+    assert 'INTELLIGENCE_MIN_SCORE: "30"' in contents
 
 
 
@@ -134,7 +134,7 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     assert "  push:" in trigger
     assert "      - main" in trigger
     assert '      - ".github/workflows/news_feed.yml"' in trigger
-    assert '      - "config/discovery_sources.json"' in trigger
+    assert '      - "config/**"' in trigger
     assert '      - "discovery/**"' in trigger
     assert '      - "storage/**"' in trigger
     assert '      - "intelligence/**"' in trigger
