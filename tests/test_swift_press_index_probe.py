@@ -109,9 +109,12 @@ def test_swift_insights_pagination_routes_are_official_and_read_only():
 
     insights = [url for url in ALTERNATE_URLS if "/insights?page=" in url]
     assert insights == [
+        "https://www.swift.com/insights?page=0&type=evo_news",
         "https://www.swift.com/insights?page=1&type=evo_news",
         "https://www.swift.com/insights?page=2&type=evo_news",
         "https://www.swift.com/insights?page=3&type=evo_news",
+        "https://www.swift.com/insights?page=4&type=evo_news",
+        "https://www.swift.com/insights?page=5&type=evo_news",
     ]
     assert all(urlsplit(url).scheme == "https" and urlsplit(url).hostname == "www.swift.com" for url in insights)
 
