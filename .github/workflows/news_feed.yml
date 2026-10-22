@@ -40,8 +40,10 @@ on:
 permissions:
   contents: read
 
+# Push runs are read-only diagnostics; keep them from replacing a pending scheduled run.
+# Scheduled/manual runs share a group so stateful executions remain serialized.
 concurrency:
-  group: xrp-intelligence-feed
+  group: xrp-intelligence-feed-${{ github.event_name == 'push' && 'push-diagnostics' || 'stateful' }}
   cancel-in-progress: false
 jobs:
   run:
