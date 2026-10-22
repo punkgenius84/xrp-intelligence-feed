@@ -26,6 +26,7 @@ PUBLIC_ENDPOINT_URLS = (
     "https://mediacenter.imf.org/newslisting?category=news&page=2",
     "https://mediacenter.imf.org/newslisting?category=features&page=2",
     "https://mediacenter.imf.org/newslisting?category=press-briefings&page=2",
+    "https://mediacenter.imf.org/newslisting?category=annual-spring-meetings&page=2",
     "https://www.imf.org/en/news?cid=ca-com-compd-bkstfooter",
     "https://www.imf.org/en/News/rss?language=eng",
     "https://www.imf.org/en/Blogs/rss?language=eng",
