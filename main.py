@@ -606,6 +606,14 @@ def score_feed(result: PipelineResult) -> list:
                 f"hint={frontier.get('deep_page_hint', 'unavailable')} "
                 f"state={frontier.get('frontier_status', 'unavailable')}"
             )
+        elif discovery_result.source_id == "citi-press-releases":
+            unchanged = discovery_result.pagination.get("citi_sitemap_unchanged")
+            digest_status = (
+                "unchanged" if unchanged is True
+                else "changed-or-first-seen" if unchanged is False
+                else "unavailable"
+            )
+            print(f"  Citi sitemap digest: {digest_status}")
         health = result.health.get(discovery_result.source_id, {})
         if health:
             print(
