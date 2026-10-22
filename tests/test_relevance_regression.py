@@ -65,7 +65,13 @@ def test_primary_institutional_xrpl_developments_clear_relevance_gate(title, sum
 
     assert score >= 30, f"expected relevant event to clear gate; score={score}, reasons={reasons}"
     assert reasons
-    assert set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"}
+    assert item.relevance_categories
+    assert set(item.relevance_categories) & {
+        "direct_xrp_xrpl",
+        "direct_ripple",
+        "rlusd_stablecoin",
+        "relevant_regulatory_digital_asset_payments",
+    }
 
 
 @pytest.mark.parametrize(
