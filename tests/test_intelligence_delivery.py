@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import json
+
 import pytest
 
 import main
@@ -68,6 +70,18 @@ def test_intelligence_outbox_corrupt_state_fails_closed(tmp_path):
     path.write_text("{broken", encoding="utf-8")
     with pytest.raises(Exception):
         JsonIntelligenceOutboxState(path).load()
+
+
+def test_intelligence_outbox_duplicate_publication_keys_fail_closed(tmp_path):
+    path = tmp_path / "intelligence_outbox.json"
+    store = JsonIntelligenceOutboxState(path)
+    store.enqueue([event(event_id="evt-duplicate")])
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["items"].append(dict(payload["items"][0]))
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(IntelligenceOutboxError, match="duplicate publication keys"):
+        store.load()
 
 
 def test_intelligence_formatter_escapes_markdown_and_mentions():
