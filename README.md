@@ -148,7 +148,7 @@ External GitHub Actions are pinned to full commit SHAs, with weekly Dependabot c
 
 | Workflow | Purpose | Operational notes |
 | --- | --- | --- |
-| **XRP Intelligence Feed** | Scheduled collection, deterministic scoring, intelligence shadow processing, and manual preview/one-event test. | Scheduled every 15 minutes at minutes 7, 22, 37, and 52. Normal intelligence-event publishing stays disabled. The isolated one-event path is manual and confirmation-gated. |
+| **XRP Intelligence Feed** | Scheduled collection, deterministic scoring, intelligence shadow processing, and manual preview/one-event test. | Scheduled every 15 minutes at minutes 8, 23, 38, and 53. Normal intelligence-event publishing stays disabled. The isolated one-event path is manual and confirmation-gated. |
 | **Test Suite** | Full pytest suite on pushes and pull requests to `main`. | Required regression gate; keep it. |
 | **Intelligence Headline Evaluation** | Manual Ollama/model quality evaluation against the fixed source-linked cases. | A quality screen only; it does not authorize publishing. |
 | **Clean Intelligence Launch Queue** | Manual, cache-aware queue reset with audit archive. | Preview-only by default; apply requires explicit confirmation. Do not rerun apply casually. |
@@ -237,7 +237,7 @@ The JSON state is saved only after entity detection, source-quality classificati
     python -m pytest -q
     python main.py
 
-The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs four times per hour at minutes 7, 22, 37, and 52. It runs the full test suite, restores persistent state, runs the intelligence layer in shadow mode, and then executes the feed. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
+The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs four times per hour at minutes 8, 23, 38, and 53. It runs the full test suite, restores persistent state, runs the intelligence layer in shadow mode, and then executes the feed. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
 
 ## Intelligence queue review
 
