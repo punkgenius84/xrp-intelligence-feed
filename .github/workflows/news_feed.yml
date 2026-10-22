@@ -357,7 +357,7 @@ jobs:
           INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
           INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
           INTELLIGENCE_TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
-          INTELLIGENCE_MIN_SCORE: "35"
+          INTELLIGENCE_MIN_SCORE: "30"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
