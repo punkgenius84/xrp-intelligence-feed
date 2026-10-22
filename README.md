@@ -265,3 +265,19 @@ Omit `--source-id` to inspect observations from all opted-in sources. Use `--pat
 - **Citi press releases are enabled and the production collector is healthy.** The latest read-only sitemap collector returned three allowlisted candidates with no errors; the scheduled collector can correctly report zero new candidates when the saved sitemap digest is unchanged. This is a no-change result, not a parked source. The separate probe is read-only and does not update production state.
 - **IMF web endpoints remain parked.** GitHub Actions returned HTTP 403 from public News, Blogs, GFSR, RSS, sitemap and the official IMF Data news listing; the official Media Center listing returned HTTP 202 with an empty body. No access-control workaround is used. Re-enable only after an official RSS/API endpoint returns usable dated items from the runner; parser fixtures remain covered.
 - **Push-triggered feed runs are source-diagnostic dry runs.** They skip Ollama setup, live inference smoke testing, and full per-headline enrichment to shorten feedback cycles. Scheduled and manual runs still perform the real model inference smoke test and full intelligence layer in shadow mode.
+
+## Isolated one-event intelligence delivery test
+
+The manual **XRP Intelligence Feed** workflow supports a narrowly scoped delivery test without enabling normal-feed publishing. Use it only after reviewing a genuinely fresh queued event:
+
+1. Open **Actions → XRP Intelligence Feed → Run workflow** on `main`.
+2. Leave **Dry run** enabled and **Preview intelligence** off.
+3. Enable **Publish exactly one explicitly selected queued intelligence event**.
+4. Copy the exact `event_id` from the current queued-intelligence preview/logs into **Exact queued event ID**. There is deliberately no default ID.
+5. Enter `POST-ONE-INTELLIGENCE-EVENT` in the confirmation field.
+6. Inspect the run output. The test must stop unless the exact ID matches one queued event, is not already in delivery history, and has at least one valid HTTP(S) evidence URL with a publication timestamp within the 30-day freshness window.
+
+The test path temporarily enables delivery for that one event only, with a one-post limit. It leaves the normal feed in dry-run mode, refuses missing/ambiguous/stale/already-delivered targets, and retains unrelated queued items. A successful workflow run alone is not proof that a Discord post occurred; confirm the log reports exactly one delivered event and verify the Discord message.
+
+Do not enable routine intelligence publishing until the one-event test and subsequent shadow-output review are accepted. The former hardcoded DriveWealth test workflow has been removed so there is only one supported test path.
+

@@ -72,9 +72,13 @@ def test_workflow_skips_full_enrichment_on_push_but_keeps_scheduled_shadow_mode(
     run = _step_block(contents, "run: python main.py")
     assert "INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}" in run
     assert "Scheduled and manual runs keep full intelligence enrichment enabled." in run
-    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && 'true' || 'false' }}" in run
-    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && 'true' || 'false' }}" in run
+    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
+    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
     assert "publish_intelligence_test:" in contents
+    assert "intelligence_test_confirmation:" in contents
+    assert "POST-ONE-INTELLIGENCE-EVENT" in contents
+    assert 'default: ""' in contents
+    assert "name: Validate isolated one-event request" in contents
     assert "default: false" in contents
     assert 'OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"' in run
     assert 'OLLAMA_MODEL: "qwen2.5:3b"' in run
@@ -138,9 +142,13 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
 
     run = _step_block(contents, "run: python main.py")
     assert "DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}" in run
-    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && 'true' || 'false' }}" in run
-    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && 'true' || 'false' }}" in run
+    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
+    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
     assert "publish_intelligence_test:" in contents
+    assert "intelligence_test_confirmation:" in contents
+    assert "POST-ONE-INTELLIGENCE-EVENT" in contents
+    assert 'default: ""' in contents
+    assert "name: Validate isolated one-event request" in contents
     assert "default: false" in contents
 
     save = _step_block(contents, "name: Save persistent state")
