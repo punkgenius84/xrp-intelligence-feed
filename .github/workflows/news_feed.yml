@@ -40,8 +40,10 @@ on:
 permissions:
   contents: read
 
+# Read-only pushes and manual dry runs must not replace a pending scheduled run.
+# Schedules and any manual run that may persist state or publish stay serialized.
 concurrency:
-  group: xrp-intelligence-feed
+  group: xrp-intelligence-feed-${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run && !inputs.publish_intelligence_test)) && 'diagnostic' || 'stateful' }}
   cancel-in-progress: false
 jobs:
   run:
