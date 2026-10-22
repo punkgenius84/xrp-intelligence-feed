@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
+from models import NewsItem
 from storage.delivery_history import JsonDeliveryHistory
+from storage.outbox import JsonOutboxState
 
 
 STAMP = datetime(2026, 9, 23, 12, tzinfo=timezone.utc)
@@ -32,3 +34,22 @@ def test_record_is_idempotent_for_same_publication(tmp_path):
     store.record([Item()], {"discord|source:item|hash"}, posted_at=STAMP)
     store.record([Item()], {"discord|source:item|hash"}, posted_at=STAMP)
     assert len(store.load()) == 1
+
+
+def test_history_records_queued_legacy_item_using_its_canonical_key(tmp_path):
+    source = NewsItem(
+        title="Legacy source item",
+        url="https://example.com/legacy",
+        source="Official Source",
+        published_at=STAMP,
+    )
+    outbox = JsonOutboxState(tmp_path / "outbox.json")
+    queued = outbox.enqueue([source])
+    key = queued[0].key
+
+    history = JsonDeliveryHistory(tmp_path / "history.json")
+    history.record(queued, {key}, posted_at=STAMP)
+
+    records = history.load()
+    assert len(records) == 1
+    assert records[0].key == key
