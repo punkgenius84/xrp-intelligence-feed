@@ -418,3 +418,8 @@ jobs:
         with:
           path: state/intelligence_quarantine.json
           key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
+      - name: Verify guarded intelligence delivery postconditions
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && success()
+        env:
+          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
+        run: python scripts/verify_intelligence_test_result.py --event-id "$TEST_EVENT_ID"
