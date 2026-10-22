@@ -1,5 +1,6 @@
 from discovery.http import HttpResponse
 from scripts.probe_coinbase_product_index import URL, TARGET_PATH, probe_product_index
+from scripts.probe_coinbase_yahoo_index import YAHOO_TARGET_PATH
 
 
 class FakeHttp:
@@ -80,3 +81,33 @@ def test_product_index_matches_locale_prefixed_target_route():
 
     assert "target_route=present" in result
     assert "target_date=2026-10-15T12:00:00+00:00" in result
+
+
+def test_product_index_checks_yahoo_finance_route_instead_of_only_current_canary():
+    html = (
+        '<html><body><article>'
+        '<time datetime="2026-10-19T12:00:00Z">October 19, 2026</time>'
+        f'<a href="https://www.coinbase.com{YAHOO_TARGET_PATH}">Coinbase stock trading with Yahoo Finance</a>'
+        '</article></body></html>'
+    ).encode()
+
+    result = probe_product_index(FakeHttp(_response(html)), target_path=YAHOO_TARGET_PATH)
+
+    assert "target_route=present" in result
+    assert "target_date=2026-10-19T12:00:00+00:00" in result
+
+
+def test_product_index_does_not_assign_neighbor_date_to_yahoo_finance_route():
+    html = (
+        '<html><body><article>'
+        '<time datetime="2026-10-13T12:00:00Z">October 13, 2026</time>'
+        '<a href="https://www.coinbase.com/blog/other-story">Other official story</a>'
+        '</article>'
+        f'<div class="card"><a href="https://www.coinbase.com{YAHOO_TARGET_PATH}">Read More</a></div>'
+        '</body></html>'
+    ).encode()
+
+    result = probe_product_index(FakeHttp(_response(html)), target_path=YAHOO_TARGET_PATH)
+
+    assert "target_route=present" in result
+    assert "target_date=unresolved" in result
