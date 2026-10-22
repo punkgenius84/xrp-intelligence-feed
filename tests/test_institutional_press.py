@@ -656,6 +656,7 @@ def test_unchanged_citi_sitemap_is_healthy_and_skips_detail_fetches():
     assert result.status == "success"
     assert result.candidates == []
     assert result.errors == []
+    assert result.pagination["citi_sitemap_unchanged"] is True
     assert len(http.calls) == 1
 
 
@@ -682,6 +683,7 @@ def test_citi_source_uses_bounded_official_sitemap_and_collects_grounded_detail(
     assert citi["sitemap_detail_limit"] == 10
     assert result.status == "success"
     assert len(result.candidates) == 1
+    assert result.pagination["citi_sitemap_unchanged"] is False
     assert result.candidates[0].title == "Citi Configured Source Test"
     assert result.candidates[0].published_at.isoformat() == "2026-10-18T00:00:00+00:00"
     assert result.state_updates == {}
