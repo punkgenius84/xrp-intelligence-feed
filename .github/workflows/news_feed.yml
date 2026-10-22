@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - ".github/workflows/news_feed.yml"
-      - "config/discovery_sources.json"
+      - "config/**"
       - "discovery/**"
       - "storage/**"
       - "intelligence/**"
