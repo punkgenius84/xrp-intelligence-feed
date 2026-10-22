@@ -156,8 +156,8 @@ External GitHub Actions are pinned to full commit SHAs, with weekly Dependabot c
 | **Quarantine Stale Intelligence Queue Items** | Manual quarantine of events whose latest trustworthy evidence is older than 30 days. | Preview-only by default; apply is confirmation-gated and never publishes. |
 | **Quarantine One Malformed Intelligence Event** | Manual quarantine of one exact event with generic/invalid evidence. | Requires an exact event ID; saves quarantine audit before updated active state. Never publishes. |
 | **XRP Intelligence Weekly Digest** | Posts a weekly digest of delivery history to Discord. | Separate from intelligence-event publishing; keep only if the weekly summary is wanted. It is a real posting workflow, not a test. |
-| **ECB / Bank of Canada / Bank of England RSS probes** | Read-only runner checks for enabled official feeds. | Retain as source-health diagnostics; no state writes or Discord posts. |
-| **Coinbase / SWIFT / IMF probes** | Read-only diagnostics for sources with unresolved access/date limitations. | Retain while those source issues are being investigated. Results do not bypass access controls or enable parked sources. |
+| **ECB / Bank of Canada / Bank of England RSS probes** | Read-only checks used when validating enabled official feeds. | Run deliberately when needed; do not block launch work on repeated probes. |
+| **Coinbase / SWIFT / IMF probes** | Read-only scripts for unresolved access/date limitations. | Parked for later; not run automatically on code pushes. Results do not bypass access controls or enable parked sources. |
 
 The obsolete marker-commit workflow for generic-event quarantine has been removed. The supported manual quarantine workflow remains. Avoid adding workflows that mutate the same production cache without the feed's concurrency lock and an explicit preview/confirmation gate.
 
