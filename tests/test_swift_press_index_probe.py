@@ -99,6 +99,7 @@ def test_swift_sitemap_routes_reject_html_body_and_empty_success():
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[0]),
         response(b"", content_type="application/xml", url=SITEMAP_URLS[1]),
         response(b"<html>challenge page</html>", url=SITEMAP_URLS[2]),
+        response(b"<html>challenge page</html>", url=SITEMAP_URLS[3]),
     ]
     result = probe_swift_indexes(FakeHttp(responses))
     assert "sitemap=" + SITEMAP_URLS[0] + " status=unusable reason=not_recognized_as_xml" in result
@@ -109,9 +110,12 @@ def test_swift_insights_pagination_routes_are_official_and_read_only():
 
     insights = [url for url in ALTERNATE_URLS if "/insights?page=" in url]
     assert insights == [
+        "https://www.swift.com/insights?page=0&type=evo_news",
         "https://www.swift.com/insights?page=1&type=evo_news",
         "https://www.swift.com/insights?page=2&type=evo_news",
         "https://www.swift.com/insights?page=3&type=evo_news",
+        "https://www.swift.com/insights?page=4&type=evo_news",
+        "https://www.swift.com/insights?page=5&type=evo_news",
     ]
     assert all(urlsplit(url).scheme == "https" and urlsplit(url).hostname == "www.swift.com" for url in insights)
 

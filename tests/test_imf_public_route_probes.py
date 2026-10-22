@@ -57,7 +57,10 @@ class FakeEndpointHttp:
 
 
 def test_additional_imf_endpoint_probes_are_official_and_read_only():
-    assert len(PUBLIC_ENDPOINT_URLS) >= 9
+    assert len(PUBLIC_ENDPOINT_URLS) >= 18
+    assert "https://mediacenter.imf.org/newslisting?category=press-briefings" in PUBLIC_ENDPOINT_URLS
+    assert "https://mediacenter.imf.org/newslisting?category=annual-spring-meetings" in PUBLIC_ENDPOINT_URLS
+    assert "https://www.imf.org/en/Blogs/archive/2026" in PUBLIC_ENDPOINT_URLS
     for url in PUBLIC_ENDPOINT_URLS:
         from urllib.parse import urlsplit
         parts = urlsplit(url)

@@ -17,13 +17,21 @@ CONFIG_PATH = Path("config/discovery_sources.json")
 # Additional official listing variants, including IMF Media Center categories.
 # These are read-only endpoint checks; they do not create production source config.
 PUBLIC_ENDPOINT_URLS = (
+    "https://mediacenter.imf.org/newslisting",
     "https://mediacenter.imf.org/newslisting?category=news",
     "https://mediacenter.imf.org/newslisting?category=press-releases",
     "https://mediacenter.imf.org/newslisting?category=features",
+    "https://mediacenter.imf.org/newslisting?category=press-briefings",
+    "https://mediacenter.imf.org/newslisting?category=annual-spring-meetings",
     "https://mediacenter.imf.org/newslisting?category=news&page=2",
+    "https://mediacenter.imf.org/newslisting?category=features&page=2",
+    "https://mediacenter.imf.org/newslisting?category=press-briefings&page=2",
+    "https://mediacenter.imf.org/newslisting?category=annual-spring-meetings&page=2",
     "https://www.imf.org/en/news?cid=ca-com-compd-bkstfooter",
     "https://www.imf.org/en/News/rss?language=eng",
     "https://www.imf.org/en/Blogs/rss?language=eng",
+    "https://www.imf.org/en/Blogs/archive",
+    "https://www.imf.org/en/Blogs/archive/2026",
     "https://www.imf.org/external/sitemap.htm",
     "https://www.imf.org/en/Publications/WEO",
     # Official IMF Data news listing; narrower than the general IMF News feed.
