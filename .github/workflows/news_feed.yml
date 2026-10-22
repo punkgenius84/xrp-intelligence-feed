@@ -29,9 +29,13 @@ on:
         type: boolean
         default: false
       intelligence_test_event_id:
-        description: "Exact queued event ID for the isolated one-event test"
+        description: "Exact fresh event ID copied from the queued-event preview; blank by default"
         type: string
-        default: "evt-605fe5788f248b06e06fcb7f"
+        default: ""
+      intelligence_test_confirmation:
+        description: "Required only for the one-event post: type POST-ONE-INTELLIGENCE-EVENT"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -305,6 +309,30 @@ jobs:
           print(f"Intelligence inference smoke test passed: model={event.model!r} type={event.event_type!r} claims={len(event.claims)}")
           PY
 
+      - name: Validate isolated one-event request
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test
+        env:
+          TEST_ENABLED: ${{ inputs.publish_intelligence_test }}
+          TEST_DRY_RUN: ${{ inputs.dry_run }}
+          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
+          TEST_CONFIRMATION: ${{ inputs.intelligence_test_confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$TEST_DRY_RUN" != "true" ]]; then
+            echo "::error::One-event test requires dry_run=true so normal feed delivery remains disabled."
+            exit 1
+          fi
+          if [[ ! "$TEST_EVENT_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$ ]]; then
+            echo "::error::Provide the exact event ID from the current queued-event preview; no default target is allowed."
+            exit 1
+          fi
+          if [[ "$TEST_CONFIRMATION" != "POST-ONE-INTELLIGENCE-EVENT" ]]; then
+            echo "::error::Explicit confirmation is required: POST-ONE-INTELLIGENCE-EVENT"
+            exit 1
+          fi
+          echo "Request validated. Runtime must still verify unique queue match, freshness, evidence, and delivery history."
+
       - name: Run feed
         id: feed
         run: python main.py
@@ -317,8 +345,8 @@ jobs:
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
           # Publishing is off except for an explicit manual one-event test.
-          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && 'true' || 'false' }}
-          INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && 'true' || 'false' }}
+          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
+          INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
           INTELLIGENCE_TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
           INTELLIGENCE_MIN_SCORE: "35"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
