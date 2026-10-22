@@ -243,3 +243,15 @@ def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
     assert workflow.index("name: Count restored queue entries") < workflow.index("name: Archive and clear active queue")
     assert workflow.index("name: Save intelligence quarantine") < workflow.index("name: Save persistent state")
     assert "steps.queue_preflight.outputs.pending != '0'" in save
+
+
+
+def test_workflow_previews_quarantined_intelligence_on_diagnostic_runs():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    preview = _step_block(contents, "name: Preview quarantined intelligence events (read-only)")
+
+    assert "python scripts/preview_intelligence_quarantine.py --limit 20" in preview
+    assert "github.event_name == 'push'" in preview
+    assert "inputs.preview_intelligence && inputs.dry_run" in preview
+    assert "DISCORD_WEBHOOK_URL" not in preview
+    assert "INTELLIGENCE_PUBLISH" not in preview
