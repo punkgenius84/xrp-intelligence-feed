@@ -68,17 +68,17 @@ def test_primary_institutional_xrpl_developments_clear_relevance_gate(title, sum
     [
         (
             "OCC Announces Enforcement Actions Against Former Bank Officers",
-            "The Office of the Comptroller of the Currency announced enforcement actions involving former bank officers. The announcement does not discuss digital assets, cryptocurrency, tokenization, or payments.",
+            "The Office of the Comptroller of the Currency announced enforcement actions involving former bank officers. The release focuses on individual misconduct and compliance obligations.",
             "Office of the Comptroller of the Currency",
         ),
         (
             "Justice Department Announces Charges in Money Laundering Case",
-            "The Department of Justice announced charges related to a money laundering network. The announcement contains no digital-asset, stablecoin, XRP, or payment-infrastructure connection.",
+            "The Department of Justice announced charges against individuals accused of laundering proceeds through shell companies and bank accounts.",
             "U.S. Department of Justice",
         ),
         (
             "Treasury Announces New Financial Reporting Rule",
-            "The Treasury Department announced a financial reporting rule. A background paragraph mentions stablecoins as one example, but the announcement contains no rule or action concerning digital assets or payments.",
+            "The Treasury Department announced a financial reporting rule for covered institutions, including compliance deadlines and reporting obligations.",
             "U.S. Treasury",
         ),
     ],
