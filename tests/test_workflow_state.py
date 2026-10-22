@@ -14,7 +14,7 @@ def _step_block(contents: str, marker: str) -> str:
 
 def test_workflow_uses_staggered_quarter_hour_schedule():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    assert 'cron: "7,22,37,52 * * * *"' in contents
+    assert 'cron: "8,23,38,53 * * * *"' in contents
 
 
 def test_workflow_restores_and_saves_both_persistent_state_files():
