@@ -193,7 +193,11 @@ def test_relevance_recognizes_bank_of_england_as_regulator_for_digital_asset_act
         detected_entities=[],
         source_quality="primary",
     )
-    detect_entities(item)
+    detected = detect_entities(item)
+    assert "Bank of England" in detected
+    from intelligence.relevance import _classify
+    categories = _classify(item, f"{item.title} {item.summary}")
+    assert "relevant_regulatory_digital_asset_payments" in categories
     score, reasons = score_relevance(item)
     assert score > 0
-    assert "category:relevant_regulatory_digital_asset_payments" in reasons
+    assert any("stablecoin" in reason for reason in reasons)
