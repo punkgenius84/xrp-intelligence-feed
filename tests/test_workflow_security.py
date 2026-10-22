@@ -63,27 +63,26 @@ def test_production_inference_smoke_test_allows_slow_cold_model_startup():
     assert 'OllamaProvider(model="qwen2.5:3b", timeout=90)' in workflow
 
 
-def test_only_current_citi_production_probe_runs_in_push_diagnostics():
+def test_source_specific_parser_probes_are_parked_from_push_diagnostics():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
-    lines = workflow.splitlines()
-
-    def step_block(marker):
-        start = next(i for i, line in enumerate(lines) if marker in line)
-        end = next(
-            (i for i in range(start + 1, len(lines)) if lines[i].startswith("      - name:")),
-            len(lines),
-        )
-        return "\n".join(lines[start:end])
-
-    current = step_block("name: Probe Citi production sitemap collector")
-    assert "if: github.event_name == 'push'" in current
-    assert "run: python scripts/probe_citi_production_sitemap_collector.py" in current
-
-    obsolete_markers = (
-        "name: Probe Citi official press index",
-        "name: Probe Citi broader official news index",
-        "name: Probe Citi institutional collector fallback",
-        "name: Probe Citi official sitemap (read-only diagnostic)",
+    # Parser/access investigations are deferred; the scripts remain available for
+    # a deliberate future run but should not slow or distract normal code pushes.
+    parked_scripts = (
+        "probe_coinbase_article_metadata.py",
+        "probe_coinbase_official_sitemap.py",
+        "probe_coinbase_blog_rss.py",
+        "probe_coinbase_landing_index.py",
+        "probe_coinbase_product_index.py",
+        "probe_coinbase_yahoo_index.py",
+        "probe_coinbase_investor_news.py",
+        "probe_swift_press_index.py",
+        "probe_imf_media_center.py",
+        "probe_citi_production_sitemap_collector.py",
     )
-    for marker in obsolete_markers:
-        assert marker not in workflow, f"superseded diagnostic step remains: {marker}"
+    for script in parked_scripts:
+        assert f"run: python scripts/{script}" not in workflow, f"parked probe still runs automatically: {script}"
+        assert (Path(__file__).resolve().parents[1] / "scripts" / script).is_file(), f"keep probe for later: {script}"
+
+    assert "Preview persisted Coinbase undated observations" not in workflow
+    assert "Preview queued intelligence events" in workflow
+    assert "Preview quarantined intelligence events" in workflow
