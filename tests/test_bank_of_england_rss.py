@@ -190,9 +190,10 @@ def test_relevance_recognizes_bank_of_england_as_regulator_for_digital_asset_act
         summary="The Bank of England publishes a stablecoin rule for payment firms.",
         source_type="discovery",
         source_id=SOURCE_ID,
-        detected_entities=detect_entities(title + " The Bank of England publishes a stablecoin rule."),
+        detected_entities=[],
         source_quality="primary",
     )
+    detect_entities(item)
     score, reasons = score_relevance(item)
     assert score > 0
     assert "category:relevant_regulatory_digital_asset_payments" in reasons
