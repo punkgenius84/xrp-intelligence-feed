@@ -542,6 +542,32 @@ def test_score_feed_shows_fresh_candidates_below_intelligence_minimum(monkeypatc
 
 
 
+def test_score_feed_shows_relevance_near_misses_when_llm_is_disabled(monkeypatch, capsys):
+    item = SimpleNamespace(
+        relevance_score=24,
+        title="Fresh payment infrastructure candidate",
+        source="Official source",
+        score_reasons=["institutional keyword (+7)", "context keyword (+4)"],
+    )
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False),
+    )
+    result = main.PipelineResult(
+        collected=[item],
+        fresh=[item],
+        publishable=[],
+    )
+
+    main.score_feed(result)
+    output = capsys.readouterr().out
+    assert "Relevance below-publish candidates (showing 1 of 1; capped at 5; publish threshold 30):" in output
+    assert "[24] Fresh payment infrastructure candidate — Official source" in output
+    assert "institutional keyword (+7)" in output
+    assert "context keyword (+4)" in output
+
+
 def test_partial_source_errors_are_labeled_as_warnings(capsys):
     main._print_source_failures(
         ["coinbase-blog: one official article lacks a reliable date", "sec-edgar: HTTP 500"],
