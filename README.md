@@ -4,6 +4,16 @@ A free, primary-source-first XRP/XRPL intelligence feed. It collects official go
 
 **Current status:** deterministic intelligence processing is live in GitHub Actions, while **intelligence-event Discord publishing remains OFF**. The system is deliberately observing real shadow output before enabling that final delivery step.
 
+
+
+## Launch checkpoint — 22 October 2026
+
+- **Routine intelligence-event publishing remains disabled.** The normal scheduled feed is still in shadow mode for intelligence events; do not change `INTELLIGENCE_PUBLISH=false` as part of routine cleanup.
+- The guarded one-event test now requires an exact event ID, `dry_run=true`, and the confirmation `POST-ONE-INTELLIGENCE-EVENT`. There is no hardcoded fallback event ID.
+- The pre-launch queue reset archived the prior 19 active events. Delivery history and deduplication state were preserved; the reset did not post to Discord.
+- The post-merge push diagnostic on 22 October reported 483 collected candidates, 0 new, 0 relevant, and 0 intelligence events; its read-only queue preview showed 0 pending. Because this was a push-triggered diagnostic run, persistent state saving was skipped. Treat this as a diagnostic snapshot—not as a substitute for a successful scheduled observation.
+- The post-merge full test suite passed. The remaining launch gate is to observe a genuinely fresh, relevant queued event, review its evidence and date, run the guarded one-event delivery manually, and verify both the Discord post and persisted delivery history.
+
 ## What it does
 
 1. Collects bounded feeds and official discovery sources.
@@ -132,6 +142,22 @@ The discovery registry includes official institutional sources for Citi, Circle,
 ## Workflow supply-chain security
 
 External GitHub Actions are pinned to full commit SHAs, with weekly Dependabot checks configured to propose deliberate updates. The production workflow installs a fixed Ollama release archive and verifies its published SHA-256 before extraction. The expected archive version and digest must be updated together from the official release when intentionally upgrading Ollama. CI tests enforce SHA pinning and the Ollama checksum gate.
+
+## GitHub Actions workflow guide
+
+| Workflow | Purpose | Operational notes |
+| --- | --- | --- |
+| **XRP Intelligence Feed** | Scheduled collection, deterministic scoring, intelligence shadow processing, and manual preview/one-event test. | Scheduled every 15 minutes at minutes 7, 22, 37, and 52. Normal intelligence-event publishing stays disabled. The isolated one-event path is manual and confirmation-gated. |
+| **Test Suite** | Full pytest suite on pushes and pull requests to `main`. | Required regression gate; keep it. |
+| **Intelligence Headline Evaluation** | Manual Ollama/model quality evaluation against the fixed source-linked cases. | A quality screen only; it does not authorize publishing. |
+| **Clean Intelligence Launch Queue** | Manual, cache-aware queue reset with audit archive. | Preview-only by default; apply requires explicit confirmation. Do not rerun apply casually. |
+| **Quarantine Stale Intelligence Queue Items** | Manual quarantine of events whose latest trustworthy evidence is older than 30 days. | Preview-only by default; apply is confirmation-gated and never publishes. |
+| **Quarantine One Malformed Intelligence Event** | Manual quarantine of one exact event with generic/invalid evidence. | Requires an exact event ID; saves quarantine audit before updated active state. Never publishes. |
+| **XRP Intelligence Weekly Digest** | Posts a weekly digest of delivery history to Discord. | Separate from intelligence-event publishing; keep only if the weekly summary is wanted. It is a real posting workflow, not a test. |
+| **ECB / Bank of Canada / Bank of England RSS probes** | Read-only runner checks for enabled official feeds. | Retain as source-health diagnostics; no state writes or Discord posts. |
+| **Coinbase / SWIFT / IMF probes** | Read-only diagnostics for sources with unresolved access/date limitations. | Retain while those source issues are being investigated. Results do not bypass access controls or enable parked sources. |
+
+The obsolete marker-commit workflow for generic-event quarantine has been removed. The supported manual quarantine workflow remains. Avoid adding workflows that mutate the same production cache without the feed's concurrency lock and an explicit preview/confirmation gate.
 
 ## CI
 
@@ -279,5 +305,5 @@ The manual **XRP Intelligence Feed** workflow supports a narrowly scoped deliver
 
 The test path temporarily enables delivery for that one event only, with a one-post limit. It leaves the normal feed in dry-run mode, refuses missing/ambiguous/stale/already-delivered targets, and retains unrelated queued items. A successful workflow run alone is not proof that a Discord post occurred; confirm the log reports exactly one delivered event and verify the Discord message.
 
-Do not enable routine intelligence publishing until the one-event test and subsequent shadow-output review are accepted. The former hardcoded DriveWealth test workflow has been removed so there is only one supported test path.
+Do not enable routine intelligence publishing until the one-event test and subsequent shadow-output review are accepted. The former hardcoded DriveWealth test workflow has been removed; there is now one supported, confirmation-gated path for an actual one-event delivery test.
 
