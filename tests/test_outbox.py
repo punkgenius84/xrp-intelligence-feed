@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 
 import pytest
 
@@ -50,6 +51,18 @@ def test_corrupt_state_fails_closed(tmp_path):
     path.write_text("{broken", encoding="utf-8")
     with pytest.raises(OutboxError):
         JsonOutboxState(path).load()
+
+
+def test_duplicate_publication_keys_fail_closed(tmp_path):
+    path = tmp_path / "outbox.json"
+    store = JsonOutboxState(path)
+    store.enqueue([item()])
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["items"].append(dict(payload["items"][0]))
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(OutboxError, match="duplicate publication keys"):
+        store.load()
 
 
 def test_capacity_overflow_refuses_to_drop_undelivered_entries(tmp_path):

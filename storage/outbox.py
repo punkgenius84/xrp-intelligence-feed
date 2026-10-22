@@ -127,7 +127,11 @@ class JsonOutboxState:
         if value["schema_version"] != SCHEMA_VERSION or not isinstance(value["items"], list):
             raise OutboxError(f"Discord outbox {self.path} has an unsupported schema")
         try:
-            return [from_record(item) for item in value["items"]]
+            items = [from_record(item) for item in value["items"]]
+            keys = [item.key for item in items]
+            if len(keys) != len(set(keys)):
+                raise ValueError("duplicate publication keys would make queued items ambiguous")
+            return items
         except (TypeError, ValueError) as exc:
             raise OutboxError(f"Discord outbox {self.path} contains an invalid item: {exc}") from exc
 

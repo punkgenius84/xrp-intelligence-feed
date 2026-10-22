@@ -91,7 +91,11 @@ class JsonIntelligenceOutboxState:
                 f"Intelligence outbox {self.path} has an unsupported schema"
             )
         try:
-            return [_from_record(item) for item in value["items"]]
+            items = [_from_record(item) for item in value["items"]]
+            keys = [item.key for item in items]
+            if len(keys) != len(set(keys)):
+                raise ValueError("duplicate publication keys would make queued events ambiguous")
+            return items
         except (TypeError, ValueError) as exc:
             raise IntelligenceOutboxError(
                 f"Intelligence outbox {self.path} contains an invalid item: {exc}"
