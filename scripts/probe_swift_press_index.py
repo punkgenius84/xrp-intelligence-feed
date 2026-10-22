@@ -16,23 +16,31 @@ INDEX_URLS = (
     "https://www.swift.com/about-us/media-centre/press-releases",
     "https://www.swift.com/about-us/media-centre/press-releases?page=0",
     "https://www.swift.com/about-us/media-centre/press-releases?page=1",
+    "https://www.swift.com/about-us/media-centre/press-releases?page=2",
     "https://www.swift.com/news-events/press-releases",
     "https://www.swift.com/news-events/press-releases?page=0",
     "https://www.swift.com/news-events/press-releases?page=1",
+    "https://www.swift.com/news-events/press-releases?page=2",
     "https://www.swift.com/news-events/migrated-news/press-releases?page=0",
+    "https://www.swift.com/news-events/migrated-news/press-releases?page=1",
 )
 # Additional official news/media landing pages; status-only because article URL patterns differ.
 ALTERNATE_URLS = (
+    "https://www.swift.com/news-events",
     "https://www.swift.com/insights/news",
+    "https://www.swift.com/insights?page=0&type=evo_news",
     "https://www.swift.com/insights?page=1&type=evo_news",
     "https://www.swift.com/insights?page=2&type=evo_news",
     "https://www.swift.com/insights?page=3&type=evo_news",
+    "https://www.swift.com/insights?page=4&type=evo_news",
+    "https://www.swift.com/insights?page=5&type=evo_news",
     "https://www.swift.com/news-events/news?news_type=hot",
     "https://www.swift.com/about-us/media-centre",
 )
 # User-discovered official sitemap endpoints. Treat XML as sitemap diagnostics only;
 # do not infer news events from sitemap URLs without validating linked pages.
 SITEMAP_URLS = (
+    "https://www.swift.com/sitemap.xml?page=0",
     "https://www.swift.com/sitemap.xml?page=1",
     "https://www.swift.com/sitemap.xml?page=2",
     "https://www.swift.com/sitemap.xml",
