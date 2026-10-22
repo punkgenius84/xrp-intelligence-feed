@@ -1394,7 +1394,10 @@ class InstitutionalPressDiscovery:
             return DiscoveryResult(
                 self.source["source_id"], METHOD, "success", fetched_at=fetched_at,
                 state_updates={request_id: header_updates} if header_updates else {},
-                pagination={"citi_sitemap_sha256": digest},
+                pagination={
+                    "citi_sitemap_sha256": digest,
+                    "citi_sitemap_unchanged": True,
+                },
             )
 
         unique: dict[str, tuple[str, str]] = {}
@@ -1458,7 +1461,10 @@ class InstitutionalPressDiscovery:
             for key in ("etag", "last_modified") if root_response.headers.get(key)
         }
         state_updates = {request_id: header_updates} if status in {"success", "empty"} and header_updates else {}
-        pagination = {"citi_sitemap_sha256": digest} if status in {"success", "empty"} else {}
+        pagination = (
+            {"citi_sitemap_sha256": digest, "citi_sitemap_unchanged": False}
+            if status in {"success", "empty"} else {}
+        )
         return DiscoveryResult(
             self.source["source_id"], METHOD, status,
             candidates=candidates[:self.source["max_items"]],
