@@ -557,6 +557,25 @@ def score_feed(result: PipelineResult) -> list:
                 print(f"  [{item.relevance_score}] {item.title} — {item.source}")
                 for reason in item.score_reasons[:3]:
                     print(f"    - {reason}")
+    # Push-triggered source diagnostics intentionally skip LLM enrichment. Still
+    # expose the strongest fresh near-misses so scoring can be improved from evidence
+    # rather than by blindly lowering the publication threshold.
+    if not intelligence_config.enabled:
+        below_publish = sorted(
+            (item for item in fresh if item.relevance_score < publish_score),
+            key=lambda item: (-item.relevance_score, item.title.casefold()),
+        )
+        if below_publish:
+            shown = below_publish[:5]
+            print(
+                "Relevance below-publish candidates "
+                f"(showing {len(shown)} of {len(below_publish)}; capped at 5; "
+                f"publish threshold {publish_score}):"
+            )
+            for item in shown:
+                print(f"  [{item.relevance_score}] {item.title} — {item.source}")
+                for reason in item.score_reasons[:3]:
+                    print(f"    - {reason}")
     for item in relevant:
         print(
             f"[{item.relevance_score}] {item.title} — {item.source} "
