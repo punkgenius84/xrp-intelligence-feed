@@ -86,7 +86,7 @@ def probe_bank_of_england_rss() -> str:
         link = str(entry.get("link", "")).strip()
         lines.append(
             f"  entry title={title!r} published_at={_published(entry)!r} "
-            f"official_https_link={str(_official_https_url(link)).lower()}"
+            f"path={urlsplit(link).path[:200]!r} official_https_link={str(_official_https_url(link)).lower()}"
         )
     lines.append(
         f"sample_size={len(sample)} sample_valid_dates={valid_dates} sample_official_links={valid_links} "
