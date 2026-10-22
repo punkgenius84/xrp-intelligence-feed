@@ -21,6 +21,11 @@ STAMP = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
     ("title", "summary", "url"),
     [
         (
+            "OCC Advances U.S. Digital Asset Leadership with Final Rule to Implement GENIUS Act",
+            "The Office of the Comptroller of the Currency announced a final rule implementing the GENIUS Act. The rule establishes requirements for permitted payment stablecoin issuers and certain custody activities under OCC jurisdiction, and takes effect January 18, 2027.",
+            "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-92.html",
+        ),
+        (
             "DriveWealth and Ripple Partner to Bring Institutional Digital Asset Infrastructure to Global Investing",
             "The partnership includes RLUSD stablecoin settlement on the XRP Ledger, Ripple Payments for cross-border acceptance, digital-asset custody, and exploratory equity-financing work.",
             "https://ripple.com/ripple-press/drivewealth-and-ripple-partner-to-bring-institutional-digital-asset-infrastructure-to-global-investing/",
@@ -60,7 +65,13 @@ def test_primary_institutional_xrpl_developments_clear_relevance_gate(title, sum
 
     assert score >= 30, f"expected relevant event to clear gate; score={score}, reasons={reasons}"
     assert reasons
-    assert set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"}
+    assert item.relevance_categories
+    assert set(item.relevance_categories) & {
+        "direct_xrp_xrpl",
+        "direct_ripple",
+        "rlusd_stablecoin",
+        "relevant_regulatory_digital_asset_payments",
+    }
 
 
 @pytest.mark.parametrize(
