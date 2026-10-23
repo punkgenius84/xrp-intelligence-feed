@@ -42,6 +42,7 @@ def select_candidates(
     *,
     now: datetime | None = None,
     min_age_days: int = MIN_BRANCH_AGE_DAYS,
+    repository: str | None = None,
 ) -> list[dict[str, str]]:
     """Return only branches whose exact current tip was merged and is stale."""
     current_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -60,6 +61,10 @@ def select_candidates(
         head = pr.get("head")
         if not isinstance(base, dict) or not isinstance(head, dict):
             continue
+        if repository is not None:
+            head_repo = head.get("repo")
+            if not isinstance(head_repo, dict) or head_repo.get("full_name") != repository:
+                continue
         if base.get("ref") != default_branch:
             continue
         merged_at = _parse_time(pr.get("merged_at"))
@@ -171,7 +176,9 @@ def main() -> int:
     closed_prs = api.pages(f"/repos/{repository}/pulls?state=closed&sort=updated&direction=desc")
     open_prs = api.pages(f"/repos/{repository}/pulls?state=open")
 
-    candidates = select_candidates(branches, closed_prs, open_prs, default_branch)
+    candidates = select_candidates(
+        branches, closed_prs, open_prs, default_branch, repository=repository
+    )
     mode = "DRY RUN" if dry_run else "DELETE MODE"
     print(f"{mode}: inspected {len(branches)} branches and {len(closed_prs)} closed / {len(open_prs)} open pull requests.")
     print(f"Default branch: {default_branch}; minimum age since merge: {MIN_BRANCH_AGE_DAYS} days.")
