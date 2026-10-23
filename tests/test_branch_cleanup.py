@@ -12,11 +12,11 @@ def branch(name, sha, *, protected=False):
     return {"name": name, "commit": {"sha": sha}, "protected": protected}
 
 
-def pr(name, sha, *, merged_at=OLD_MERGE, base="main"):
+def pr(name, sha, *, merged_at=OLD_MERGE, base="main", repo="punkgenius84/xrp-intelligence-feed"):
     return {
         "merged_at": merged_at,
         "base": {"ref": base},
-        "head": {"ref": name, "sha": sha},
+        "head": {"ref": name, "sha": sha, "repo": {"full_name": repo}},
     }
 
 
@@ -82,3 +82,15 @@ def test_candidates_are_sorted_case_insensitively():
         now=NOW,
     )
     assert [item["name"] for item in result] == ["A-first", "z-last"]
+
+
+def test_repository_filter_excludes_fork_pull_requests():
+    result = select_candidates(
+        [branch("same-name", "sha-fork")],
+        [pr("same-name", "sha-fork", repo="someone-else/xrp-intelligence-feed")],
+        [],
+        "main",
+        now=NOW,
+        repository="punkgenius84/xrp-intelligence-feed",
+    )
+    assert result == []
