@@ -1,0 +1,36 @@
+name: Safe Merged Branch Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview eligible branches only; never delete"
+        type: boolean
+        default: true
+        required: true
+      confirm_delete:
+        description: "Required for deletion: DELETE-MERGED-BRANCHES"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Preview or clean stale merged branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM_DELETE: ${{ inputs.confirm_delete }}
+        run: python scripts/cleanup_merged_branches.py
