@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -236,7 +237,7 @@ def test_intelligence_publish_posts_to_existing_channel(monkeypatch, tmp_path):
                 source_id="source-1",
                 source="Official source",
                 url="https://example.com/source",
-                published_at="2026-09-23T12:00:00+00:00",
+                published_at=datetime.now(timezone.utc).isoformat(),
                 title="Source title",
                 source_quality="primary",
             )

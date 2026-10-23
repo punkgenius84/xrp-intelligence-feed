@@ -2,6 +2,14 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
+
+# Running ``python scripts/verify_intelligence_test_result.py`` places the
+# scripts directory, not the repository root, on sys.path. Add the root so
+# the CLI can import the same project packages that pytest can import.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from storage.intelligence_delivery_history import (
     IntelligenceDeliveryHistoryError,

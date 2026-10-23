@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -78,3 +81,28 @@ def test_verifier_rejects_blank_event_id(tmp_path):
             history_store=JsonIntelligenceDeliveryHistory(tmp_path / "history.json"),
             outbox_store=JsonIntelligenceOutboxState(tmp_path / "outbox.json"),
         )
+
+
+
+def test_verifier_cli_can_import_project_packages(tmp_path):
+    repository_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/verify_intelligence_test_result.py",
+            "--event-id",
+            "evt-cli-smoke",
+            "--history-path",
+            str(tmp_path / "missing-history.json"),
+            "--outbox-path",
+            str(tmp_path / "missing-outbox.json"),
+        ],
+        cwd=repository_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "selected event evt-cli-smoke is missing from intelligence delivery history" in result.stderr
+    assert "ModuleNotFoundError" not in result.stderr
