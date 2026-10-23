@@ -152,9 +152,13 @@ class GitHubAPI:
 def main() -> int:
     repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
     token = os.environ.get("GITHUB_TOKEN", "").strip()
-    dry_run = os.environ.get("DRY_RUN", "true").strip().lower() == "true"
+    dry_run_value = os.environ.get("DRY_RUN", "true").strip().lower()
     confirmation = os.environ.get("CONFIRM_DELETE", "").strip()
 
+    if dry_run_value not in {"true", "false"}:
+        print("ERROR: DRY_RUN must be exactly 'true' or 'false'.", file=sys.stderr)
+        return 2
+    dry_run = dry_run_value == "true"
     if not repository or "/" not in repository:
         print("ERROR: GITHUB_REPOSITORY must be owner/repository.", file=sys.stderr)
         return 2
