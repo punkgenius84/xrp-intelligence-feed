@@ -108,12 +108,15 @@ def test_workflow_runs_real_intelligence_inference_before_feed():
     smoke = _step_block(contents, "name: Validate intelligence inference")
     app = contents.index("run: python main.py")
 
+    verify_only_skip = "&& !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)"
     assert "if: github.event_name != 'push'" in smoke
-    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Restore intelligence model cache")
-    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Install Ollama")
-    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Start Ollama")
-    assert "if: github.event_name != 'push'" in _step_block(contents, "name: Ensure intelligence model is available")
-    assert "if: github.event_name != 'push' && success()" in _step_block(contents, "name: Save intelligence model cache")
+    assert verify_only_skip in _step_block(contents, "name: Restore intelligence model cache")
+    assert verify_only_skip in _step_block(contents, "name: Install Ollama")
+    assert verify_only_skip in _step_block(contents, "name: Start Ollama")
+    assert verify_only_skip in _step_block(contents, "name: Ensure intelligence model is available")
+    assert verify_only_skip in _step_block(contents, "name: Validate intelligence inference")
+    assert verify_only_skip in _step_block(contents, "name: Save intelligence model cache")
+    assert "if: github.event_name != 'push' && success()" not in _step_block(contents, "name: Save intelligence model cache")
     assert "OllamaProvider(model=\"qwen2.5:3b\", timeout=90)" in smoke
     assert "enrich_clusters([item]" in smoke
     assert "if failures or len(events) != 1:" in smoke

@@ -86,3 +86,18 @@ def test_source_specific_parser_probes_are_parked_from_push_diagnostics():
     assert "Preview persisted Coinbase undated observations" not in workflow
     assert "Preview queued intelligence events" in workflow
     assert "Preview quarantined intelligence events" in workflow
+
+
+
+def test_read_only_delivery_verification_never_runs_feed_or_publishes():
+    workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
+    assert "verify_intelligence_test_result:" in workflow
+    assert "VERIFY-INTELLIGENCE-DELIVERY" in workflow
+    assert "publish_intelligence_test=false" in workflow
+    assert "if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) }}" in workflow
+    assert "if: github.event_name == 'workflow_dispatch' && (inputs.publish_intelligence_test || inputs.verify_intelligence_test_result) && success()" in workflow
+    assert "python scripts/verify_intelligence_test_result.py --event-id \"$TEST_EVENT_ID\"" in workflow
+    # Verification-only runs join the stateful concurrency group to avoid racing
+    # scheduled cache writes, while the feed and model startup are skipped.
+    assert "!inputs.verify_intelligence_test_result)) && 'diagnostic' || 'stateful'" in workflow
+    assert workflow.count("&& !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)") >= 5
