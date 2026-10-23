@@ -351,7 +351,7 @@ jobs:
         run: python scripts/prepare_quarantined_intelligence_test.py --event-id "$TEST_EVENT_ID" --confirm "$TEST_CONFIRMATION"
 
       - name: Run feed
-        if: !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) }}
         id: feed
         run: python main.py
         env:
