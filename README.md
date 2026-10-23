@@ -311,3 +311,15 @@ The test path temporarily enables delivery for that one event only, with a one-p
 
 Do not enable routine intelligence publishing until the one-event test and subsequent shadow-output review are accepted. The former hardcoded DriveWealth test workflow has been removed; there is now one supported, confirmation-gated path for an actual one-event delivery test.
 
+## Safe merged-branch cleanup
+
+The manual **Safe Merged Branch Cleanup** workflow can prune stale branches without reviewing the branch list by hand.
+
+- The default is **dry run**. It lists eligible branches and deletes nothing.
+- A branch is eligible only if its current tip exactly matches the head SHA of a pull request merged into the default branch at least seven days ago.
+- Protected branches, the default branch, branches with an open pull request, branches whose tip moved after the merged PR, and branches from forks are excluded.
+- Apply mode requires setting dry run to `false` and entering the exact confirmation `DELETE-MERGED-BRANCHES`.
+- Before each deletion, the workflow rechecks the branch SHA. Branches changed after inventory are skipped.
+- GitHub branch rules or permissions may still reject an individual deletion; failures are logged and do not bypass protections.
+
+Run the dry-run mode first and review its output. This utility does not change source code, workflow settings, Actions caches, or Discord publishing. It only deletes branches that satisfy the conservative merged-PR checks above.
