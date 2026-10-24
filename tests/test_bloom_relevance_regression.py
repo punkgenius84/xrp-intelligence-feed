@@ -98,6 +98,33 @@ def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
     assert "institutional_digital_asset_payment" in item.relevance_categories
 
 
+def test_imf_cbdc_cross_border_payment_report_clears_relevance_gate():
+    item = NewsItem(
+        title=(
+            "Common Monetary Area: Technical Assistance Report-Project Sunbird "
+            "and Cross-Border Payments with CBDC - International Monetary Fund | IMF"
+        ),
+        summary="Google News discovery; publisher attribution: International Monetary Fund.",
+        url="https://news.google.com/rss/articles/example-imf-cbdc-report",
+        source="International Monetary Fund",
+        source_id="imf-google-news-discovery",
+        source_quality="primary",
+        authority_tier=1,
+        category="institutional",
+        published_at=STAMP,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    item.relevance_score, item.score_reasons = score_relevance(item)
+
+    assert "International Monetary Fund" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"IMF CBDC cross-border report unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+
+
 def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     item = score_item(
         "MAS Announces Senior Leadership Changes",
