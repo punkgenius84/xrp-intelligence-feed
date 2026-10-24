@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -11,9 +12,11 @@ sys.path.insert(0, str(ROOT))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 from discovery.dispatch import collect_source, load_discovery_sources
+from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
+from models import NewsItem
 
 
 TARGETS = (
@@ -67,10 +70,12 @@ def _probe_configured_google_news_collectors() -> None:
             f"probe_status={result.status} candidates={len(result.candidates)} "
             f"errors={len(result.errors)}"
         )
-        for candidate in result.candidates[:10]:
+        for index, candidate in enumerate(result.candidates):
             detect_entities(candidate)
             classify_source_quality(candidate)
             score, reasons = score_relevance(candidate)
+            if score < 30 and index >= 3:
+                continue
             metadata = candidate.source_native_metadata
             print(
                 f"  candidate date={candidate.published_at.isoformat() if candidate.published_at else 'unknown'} "
@@ -177,6 +182,86 @@ def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, li
     return found
 
 
+def _probe_secondary_source_duplicate_gate() -> None:
+    """Compare a few real publisher collectors in memory; never save state or publish."""
+    selected_ids = {
+        "mas-google-news-discovery",
+        "coinbase-google-news-discovery",
+        "mastercard-press-releases",
+        "theblock-google-news-discovery",
+    }
+    client = BoundedHttpClient(
+        user_agent="XRPIntelligenceFeed/0.4 (+read-only cross-source duplicate probe)",
+        timeout=(3.0, 6.0),
+        max_bytes=1_000_000,
+        max_redirects=2,
+        max_attempts=1,
+    )
+    try:
+        configured_sources = load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+    except Exception as exc:
+        print(f"duplicate_gate_probe=error registry={type(exc).__name__}: {exc}")
+        return
+
+    items: list[NewsItem] = []
+    now = datetime.now(timezone.utc)
+    for configured in configured_sources:
+        if configured.get("source_id") not in selected_ids:
+            continue
+        source = {**configured, "enabled": True}
+        try:
+            result = collect_source(source, http=client)
+        except Exception as exc:
+            print(f"duplicate_gate_source={source['source_id']} status=error error={type(exc).__name__}: {exc}")
+            continue
+        print(
+            f"duplicate_gate_source={source['source_id']} configured_enabled={configured['enabled']} "
+            f"status={result.status} candidates={len(result.candidates)} errors={len(result.errors)}"
+        )
+        for candidate in result.candidates:
+            candidate = normalize_candidate(candidate)
+            item = NewsItem(
+                title=candidate.title,
+                url=candidate.url,
+                source=candidate.source,
+                published_at=candidate.published_at,
+                summary=candidate.summary,
+                source_id=candidate.source_id,
+                authority_tier=candidate.authority_tier,
+                category=candidate.category,
+                candidate_id=candidate.candidate_id,
+            )
+            detect_entities(item)
+            classify_source_quality(item)
+            score_relevance(item)
+            published = item.published_at
+            if published is None:
+                continue
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+            age = now - published.astimezone(timezone.utc)
+            if age < -timedelta(days=1) or age > timedelta(days=14):
+                continue
+            if item.relevance_score >= 30:
+                items.append(item)
+        for error in result.errors[:2]:
+            print(f"  duplicate_gate_error={error[:260]}")
+
+    correlate(items)
+    kept, suppressed = suppress_correlated_secondary_duplicates(items, publish_score=30)
+    print(
+        f"duplicate_gate_summary candidates_score30_recent14d={len(items)} "
+        f"kept_for_delivery={len(kept)} suppressed_secondary_duplicates={len(suppressed)}"
+    )
+    for item in suppressed:
+        print(
+            f"  duplicate_gate_suppressed score={item.relevance_score} source={item.source_id} "
+            f"title={item.title[:180]!r} url={item.url}"
+        )
+    if not suppressed:
+        print("  duplicate_gate_suppressed=none")
+
+
 def main() -> None:
     client = BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only official feed discovery probe)",
@@ -256,6 +341,7 @@ def main() -> None:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
     _probe_configured_google_news_collectors()
+    _probe_secondary_source_duplicate_gate()
 
 
 if __name__ == "__main__":
