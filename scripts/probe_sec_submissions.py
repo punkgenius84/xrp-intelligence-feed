@@ -124,6 +124,8 @@ def select_index_targets(
     """Select at most two recent 8-K filing indexes for read-only parser validation."""
     if type(limit) is not int or not 0 <= limit <= 2:
         raise ValueError("filing-index probe limit must be from 0 to 2")
+    if limit == 0:
+        return []
     targets: list[tuple[str, str, dict[str, str]]] = []
     for label, cik, summary in issuer_summaries:
         sample = summary.get("sample", [])
