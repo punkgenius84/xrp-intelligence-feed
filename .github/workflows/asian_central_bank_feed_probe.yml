@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/asian_central_bank_feed_probe.yml"
       - "scripts/probe_asian_central_bank_feeds.py"
+      - "tests/test_asian_central_bank_feed_probe.py"
       - "config/discovery_sources.json"
       - "config/entities.json"
       - "config/keywords.json"
@@ -22,6 +23,7 @@ on:
     paths:
       - ".github/workflows/asian_central_bank_feed_probe.yml"
       - "scripts/probe_asian_central_bank_feeds.py"
+      - "tests/test_asian_central_bank_feed_probe.py"
       - "config/discovery_sources.json"
       - "config/entities.json"
       - "config/keywords.json"
