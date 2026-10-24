@@ -83,6 +83,21 @@ def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
 
 
+def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
+    item = score_item(
+        "Coinbase and Thunes connect stablecoin infrastructure with global fiat payouts",
+        "Coinbase and Thunes connected stablecoin infrastructure to global fiat payouts.",
+        "https://news.google.com/rss/articles/example-coinbase-thunes",
+    )
+
+    assert "Coinbase" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"Coinbase/Thunes stablecoin connection unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+
+
 def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     item = score_item(
         "MAS Announces Senior Leadership Changes",
@@ -98,7 +113,7 @@ def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     )
 
 
-def test_only_runner_validated_asian_google_news_sources_are_enabled():
+def test_only_runner_validated_google_news_sources_are_enabled():
     payload = json.loads(
         (ROOT / "config" / "discovery_sources.json").read_text(encoding="utf-8")
     )
@@ -107,13 +122,17 @@ def test_only_runner_validated_asian_google_news_sources_are_enabled():
         "mas-google-news-discovery",
         "bot-google-news-english-discovery",
         "bot-google-news-thai-stablecoin-hearing",
+        "coinbase-google-news-discovery",
     }
 
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # The English feed returned only unrelated items during the live runner probe.
+    # The English BOT query returned only unrelated candidates.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
+    # Coinbase was enabled only after the live collector found a relevant
+    # stablecoin-payout story with a defensible RSS publication timestamp.
+    assert sources["coinbase-google-news-discovery"]["enabled"] is True
     # Google News RSS returns up to 100 entries by default; avoid self-inflicted
     # truncation/partial health on every run while retaining a hard upper bound.
     assert all(sources[source_id]["max_items"] == 100 for source_id in expected)

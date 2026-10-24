@@ -533,6 +533,19 @@
       "publisher_host": "bot.or.th",
       "publisher_name": "Bank of Thailand",
       "context_hint": "public hearing on THB stablecoin regulation"
+    },
+    {
+      "source_id": "coinbase-google-news-discovery",
+      "name": "Coinbase (Google News discovery)",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoinbase.com%2Fblog+%28XRP+OR+Ripple+OR+stablecoin+OR+custody+OR+payments+OR+tokenization%29+when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coinbase.com",
+      "publisher_name": "Coinbase"
     }
   ]
 }
