@@ -194,6 +194,8 @@ def _probe_secondary_source_duplicate_gate() -> None:
         "mas-google-news-discovery",
         "coinbase-google-news-discovery",
         "mastercard-press-releases",
+        "xrpl-community-blog",
+        "coindesk-google-news-discovery",
         "theblock-google-news-discovery",
     }
     client = BoundedHttpClient(

@@ -107,7 +107,9 @@ def test_secondary_crypto_news_discovery_probes_are_restricted_and_selectively_e
     }
     for source_id, host in expected.items():
         source = by_id[source_id]
-        assert source["enabled"] is (source_id == "theblock-google-news-discovery")
+        assert source["enabled"] is (
+            source_id in {"theblock-google-news-discovery", "coindesk-google-news-discovery"}
+        )
         assert source["authority_tier"] == 2
         assert source["publisher_host"] == host
         assert validate_google_news_source(source) == source
