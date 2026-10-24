@@ -91,7 +91,7 @@ def test_same_host_script_discovery_rejects_external_assets_and_caps_results():
 def test_candidate_api_routes_extracts_routes_without_requesting_them():
     script = r'''
       const searchPath = "/api/v1/search?section=news";
-      const contentPath = "\\/api/v2/releases";
+      const contentPath = "\/api/v2/releases";
       const graphqlPath = "/graphql";
       const asset = "/assets/app.js";
       const absolute = "https://third-party.invalid/api/data";
