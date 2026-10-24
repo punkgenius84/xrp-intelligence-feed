@@ -332,3 +332,18 @@ def test_tokenized_equities_on_solananetwork_are_relevant_crypto_development():
     assert "crypto_ecosystem_action" in item.relevance_categories
     assert score >= 30, f"tokenized securities on a tracked network should clear gate: {score}, {reasons}"
 
+
+def test_crypto_entity_stock_plan_without_onchain_context_is_not_relevant():
+    item = NewsItem(
+        "Ethereum announces employee stock options program",
+        "https://example.com/employee-stock-options",
+        "Example News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "Ethereum" in item.detected_entities
+    assert "crypto_ecosystem_action" not in item.relevance_categories
+    assert score < 30
+
