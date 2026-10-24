@@ -72,7 +72,7 @@ class JsonCorrelationState:
                 not isinstance(candidate_id, str)
                 or not candidate_id
                 or not isinstance(card, dict)
-                or set(card) not in {_CARD_FIELDS, _CARD_FIELDS | _CARD_METADATA_FIELDS}
+                or (set(card) != _CARD_FIELDS and set(card) != (_CARD_FIELDS | _CARD_METADATA_FIELDS))
                 or card.get("candidate_id") != candidate_id
                 or not isinstance(card["source_id"], str)
                 or not card["source_id"]
