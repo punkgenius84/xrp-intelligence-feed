@@ -118,7 +118,6 @@ def _classify(item, combined: str) -> list[str]:
     ecosystem_context = any(_contains(combined, term) for term in (
         "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
         "payments", "payment", "blockchain", "token", "tokenized", "tokenised",
-        "stock", "stocks", "equity", "equities", "shares", "securities",
         "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
         "sanctions", "money laundering", "market manipulation", "fraud",
         "investigation", "investigates", "probes", "probe", "seeks answers",
@@ -140,7 +139,16 @@ def _classify(item, combined: str) -> list[str]:
     crypto_ecosystem_action = any(
         _contains(combined, term) for term in crypto_ecosystem_action_terms
     )
-    if crypto_ecosystem_entity and crypto_ecosystem_action and ecosystem_context:
+    # Securities language is only a crypto signal when the headline ties the
+    # security to an on-chain/tokenized representation, not ordinary stock news.
+    security_token_context = any(_contains(combined, term) for term in (
+        "tokenized stock", "tokenised stock", "tokenized equity", "tokenised equity",
+        "tokenized securities", "tokenised securities", "stock on", "stocks on",
+        "equity on", "equities on", "shares on", "securities on",
+        "on-chain stock", "onchain stock",
+    ))
+    if (crypto_ecosystem_entity and crypto_ecosystem_action
+            and (ecosystem_context or security_token_context)):
         categories.append("crypto_ecosystem_action")
 
     broad_tokenization = any(_contains(combined, term) for term in (
