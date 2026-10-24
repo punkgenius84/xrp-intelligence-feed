@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 import re
 import sys
-from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -35,6 +33,8 @@ TARGETS = (
     ("BOT stablecoin hearing", "https://www.bot.or.th/th/laws-and-rules/public-hearing/public-hearing-20261020-Stablecoin.html", "www.bot.or.th"),
     ("BOT robots", "https://www.bot.or.th/robots.txt", "www.bot.or.th"),
 )
+
+
 def _probe_configured_google_news_collectors() -> None:
     """Exercise the real collector in memory without enabling or saving any source."""
     print("\nREAD-ONLY collector validation; enabled flags are overridden in memory only")
@@ -199,6 +199,7 @@ def main() -> None:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
     _probe_configured_google_news_collectors()
+
 
 if __name__ == "__main__":
     main()
