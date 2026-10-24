@@ -177,6 +177,50 @@ def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, li
     return found
 
 
+def _probe_bot_thai_hearing_sitemap() -> None:
+    """Exercise the disabled BOT Thai hearing source in memory, without state writes."""
+    client = BoundedHttpClient(
+        user_agent="XRPIntelligenceFeed/0.4 (+read-only BOT sitemap collector validation)",
+        timeout=(3.0, 6.0),
+        max_bytes=1_000_000,
+        max_redirects=2,
+        max_attempts=1,
+    )
+    try:
+        configured = next(
+            source for source in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+            if source.get("source_id") == "bot-thai-public-hearings"
+        )
+    except Exception as exc:
+        print(f"collector source_id=bot-thai-public-hearings status=not_available error={type(exc).__name__}: {exc}")
+        return
+
+    source = {**configured, "enabled": True}
+    try:
+        result = collect_source(source, http=client)
+    except Exception as exc:
+        print(f"collector source_id=bot-thai-public-hearings status=error error={type(exc).__name__}: {exc}")
+        return
+
+    print(
+        f"collector source_id=bot-thai-public-hearings configured_enabled={configured['enabled']} "
+        f"probe_status={result.status} candidates={len(result.candidates)} errors={len(result.errors)}"
+    )
+    for candidate in result.candidates[:10]:
+        detect_entities(candidate)
+        classify_source_quality(candidate)
+        score, reasons = score_relevance(candidate)
+        print(
+            f"  candidate date={candidate.published_at.isoformat() if candidate.published_at else 'unknown'} "
+            f"score={score} title={candidate.title[:180]!r}"
+        )
+        print(f"  candidate_link={candidate.url}")
+        if reasons:
+            print(f"  score_reasons={' | '.join(reasons)[:400]}")
+    for error in result.errors[:5]:
+        print(f"  collector_error={error[:300]}")
+
+
 def main() -> None:
     client = BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only official feed discovery probe)",
@@ -256,6 +300,7 @@ def main() -> None:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
     _probe_configured_google_news_collectors()
+    _probe_bot_thai_hearing_sitemap()
 
 
 if __name__ == "__main__":
