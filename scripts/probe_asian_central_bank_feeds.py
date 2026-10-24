@@ -17,6 +17,9 @@ TARGETS = (
     ("MAS media release", "https://www.mas.gov.sg/news/media-releases/2026/mas-bnm-and-bot-partner-with-industry-to-advance-cross-border-settlement-in-digital-money", "www.mas.gov.sg"),
     ("MAS robots", "https://www.mas.gov.sg/robots.txt", "www.mas.gov.sg"),
     ("MAS sitemap", "https://www.mas.gov.sg/sitemap.xml", "www.mas.gov.sg"),
+    ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
+    ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
+    ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
     ("BOT English news", "https://www.bot.or.th/en/news-and-media/news.html", "www.bot.or.th"),
     ("BOT English hearings", "https://www.bot.or.th/en/laws-and-rules/public-hearing.html", "www.bot.or.th"),
     ("BOT generic sitemap", "https://www.bot.or.th/sitemap.xml", "www.bot.or.th"),
@@ -104,6 +107,17 @@ def main() -> None:
             if not feeds and not articles:
                 print("  no feed links or date-bearing official article links in returned HTML")
         elif content_type in FEED_TYPES or "xml" in content_type:
+            if "news.google.com" in urlsplit(url).hostname:
+                try:
+                    import feedparser
+                    parsed = feedparser.parse(response.content)
+                    print(f"  rss_entry_count={len(parsed.entries)} bozo={bool(parsed.bozo)}")
+                    for entry in parsed.entries[:12]:
+                        source = entry.get("source", {})
+                        print(f"  rss_item date={entry.get('published', entry.get('updated', 'unknown'))!r} title={entry.get('title', '')[:180]!r} source={source.get('title', '')!r} source_url={source.get('href', '')!r} feed_link={entry.get('link', '')!r}")
+                except Exception as exc:
+                    print(f"  rss_parse_error={type(exc).__name__}: {exc}")
+                continue
             blocks = re.findall(r"<url>(.*?)</url>", text, re.IGNORECASE | re.DOTALL)
             locations = []
             for block in blocks:
@@ -112,7 +126,6 @@ def main() -> None:
                 if loc_match:
                     locations.append((unescape(loc_match.group(1).strip()), mod_match.group(1).strip() if mod_match else ""))
             print(f"  sitemap_url_count={len(locations)}")
-            recent = [(loc, modified) for loc, modified in locations if "2026" in loc or "stablecoin" in loc.lower() or "public-hearing" in loc.lower() or (modified and modified[:4] >= "2025")]
             targeted = [(loc, modified) for loc, modified in locations if any(term in loc.lower() for term in ("stablecoin", "public-hearing", "hearing", "digital-money"))]
             print(f"  targeted_hearing_or_stablecoin_urls={len(targeted)}")
             for loc, modified in targeted[:25]:
@@ -121,8 +134,6 @@ def main() -> None:
             print(f"  url_encoded_2026_count={len(dated_2026)}")
             for loc, modified in dated_2026[-20:]:
                 print(f"  latest_2026_sitemap_url lastmod={modified or 'unknown'} url={loc}")
-            for loc, modified in recent[:40]:
-                print(f"  sitemap_candidate lastmod={modified or 'unknown'} url={loc}")
             if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
