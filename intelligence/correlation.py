@@ -329,6 +329,52 @@ def suppress_correlated_secondary_duplicates(
         suppressed.append(item)
     return kept, suppressed
 
+_SECONDARY_COMMENTARY_MARKERS = (
+    "price prediction",
+    "price predictions",
+    "price forecast",
+    "price forecasts",
+    "price outlook",
+    "price target",
+    "price targets",
+    "price analysis",
+    "technical analysis",
+    "chart analysis",
+    "analyst predicts",
+    "analysts predict",
+    "analyst expects",
+    "analysts expect",
+    "expert predicts",
+    "experts predict",
+    "could reach",
+    "could hit",
+    "may reach",
+    "might reach",
+    "how high can",
+    "how high will",
+)
+
+
+def filter_secondary_opinion_commentary(
+    items: list[NewsItem],
+) -> tuple[list[NewsItem], list[NewsItem]]:
+    """Hold clearly speculative price/technical-analysis headlines from tier-2 outlets.
+
+    This is a delivery eligibility gate only: it does not alter relevance scores
+    or suppress primary-source reporting. Markers are intentionally narrow so
+    factual launch, regulation, custody, payments, and protocol stories remain.
+    """
+    kept: list[NewsItem] = []
+    held: list[NewsItem] = []
+    for item in items:
+        title = unicodedata.normalize("NFKC", item.title).casefold()
+        is_commentary = item.source_quality == "high_signal" and any(
+            marker in title for marker in _SECONDARY_COMMENTARY_MARKERS
+        )
+        (held if is_commentary else kept).append(item)
+    return kept, held
+
+
 def build_correlation_card(item: NewsItem) -> dict:
     """Return the bounded memory representation for one enriched candidate."""
     return _card_from_item(item)
