@@ -108,7 +108,7 @@ def test_issue_index_extracts_individual_proposed_regulation_with_context():
 
 def test_unchanged_rss_is_not_modified_without_fetching_issues():
     http = FakeHttp([response(b"", url=FEED_URL, status=304, headers={"etag": '"v1"'})])
-    state = {"sources": {SOURCE_ID: {"requests": {"rss": {"etag": '"v1"'}}}}
+    state = {"sources": {SOURCE_ID: {"requests": {"rss": {"etag": '"v1"'}}}}}
     result = run(http, state=state)
     assert result.status == "not_modified"
     assert result.candidates == []
