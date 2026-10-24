@@ -170,7 +170,8 @@ def test_unrecognized_filing_index_keeps_candidate_but_marks_source_partial():
     assert len(result.candidates) == 1
     assert result.status == "partial"
     assert result.candidates[0].source_status == "partial"
-    assert result.candidates[0].source_error == "filing-index enrichment failed"
+    assert "filing-index enrichment failed" in result.candidates[0].source_error
+    assert "no recognizable Items or exhibit context" in result.candidates[0].source_error
     assert result.state_updates == {}
 
 
