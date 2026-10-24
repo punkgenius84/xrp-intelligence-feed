@@ -46,15 +46,17 @@ def test_probe_rejects_inconsistent_required_arrays():
         summarize_payload(data, "9999999999")
 
 
-def test_probe_skips_bad_accession_and_unsafe_document_name():
+def test_probe_skips_bad_accession_but_ignores_unused_primary_document_path():
     data = payload()
     recent = data["filings"]["recent"]
     recent["accessionNumber"][0] = "0000000001-26-000001"
-    recent["primaryDocument"][1] = "../unsafe.html"
+    # The probe never constructs a primary-document URL, so a path-like
+    # primaryDocument value must not invalidate the official filing-index row.
+    recent["primaryDocument"][1] = "xslF345X05/inline-form.htm"
     result = summarize_payload(data, "9999999999")
-    assert result["skipped_rows"] == 2
-    assert result["valid_rows"] == 1
-    assert result["sample"][0]["form"] == "10-K"
+    assert result["skipped_rows"] == 1
+    assert result["valid_rows"] == 2
+    assert all(row["filing_index_url"].startswith("https://www.sec.gov/Archives/edgar/data/") for row in result["sample"])
 
 
 def test_probe_accepts_missing_optional_document_arrays():
