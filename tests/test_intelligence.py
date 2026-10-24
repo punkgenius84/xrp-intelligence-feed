@@ -83,6 +83,9 @@ def test_regulatory_action_requires_digital_asset_or_payment_context():
         ("SEC withdraws proposed crypto custody guidance", "SEC"),
         ("CFTC grants relief for digital asset derivatives reporting", "CFTC"),
         ("OCC clarifies rules for stablecoin reserve custody", "OCC"),
+        ("SEC suspends digital asset custody rule", "SEC"),
+        ("Treasury implements crypto sanctions framework", "Treasury"),
+        ("OCC reinstates bank guidance for digital assets", "OCC"),
     ],
 )
 def test_regulatory_decision_verbs_surface_digital_asset_actions(title, entity):
