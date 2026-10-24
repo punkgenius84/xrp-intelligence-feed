@@ -26,7 +26,6 @@ ISSUERS = (
     ("Visa Inc.", "1403161"),
 )
 ACCESSION_RE = re.compile(r"^(\d{10})-(\d{2})-(\d{6})$")
-FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$")
 
 
 def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
@@ -78,11 +77,11 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         if not form:
             skipped += 1
             continue
-        document = str(documents[index] or "").strip() if index < len(documents) else ""
+        # primaryDocument can legitimately contain SEC-generated subpaths
+        # (for example inline-XBRL directories). This probe builds only the
+        # official filing-index URL from CIK + accession, so document paths
+        # must not cause otherwise valid submissions rows to be discarded.
         description = str(descriptions[index] or "").strip() if index < len(descriptions) else ""
-        if document and not FILENAME_RE.fullmatch(document):
-            skipped += 1
-            continue
         counts[form] += 1
         accession_path = accession.replace("-", "")
         index_url = f"{ARCHIVES_ROOT}{int(expected_cik)}/{accession_path}/{accession}-index.htm"
