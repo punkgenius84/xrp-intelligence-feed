@@ -1,0 +1,143 @@
+from datetime import datetime, timezone
+
+import pytest
+
+from discovery.google_news_official_rss import (
+    GoogleNewsOfficialRSSDiscovery, METHOD, validate_google_news_source,
+)
+from discovery.dispatch import DiscoveryRegistryError, collect_source, validate_discovery_sources
+from discovery.http import DiscoveryHttpError, HttpResponse
+
+STAMP = datetime(2026, 10, 24, 3, tzinfo=timezone.utc)
+MAS_URL = "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen"
+SOURCE = {
+    "source_id": "mas-google-news-discovery",
+    "name": "Monetary Authority of Singapore (Google News discovery)",
+    "authority_tier": 1,
+    "category": "regulatory",
+    "discovery_method": METHOD,
+    "source_url": MAS_URL,
+    "enabled": True,
+    "lookback_days": 30,
+    "max_items": 25,
+    "publisher_host": "mas.gov.sg",
+    "publisher_name": "Monetary Authority of Singapore",
+}
+LINK = "https://news.google.com/rss/articles/CBMiQ0FVX3lxTE5ExampleStableArticleKey?oc=5"
+
+
+def rss(*items):
+    return ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<rss version="2.0"><channel><title>Google News</title>'
+            + "".join(items) + "</channel></rss>").encode()
+
+
+def item(title="MAS announces cross-border settlement initiative",
+         link=LINK, date="Fri, 23 Oct 2026 09:00:00 GMT",
+         publisher="Monetary Authority of Singapore",
+         href="https://www.mas.gov.sg/"):
+    return (f"<item><title>{title}</title><link>{link}</link><pubDate>{date}</pubDate>"
+            f"<source url=\"{href}\">{publisher}</source>"
+            "<description>Official publisher discovery result.</description></item>")
+
+
+class FakeHttp:
+    def __init__(self, body=None, error=None, status=200):
+        self.body = body or rss(item())
+        self.error = error
+        self.status = status
+        self.calls = []
+
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        if self.error:
+            raise self.error
+        return HttpResponse(self.status, {"content-type": "application/rss+xml"}, self.body, url)
+
+
+def run(http, config=None):
+    return collect_source(config or SOURCE, http=http, now=lambda: STAMP)
+
+
+def test_google_news_source_requires_domain_restricted_query():
+    assert validate_google_news_source(SOURCE) == SOURCE
+    invalid = {**SOURCE, "source_url": "https://news.google.com/rss/search?q=xrp"}
+    with pytest.raises(DiscoveryRegistryError):
+        validate_discovery_sources({"schema_version": 1, "sources": [invalid]})
+
+
+@pytest.mark.parametrize("changes", [
+    {"publisher_host": "mas.gov.sg.evil.example"},
+    {"source_url": "https://evil.example/rss/search?q=site%3Amas.gov.sg"},
+    {"enabled": "yes"},
+    {"authority_tier": 2},
+    {"max_items": 101},
+])
+def test_invalid_source_contract_fails_closed(changes):
+    with pytest.raises((ValueError, DiscoveryRegistryError)):
+        validate_google_news_source({**SOURCE, **changes})
+
+
+def test_disabled_source_does_not_make_request():
+    http = FakeHttp()
+    result = run(http, {**SOURCE, "enabled": False})
+    assert result.status == "not_configured"
+    assert http.calls == []
+
+
+def test_preserves_google_clickthrough_and_publisher_attribution_without_claiming_canonical_url():
+    http = FakeHttp(rss(item()))
+    result = run(http)
+    assert http.calls[0][0] == MAS_URL
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert candidate.title == "MAS announces cross-border settlement initiative"
+    assert candidate.url == LINK
+    assert candidate.primary_url == LINK
+    assert candidate.discovery_lead_url == LINK
+    assert candidate.published_at == datetime(2026, 10, 23, 9, tzinfo=timezone.utc)
+    assert candidate.source == "Monetary Authority of Singapore"
+    assert candidate.source_native_metadata["publisher_attribution"] == "Monetary Authority of Singapore"
+    assert candidate.source_native_metadata["publisher_href"] == "https://www.mas.gov.sg/"
+    assert candidate.source_native_metadata["article_url_status"] == "google_news_clickthrough_unverified"
+    assert candidate.provenance == [MAS_URL, LINK]
+
+
+@pytest.mark.parametrize("bad_link", [
+    "https://evil.example/rss/articles/CBMiQ0",
+    "http://news.google.com/rss/articles/CBMiQ0",
+    "https://news.google.com.evil.example/rss/articles/CBMiQ0",
+    "https://user@news.google.com/rss/articles/CBMiQ0",
+    "https://news.google.com/other/CBMiQ0",
+])
+def test_rejects_non_google_or_non_article_links(bad_link):
+    result = run(FakeHttp(rss(item(link=bad_link))))
+    assert result.status == "failed"
+    assert result.candidates == []
+
+
+def test_rejects_missing_publisher_attribution_and_invalid_dates():
+    no_publisher = item().replace(
+        '<source url="https://www.mas.gov.sg/">Monetary Authority of Singapore</source>', "")
+    result = run(FakeHttp(rss(no_publisher)))
+    assert result.status == "failed"
+    assert "missing publisher attribution" in result.errors[0]
+
+    result = run(FakeHttp(rss(item(date=""))))
+    assert result.status == "failed"
+    assert result.candidates == []
+
+
+def test_ignores_old_items_and_reports_http_failures():
+    old = item(date="Mon, 01 Jan 2024 10:00:00 GMT")
+    assert run(FakeHttp(rss(old))).status == "empty"
+    failed = run(FakeHttp(error=DiscoveryHttpError("blocked", kind="http_error", status_code=403)))
+    assert failed.status == "failed"
+    assert "403" in failed.errors[0]
+
+
+def test_future_dated_items_are_rejected():
+    result = run(FakeHttp(rss(item(date="Sun, 25 Oct 2026 12:00:00 GMT"))))
+    assert result.status == "failed"
+    assert result.candidates == []

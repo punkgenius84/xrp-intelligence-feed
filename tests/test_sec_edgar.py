@@ -94,6 +94,9 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "bnm-press-releases",
         "bot-news",
         "bank-of-england-news",
+        "mas-google-news-discovery",
+        "bot-google-news-english-discovery",
+        "bot-google-news-thai-stablecoin-hearing",
     }
 
 
