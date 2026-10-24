@@ -99,6 +99,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "canada-gazette-part-i",
         "bnm-press-releases",
         "bot-news",
+        "bot-thai-public-hearings",
         "bank-of-england-news",
         "mas-google-news-discovery",
         "bot-google-news-english-discovery",
