@@ -3,10 +3,13 @@ name: Safe Merged Branch Cleanup
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Preview eligible branches only; never delete"
-        type: boolean
-        default: true
+      mode:
+        description: "Preview eligible branches or delete eligible merged branches"
+        type: choice
+        options:
+          - preview
+          - delete
+        default: preview
         required: true
       confirm_delete:
         description: "Required for deletion: DELETE-MERGED-BRANCHES"
@@ -25,7 +28,7 @@ concurrency:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -35,6 +38,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          DRY_RUN: ${{ inputs.mode == 'preview' }}
           CONFIRM_DELETE: ${{ inputs.confirm_delete }}
         run: python scripts/cleanup_merged_branches.py
