@@ -139,7 +139,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "allowed_hosts",
         "article_path_regex",
     }
-    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit", "track_undated_observations", "sitemap_url", "sitemap_detail_limit"}
+    allowed = required | {"native_id_query_param", "numeric_date_order", "detail_fallback_limit", "track_undated_observations", "sitemap_url", "sitemap_detail_limit", "sitemap_path_prefixes"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - allowed:
         raise ValueError(f"Institutional source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url", "article_path_regex"):
@@ -159,12 +159,29 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
         raise ValueError("allowed_hosts must be a non-empty list")
     if any(not isinstance(host, str) or not host.strip() for host in source["allowed_hosts"]):
         raise ValueError("allowed_hosts must contain non-empty strings")
+    if "sitemap_path_prefixes" in source:
+        prefixes = source["sitemap_path_prefixes"]
+        if (
+            "sitemap_url" not in source
+            or not isinstance(prefixes, list)
+            or not prefixes
+            or any(
+                not isinstance(prefix, str)
+                or not prefix.startswith("/")
+                or not prefix.endswith("/")
+                or "?" in prefix
+                or "#" in prefix
+                or ".." in prefix.split("/")
+                for prefix in prefixes
+            )
+        ):
+            raise ValueError("sitemap_path_prefixes must be non-empty safe absolute path prefixes and requires sitemap_url")
     if "sitemap_url" in source and (
         not isinstance(source["sitemap_url"], str)
         or _safe_sitemap_url(source, source["sitemap_url"]) is None
         or not urlsplit(source["sitemap_url"]).path.casefold().endswith(".xml")
     ):
-        raise ValueError("sitemap_url must be an allowlisted HTTPS XML URL under /global/")
+        raise ValueError("sitemap_url must be an allowlisted HTTPS XML URL under its configured path policy")
     if "sitemap_url" in source and "sitemap_detail_limit" not in source:
         raise ValueError("sitemap_detail_limit is required when sitemap_url is configured")
     if "sitemap_detail_limit" in source and "sitemap_url" not in source:
@@ -1116,6 +1133,16 @@ def _safe_sitemap_url(source: dict[str, Any], value: object) -> str | None:
         for host in source.get("allowed_hosts", [])
         if isinstance(host, str)
     }
+    prefixes = source.get("sitemap_path_prefixes")
+    if isinstance(prefixes, list) and prefixes:
+        path_allowed = value.strip() == source.get("sitemap_url") or any(
+            isinstance(prefix, str) and prefix.startswith("/") and parts.path.startswith(prefix)
+            for prefix in prefixes
+        )
+    else:
+        # Preserve the original strict Citi-only path policy unless a source
+        # explicitly supplies its own narrow path allowlist.
+        path_allowed = parts.path.startswith("/global/")
     if (
         parts.scheme.casefold() != "https"
         or parts.hostname is None
@@ -1123,7 +1150,7 @@ def _safe_sitemap_url(source: dict[str, Any], value: object) -> str | None:
         or parts.port not in (None, 443)
         or parts.username is not None
         or parts.password is not None
-        or not parts.path.startswith("/global/")
+        or not path_allowed
         or parts.query
         or parts.fragment
     ):
