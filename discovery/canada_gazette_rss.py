@@ -31,7 +31,7 @@ class _IssueIndexParser(HTMLParser):
         self.heading_text = ""
         self.heading_tag = ""
         self.anchor: dict[str, str] | None = None
-        self.rows: list[tuple[str, str, str]] = []
+        self.rows: list[tuple[str, str, str]] = []\n        self.visible_text = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
@@ -181,10 +181,13 @@ class CanadaGazetteRSSDiscovery:
                 issue_url = _safe_url(entry.get("link"))
                 if issue_url is None:
                     raise ValueError("missing or non-official issue index URL")
-                issue_published = _published(entry)
+                feed_published = _published(entry)
                 route_date = _issue_date(issue_url)
-                if route_date.date() != issue_published.date():
-                    raise ValueError("issue route date conflicts with RSS publication date")
+                # Canada Gazette regular editions are published online at 2 p.m.
+                # Eastern the day before their printed issue date, so the RSS
+                # timestamp may legitimately be one calendar day earlier.
+                if abs((route_date.date() - feed_published.date()).days) > 1:
+                    raise ValueError("issue route date is inconsistent with RSS publication date")
                 index_response = self.http.get(
                     issue_url,
                     expected_content_types=("text/html", "application/xhtml+xml"),
@@ -193,6 +196,10 @@ class CanadaGazetteRSSDiscovery:
                     raise ValueError(f"issue index returned HTTP {index_response.status_code}")
                 parser = _IssueIndexParser()
                 parser.feed(index_response.content.decode("utf-8-sig"))
+                visible = " ".join(parser.visible_text.split())
+                if route_date.strftime("%B %d, %Y").replace(" 0", " ") not in visible:
+                    raise ValueError("official issue date is missing from the issue index")
+                issue_published = route_date
                 for href, title, context in parser.rows:
                     url = _safe_url(urljoin(issue_url, href), article=True)
                     if url is None:
