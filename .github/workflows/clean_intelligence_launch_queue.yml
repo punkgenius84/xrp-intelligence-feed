@@ -19,7 +19,7 @@ permissions:
 
 # Share the production feed's lock: never restore/overwrite state while a feed run is active.
 concurrency:
-  group: xrp-intelligence-feed
+  group: xrp-intelligence-feed-stateful
   cancel-in-progress: false
 
 jobs:
