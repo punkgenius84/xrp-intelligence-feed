@@ -79,8 +79,10 @@ def _parse_filing_date(value: str) -> datetime:
 def _filing_url(cik: str, accession: str, primary_document: str) -> str:
     if not _CIK_RE.fullmatch(cik) or not _ACCESSION_RE.fullmatch(accession):
         raise ValueError("invalid SEC filing identity")
-    if accession[:10] != cik.zfill(10):
-        raise ValueError("SEC accession CIK does not match requested CIK")
+    # The accession prefix identifies the EDGAR submitting account, which
+    # can be a third-party filing agent rather than the registrant. The SEC
+    # submissions JSON is already scoped to the requested issuer CIK, so keep
+    # that issuer CIK in the archive path while retaining the full accession.
     document = primary_document.strip()
     if document and ("/" in document or "\\" in document or document in {".", ".."}):
         raise ValueError("SEC primaryDocument must be a filename")
@@ -92,8 +94,9 @@ def _filing_url(cik: str, accession: str, primary_document: str) -> str:
 def _filing_index_url(cik: str, accession: str) -> str:
     if not _CIK_RE.fullmatch(cik) or not _ACCESSION_RE.fullmatch(accession):
         raise ValueError("invalid SEC filing identity")
-    if accession[:10] != cik.zfill(10):
-        raise ValueError("SEC accession CIK does not match requested CIK")
+    # Accession numbers may use a filing agent's CIK prefix. The archive
+    # directory is still keyed by the registrant CIK from the submissions
+    # endpoint, not by the submitting agent's CIK.
     return f"{SEC_ARCHIVES_ROOT}{int(cik)}/{accession.replace('-', '')}/{accession}-index.htm"
 
 
@@ -225,9 +228,7 @@ class SECEdgarDiscovery:
             accession = row["accessionNumber"].strip()
             form = row["form"].strip()
             filing_date = row["filingDate"].strip()
-            if (not _ACCESSION_RE.fullmatch(accession)
-                    or accession[:10] != padded_cik
-                    or not form or not filing_date):
+            if not _ACCESSION_RE.fullmatch(accession) or not form or not filing_date:
                 errors.append("Skipped SEC filing row with missing or malformed identity fields")
                 continue
             if form.casefold() not in accepted_forms or accession in seen_accessions:
