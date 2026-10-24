@@ -17,6 +17,20 @@ def _classify(item, combined: str) -> list[str]:
     direct = bool(entities & {"XRP", "Ripple"})
     if "XRP" in entities:
         categories.append("direct_xrp_xrpl")
+    xrp_ledger_surface = "XRP" in entities and any(
+        _contains(combined, phrase) for phrase in ("XRP Ledger", "XRPL")
+    )
+    protocol_change = any(_contains(combined, phrase) for phrase in (
+        "validator", "amendment", "bug fix", "protocol upgrade", "protocol update",
+        "network upgrade", "consensus", "ledger upgrade", "ledger bug",
+    ))
+    protocol_action = any(_contains(combined, phrase) for phrase in (
+        "moved to", "delayed", "postponed", "deferred", "scheduled",
+        "support dipped", "support dropped", "activated", "released", "fixed",
+        "rolled out", "implemented", "passed", "rejected", "vote", "voting",
+    ))
+    if xrp_ledger_surface and protocol_change and protocol_action:
+        categories.append("xrp_protocol_development")
     if "Ripple" in entities:
         categories.append("direct_ripple")
     if "RLUSD" in entities or _contains(combined, "Ripple USD"):
@@ -117,6 +131,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or institutional_relevance or "ripple_payments_network" in categories
         or "regulatory_tokenization_action" in categories
         or "government_tokenization_action" in categories
+        or "xrp_protocol_development" in categories
     )
 
     score = 0
@@ -141,6 +156,12 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
             score += points
             reasons.append(f"{group} keyword(s) {', '.join(hits)} (+{points})")
             signals.extend(f"keyword:{group}:{hit}" for hit in hits)
+
+    if "xrp_protocol_development" in categories:
+        points = weights["technical_protocol_bonus"]
+        score += points
+        reasons.append(f"XRP Ledger protocol/validator change (+{points})")
+        signals.append("topic:xrp_protocol_development")
 
     if topical and item.source_quality == "primary":
         points = weights["primary_source_bonus"]

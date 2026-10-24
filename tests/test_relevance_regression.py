@@ -436,3 +436,48 @@ def test_bnm_tokenized_bond_launch_clears_relevance_gate():
     assert "Bank Negara Malaysia" in item.detected_entities
     assert "regulatory_tokenization_action" in item.relevance_categories
     assert score >= 30, f"central-bank tokenization launch should clear gate: {score}, {reasons}"
+
+
+
+def test_xrpl_validator_bug_fix_update_clears_gate_for_secondary_media():
+    item = NewsItem(
+        title="XRP Ledger bug fix moved to November after validator support dipped for two hours",
+        summary="The proposed amendment was delayed after validator support briefly fell below the required threshold.",
+        url="https://news.google.com/rss/articles/example-xrpl-validator-bug-fix",
+        source="CoinDesk",
+        source_id="coindesk-xrpl-technical-google-news-discovery",
+        authority_tier=2,
+        category="technology",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "XRP" in item.detected_entities
+    assert item.source_quality == "high_signal"
+    assert "xrp_protocol_development" in item.relevance_categories
+    assert score >= 30, f"significant XRPL protocol change should clear the gate: {score}, {reasons}"
+    assert any("protocol/validator change" in reason for reason in reasons)
+
+
+def test_xrp_price_opinion_does_not_receive_xrpl_protocol_bonus():
+    item = NewsItem(
+        title="XRP has failed to make holders rich like bitcoin and ether. Here's why",
+        summary="A market commentary article compares historical returns and offers an opinion about XRP price performance.",
+        url="https://news.google.com/rss/articles/example-xrp-opinion",
+        source="CoinDesk",
+        source_id="coindesk-xrpl-technical-google-news-discovery",
+        authority_tier=2,
+        category="technology",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "XRP" in item.detected_entities
+    assert "xrp_protocol_development" not in item.relevance_categories
+    assert score < 30, f"price commentary must not qualify as protocol news: {score}, {reasons}"
