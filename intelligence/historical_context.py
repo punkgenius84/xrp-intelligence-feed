@@ -166,9 +166,15 @@ def select_prior_event_context(
             if len(token) > 2 and token not in _PRIOR_CONTEXT_STOPWORDS
         }
         overlap = current_tokens & historical_tokens
+        entity_tokens = {
+            token
+            for entity in entity_matches
+            for token in re.findall(r"[a-z0-9]+", entity.casefold())
+        }
+        lexical_overlap = overlap - entity_tokens
         # An entity alone (especially XRP, Ripple, SEC, or a bank name) is too
-        # broad. Require additional lexical evidence to avoid unrelated matches.
-        if not entity_matches or len(overlap) < 2:
+        # broad. Require two additional matching terms to avoid unrelated matches.
+        if not entity_matches or len(lexical_overlap) < 2:
             continue
         latest_date = max(item["published_at"] for item in dated_evidence)
         score = len(entity_matches) * 3 + len(overlap)
