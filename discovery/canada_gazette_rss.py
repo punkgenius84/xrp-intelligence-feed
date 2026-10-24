@@ -44,6 +44,7 @@ class _IssueIndexParser(HTMLParser):
             self.anchor = {"href": href, "text": ""}
 
     def handle_data(self, data: str) -> None:
+        self.visible_text += data + " "
         if self.heading_tag:
             self.heading_text += data
         if self.anchor is not None:
@@ -209,7 +210,6 @@ class CanadaGazetteRSSDiscovery:
                     native_id = path.casefold()
                     if native_id in candidates:
                         continue
-                    context = " — ".join(parser.headings[-3:])
                     summary = f"Canada Gazette Part I; {context}" if context else "Canada Gazette Part I official proposed regulation or notice."
                     candidate = DiscoveryCandidate(
                         title=title,
