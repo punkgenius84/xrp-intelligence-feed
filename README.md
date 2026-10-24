@@ -303,6 +303,12 @@ Inspect saved observations locally without changing state or posting to Discord:
 
 Omit `--source-id` to inspect observations from all opted-in sources. Use `--path` to inspect a copied `state/discovery.json` file. The preview is read-only.
 
+## SEC submissions runner probe
+
+The manual/pull-request **SEC Submissions Runner Probe** checks whether GitHub Actions can read the official SEC submissions JSON for a small, verified issuer sample. It validates returned CIK identity, required filing arrays, dated rows, and official SEC filing-index URL construction; it prints only a small sample and does not fetch filing bodies.
+
+The probe is diagnostic only: it does not write discovery state, create production candidates, enable the SEC submissions collector, enrich filings, or publish to Discord. Its network step is allowed to fail without blocking CI because SEC/network availability can vary; inspect the probe logs before using the result as activation evidence. A successful endpoint response is necessary but not sufficient to enable the collector: relevance fixtures must also show that targeted digital-asset/payment filings can be distinguished from generic issuer filings.
+
 ## Source availability notes
 
 - **Bank of England news RSS is enabled after a successful runner probe.** Its official [RSS feeds page](https://www.bankofengland.co.uk/rss) links to `https://www.bankofengland.co.uk/rss/news`. The 22 October 2026 GitHub Actions probe returned HTTP 200, parsed 50 entries with no parser errors, and all 12 sampled entries had publication dates and official HTTPS links. The adapter is bounded to 50 items and a 180-day lookback, accepts only official HTTPS article links, uses conditional request validators, and sends results through existing relevance scoring. The probe itself writes no state and does not publish.
