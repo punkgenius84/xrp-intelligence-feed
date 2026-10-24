@@ -133,7 +133,7 @@ def _classify(item, combined: str) -> list[str]:
     crypto_ecosystem_entities = {
         "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
         "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
-        "Coinbase", "Chainlink",
+        "Coinbase", "Chainlink", "CoinDCX",
     }
     crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
     ecosystem_context = any(_contains(combined, term) for term in (
@@ -142,10 +142,15 @@ def _classify(item, combined: str) -> list[str]:
         "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
         "sanctions", "money laundering", "market manipulation", "fraud",
         "investigation", "investigates", "probes", "probe", "seeks answers",
+        "hack", "hacked", "exploit", "exploited", "breach", "breached",
+        "outflow", "outflows", "stolen", "drained", "security incident",
+        "cyberattack", "cyber attack",
         "subpoena", "files suit", "filed suit", "sues", "charged", "alleges",
     ))
     crypto_ecosystem_action_terms = (
         "seeks answers", "investigates", "investigation", "probes", "probe",
+        "denies", "denied", "reports", "reported", "suffers", "suffered",
+        "loses", "lost", "hacked", "exploited", "breached", "drained",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
         "announces", "announced", "partnered", "integrates",
