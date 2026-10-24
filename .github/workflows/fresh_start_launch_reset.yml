@@ -1,0 +1,147 @@
+name: Fresh Start Launch Reset
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_reset:
+        description: "Apply the full operational-state reset after reviewing the preview"
+        type: boolean
+        default: false
+        required: true
+      confirmation:
+        description: "Required only when apply_reset is true: FRESH-START-XRP-INTELLIGENCE"
+        type: string
+        default: ""
+        required: false
+
+permissions:
+  contents: read
+
+# Must serialize with the stateful feed run so cache restore/save cannot race production.
+concurrency:
+  group: xrp-intelligence-feed-stateful
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+      - name: Restore persistent state
+        id: state_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-state-${{ github.ref_name }}-v1-
+
+      - name: Restore intelligence delivery history
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-
+
+      - name: Restore intelligence quarantine
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_quarantine.json
+          key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-restore
+          restore-keys: |
+            xrp-intelligence-quarantine-${{ github.ref_name }}-v1-
+
+      - name: Refuse unsafe apply requests
+        if: inputs.apply_reset
+        env:
+          REF_NAME: ${{ github.ref }}
+          RESTORED_KEY: ${{ steps.state_cache.outputs.cache-matched-key }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$REF_NAME" != "refs/heads/main" ]]; then
+            echo "::error::Apply mode is allowed only from main."
+            exit 1
+          fi
+          if [[ -z "$RESTORED_KEY" ]]; then
+            echo "::error::No production state cache was restored; refusing to reset an empty local view."
+            exit 1
+          fi
+          if [[ "$CONFIRMATION" != "FRESH-START-XRP-INTELLIGENCE" ]]; then
+            echo "::error::Exact confirmation FRESH-START-XRP-INTELLIGENCE is required."
+            exit 1
+          fi
+
+      - name: Preview current operational state
+        run: python scripts/fresh_start_launch_reset.py
+
+      - name: Archive and reset operational state
+        if: inputs.apply_reset
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          python scripts/fresh_start_launch_reset.py \
+            --apply \
+            --confirm "$CONFIRMATION" \
+            --archive artifacts/fresh-start-state-archive.zip
+
+      # If artifact upload fails, the cache-save steps do not run and the previous
+      # production cache remains the latest restorable state.
+      - name: Upload pre-reset state archive
+        if: inputs.apply_reset
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fresh-start-state-archive-${{ github.run_id }}
+          path: artifacts/fresh-start-state-archive.zip
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9
+
+      - name: Verify operational state is empty
+        if: inputs.apply_reset
+        run: python scripts/fresh_start_launch_reset.py --verify-empty
+
+      - name: Save reset intelligence delivery history
+        if: inputs.apply_reset
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: state/intelligence_delivery_history.json
+          key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
+
+      - name: Save fresh persistent state
+        if: inputs.apply_reset
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            state/seen.json
+            state/discovery.json
+            state/correlation.json
+            state/intelligence.json
+            state/intelligence_outbox.json
+            state/outbox.json
+            state/delivery_history.json
+          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+
+      - name: Reset summary
+        if: inputs.apply_reset
+        run: |
+          echo "Fresh-start state reset completed."
+          echo "The pre-reset state archive is attached to this workflow run."
+          echo "Quarantine audit records were preserved."
+          echo "No Discord messages were sent."
+          echo "Intelligence-event publishing settings were not changed."
