@@ -317,3 +317,18 @@ def test_crypto_market_commentary_is_not_mislabeled_as_concrete_ecosystem_action
     assert "Circle" in item.detected_entities
     assert "crypto_ecosystem_action" not in item.relevance_categories
 
+
+def test_tokenized_equities_on_solananetwork_are_relevant_crypto_development():
+    item = NewsItem(
+        "Securitize shares slide 38% since it put Apple and Nvidia stock on Solana",
+        "https://example.com/tokenized-equities-solana",
+        "DL News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "Solana" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"tokenized securities on a tracked network should clear gate: {score}, {reasons}"
+
