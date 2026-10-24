@@ -1836,11 +1836,32 @@ def test_sitemap_parser_rejects_untrusted_urls_and_malformed_xml():
     assert _parse_sitemap_entries(source_config, b"<broken") == ("invalid_xml", [])
 
 
+def test_singapore_press_centre_listing_extracts_bloom_release():
+    source_row = next(
+        row for row in load_discovery_sources() if row["source_id"] == "sg-press-centre"
+    )
+    bloom_url = (
+        "https://www.sgpc.gov.sg/detail?HomePage=home&page=%2Fdetail"
+        "&url=%2Fmedia_releases%2Fmas%2Fpress_release%2FP-20261023-2"
+    )
+    html = f"""<html><body><article>
+      <h3>MAS</h3><time datetime="2026-10-23">23 Oct 2026</time>
+      <a href="{bloom_url}">MAS, Bank Negara Malaysia and Bank of Thailand Partner with Industry to Advance Cross-Border Settlement in Digital Money through BLOOM</a>
+    </article></body></html>""".encode()
+    http = FakeHttp(response(html))
+    result = InstitutionalPressDiscovery(source_row, http=http, now=lambda: STAMP).collect()
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    assert "BLOOM" in result.candidates[0].title
+    assert result.candidates[0].published_at == datetime(2026, 10, 23, tzinfo=timezone.utc)
+    assert "P-20261023-2" in result.candidates[0].source_native_id
+
+
 def test_singapore_press_centre_is_registered_for_official_discovery():
     source_row = next(
         row for row in load_discovery_sources() if row["source_id"] == "sg-press-centre"
     )
-    assert source_row["source_url"] == "https://www.sgpc.gov.sg/"
+    assert source_row["source_url"] == "https://www.sgpc.gov.sg/home?Page=1"
     assert source_row["enabled"] is True
     assert source_row["authority_tier"] == 1
     assert source_row["native_id_query_param"] == "url"
