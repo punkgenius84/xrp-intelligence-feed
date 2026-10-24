@@ -117,6 +117,8 @@ def test_filing_index_context_extracts_items_and_bounded_exhibit_rows():
     assert _filing_index_url("1876042", "0001876042-26-000267").endswith("-index.htm")
     with pytest.raises(ValueError, match="does not match"):
         _filing_index_url("1876042", "0000000001-26-000267")
+    with pytest.raises(ValueError, match="no recognizable Items or exhibit context"):
+        _extract_filing_context(b"<html><body>JavaScript shell</body></html>")
 
 
 def test_sec_index_enrichment_is_opt_in_and_bounded_to_two_pages_per_run():
