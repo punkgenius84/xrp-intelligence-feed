@@ -54,7 +54,10 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
-    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
+    government = bool(entities & {
+        "White House", "DOJ", "Treasury", "Government of Canada",
+        "Singapore", "Malaysia", "Thailand", "China",
+    })
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
@@ -118,7 +121,9 @@ def _classify(item, combined: str) -> list[str]:
     ecosystem_context = any(_contains(combined, term) for term in (
         "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
         "payments", "payment", "blockchain", "token", "tokenized", "tokenised",
-        "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
+        "stock", "stocks", "equity", "equities", "shares", "securities",
+        "digital money", "initiative", "protocol", "network upgrade", "validator",
+        "custody", "reserve", "reserves",
         "sanctions", "money laundering", "market manipulation", "fraud",
         "investigation", "investigates", "probes", "probe", "seeks answers",
         "subpoena", "files suit", "filed suit", "sues", "charged", "alleges",
@@ -128,7 +133,8 @@ def _classify(item, combined: str) -> list[str]:
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
         "announces", "announced", "partnered", "integrates",
-        "integrated", "upgrades", "upgraded", "mints", "minted", "issues",
+        "integrated", "upgrades", "upgraded", "mints", "minted", "tokenizes",
+        "tokenises", "lists", "listed", "puts", "put", "places", "placed", "issues",
         "issued", "expands", "expanded", "connects", "connected", "adds",
         "added", "opens", "opened", "releases", "released", "rolls out",
         "rolled out", "goes live", "went live", "implements", "implemented",
