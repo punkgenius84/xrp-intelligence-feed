@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
+from discovery.sec_edgar import _extract_filing_context
 
 
 SEC_ROOT = "https://data.sec.gov/submissions/"
@@ -116,6 +117,60 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
     }
 
 
+def select_index_targets(
+    issuer_summaries: list[tuple[str, str, dict[str, object]]],
+    limit: int = 2,
+) -> list[tuple[str, str, dict[str, str]]]:
+    """Select at most two recent 8-K filing indexes for read-only parser validation."""
+    if type(limit) is not int or not 0 <= limit <= 2:
+        raise ValueError("filing-index probe limit must be from 0 to 2")
+    targets: list[tuple[str, str, dict[str, str]]] = []
+    for label, cik, summary in issuer_summaries:
+        sample = summary.get("sample", [])
+        if not isinstance(sample, list):
+            continue
+        row = next(
+            (item for item in sample
+             if isinstance(item, dict) and str(item.get("form", "")).upper() == "8-K"),
+            None,
+        )
+        if row is not None:
+            targets.append((label, cik, row))
+        if len(targets) >= limit:
+            break
+    return targets
+
+
+def _probe_filing_index(client: BoundedHttpClient, label: str, cik: str,
+                        row: dict[str, str]) -> bool:
+    url = row["filing_index_url"]
+    try:
+        response = client.get(url, expected_content_types=("text/html", "application/xhtml+xml"))
+        final_host = urlsplit(response.url).hostname
+        if final_host != "www.sec.gov":
+            raise ValueError(f"unexpected response host: {final_host or 'missing'}")
+        context = _extract_filing_context(response.content)
+    except (DiscoveryHttpError, ValueError) as exc:
+        if isinstance(exc, DiscoveryHttpError):
+            print(f"filing_index issuer={label!r} accession={row['accession']} status=unavailable kind={exc.kind} http={exc.status_code or 'n/a'}")
+        else:
+            print(f"filing_index issuer={label!r} accession={row['accession']} status=invalid error={exc}")
+        return False
+
+    items = str(context.get("filing_items", "")).strip()
+    exhibits = context.get("exhibit_descriptions", [])
+    print(
+        f"filing_index issuer={label!r} accession={row['accession']} status=parsed "
+        f"items_present={bool(items)} items_chars={len(items)} exhibits={len(exhibits)}"
+    )
+    if items:
+        print(f"  filing_items={items[:260]!r}")
+    for exhibit in exhibits[:2]:
+        print(f"  exhibit_context={str(exhibit)[:220]!r}")
+    print(f"  official_index_url={url}")
+    return True
+
+
 def main() -> int:
     email = os.environ.get("SEC_CONTACT_EMAIL", "").strip()
     if any(ch in email for ch in "\r\n"):
@@ -133,6 +188,7 @@ def main() -> int:
         max_attempts=1,
     )
     failures = 0
+    issuer_summaries: list[tuple[str, str, dict[str, object]]] = []
     print("SEC submissions endpoint probe: READ-ONLY; no state writes, no filing-body downloads, no Discord publishing")
     for index, (label, cik) in enumerate(ISSUERS):
         if index:
@@ -153,6 +209,7 @@ def main() -> int:
                 print(f"issuer={label!r} cik={cik} status=invalid error={type(exc).__name__}: {exc}")
             continue
 
+        issuer_summaries.append((label, cik, summary))
         print(
             f"issuer={label!r} cik={cik} status=valid response_name={summary['issuer_name']!r} "
             f"recent_rows={summary['recent_rows']} valid_rows={summary['valid_rows']} "
@@ -167,8 +224,21 @@ def main() -> int:
             )
             print(f"  official_index_url={row['filing_index_url']}")
 
-    print(f"probe_complete issuers={len(ISSUERS)} failures={failures} mode=read_only state_write=disabled publishing=disabled")
-    return 1 if failures else 0
+    # Validate the actual production parser against at most two official filing
+    # index pages. These are index metadata pages only; primary-document bodies
+    # are never requested. Keep a full second between all SEC requests.
+    index_targets = select_index_targets(issuer_summaries, limit=2)
+    index_failures = 0
+    for label, cik, row in index_targets:
+        time.sleep(1.05)
+        if not _probe_filing_index(client, label, cik, row):
+            index_failures += 1
+    print(
+        f"probe_complete issuers={len(ISSUERS)} submission_failures={failures} "
+        f"index_pages={len(index_targets)} index_failures={index_failures} "
+        "mode=read_only state_write=disabled publishing=disabled"
+    )
+    return 1 if failures or index_failures else 0
 
 
 if __name__ == "__main__":
