@@ -587,7 +587,7 @@
       "category": "technology",
       "discovery_method": "google_news_official_rss",
       "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 30,
       "max_items": 100,
       "publisher_host": "coindesk.com",
