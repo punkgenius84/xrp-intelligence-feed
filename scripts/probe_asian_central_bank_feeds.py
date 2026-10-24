@@ -181,6 +181,17 @@ def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
     return routes
 
 
+def _route_context(script_text: str, route: str, radius: int = 220) -> str:
+    """Return a short, whitespace-normalized context around a route string."""
+    normalized = script_text.replace(r"\\/", "/").replace(r"\\u002F", "/")
+    index = normalized.find(route)
+    if index < 0:
+        return ""
+    start = max(0, index - max(0, radius))
+    end = min(len(normalized), index + len(route) + max(0, radius))
+    return " ".join(normalized[start:end].split())[:700]
+
+
 def _probe_same_host_script_assets(
     client: BoundedHttpClient, label: str, html: str, page_url: str, expected_host: str
 ) -> None:
@@ -206,6 +217,9 @@ def _probe_same_host_script_assets(
         print(f"  script_asset url={script_url} http={response.status_code} bytes={len(response.content)} candidate_routes={len(routes)}")
         for route in routes:
             print(f"    candidate_same_site_route={route}")
+            context = _route_context(body, route)
+            if context:
+                print(f"    route_context={context}")
 
 
 def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, list[str]]:
