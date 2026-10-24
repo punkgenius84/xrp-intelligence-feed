@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlencode, urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -31,6 +32,8 @@ TARGETS = (
     ("MAS BLOOM initiative", "https://www.mas.gov.sg/schemes-and-initiatives/BLOOM", "www.mas.gov.sg"),
     ("MAS robots", "https://www.mas.gov.sg/robots.txt", "www.mas.gov.sg"),
     ("MAS sitemap", "https://www.mas.gov.sg/sitemap.xml", "www.mas.gov.sg"),
+    ("SG Press Centre root", "https://www.sgpc.gov.sg/", "www.sgpc.gov.sg"),
+    ("SG Press Centre releases page", "https://www.sgpc.gov.sg/home?Page=1", "www.sgpc.gov.sg"),
     ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
     ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
     ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
@@ -134,6 +137,143 @@ def _links(html: str, page_url: str, expected_host: str) -> tuple[list[str], lis
         if re.search(r"/(?:news|media-releases|press-release|public-hearing)/[^?#]*(?:20\d{2}|\d{8})", path, re.IGNORECASE):
             article_links.append(absolute)
     return sorted(set(feeds)), sorted(set(article_links))
+
+
+def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: int = 6) -> list[str]:
+    """Return a small, same-host list of script assets for read-only diagnostics."""
+    if limit <= 0:
+        return []
+    preferred: list[str] = []
+    fallback: list[str] = []
+    vendor_markers = ("/vendors/", "jquery", "bootstrap", "swiper", "moment", "fontawesome", "iframe-lightbox")
+    for tag in re.findall(r"<script\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
+        src = attrs.get("src", "").strip()
+        if not src:
+            continue
+        absolute = urljoin(page_url, src)
+        if not _host_ok(absolute, expected_host):
+            continue
+        path = urlsplit(absolute).path.lower()
+        if not path.endswith((".js", ".mjs")):
+            continue
+        target = fallback if any(marker in path for marker in vendor_markers) else preferred
+        if absolute not in preferred and absolute not in fallback:
+            target.append(absolute)
+    return (preferred + fallback)[:limit]
+
+
+def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
+    """Extract likely same-site content/API route strings; never request them here."""
+    normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
+    pattern = re.compile(
+        r"""["'\x60]((?:/api(?:/v[0-9]+)?|/graphql|/search|/news(?:/|\?)|"""
+        r"""/media-releases/|/content/|/umbraco/)[^"'\x60\s]{0,160})["'\x60]""",
+        re.IGNORECASE,
+    )
+    routes: list[str] = []
+    for match in pattern.finditer(normalized):
+        route = match.group(1).rstrip(".,;)")
+        if route.startswith("//") or route in routes:
+            continue
+        routes.append(route)
+        if len(routes) >= max(0, limit):
+            break
+    return routes
+
+
+def _route_context(script_text: str, route: str, radius: int = 650) -> str:
+    """Return a short, whitespace-normalized context around a route string."""
+    normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
+    index = normalized.find(route)
+    if index < 0:
+        return ""
+    start = max(0, index - max(0, radius))
+    end = min(len(normalized), index + len(route) + max(0, radius))
+    return " ".join(normalized[start:end].split())[:1500]
+
+
+def _probe_sgpc_listing_api(client: BoundedHttpClient) -> None:
+    """Probe the first-party SG Press Centre listing API with a bounded date window."""
+    end_date = datetime.now(timezone.utc).date()
+    start_date = end_date - timedelta(days=30)
+    query = urlencode({
+        "StartDate": start_date.strftime("%d-%b-%Y"),
+        "EndDate": end_date.strftime("%d-%b-%Y"),
+        "page": "1",
+    })
+    url = "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData?" + query
+    print(f"  sgpc_listing_api_request={url}")
+    try:
+        response = client.get(url, expected_content_types=("application/json", "text/json"))
+    except DiscoveryHttpError as exc:
+        status = f" http_status={exc.status_code}" if exc.status_code else ""
+        print(f"  sgpc_listing_api=unavailable reason={exc.kind}{status}")
+        return
+    final_host = urlsplit(response.url).hostname
+    if final_host != "www.sgpc.gov.sg":
+        print(f"  sgpc_listing_api=rejected unexpected_final_host={final_host or 'missing'}")
+        return
+    try:
+        payload = json.loads(response.content.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        print(f"  sgpc_listing_api=invalid_json error={type(exc).__name__}")
+        return
+    if not isinstance(payload, dict):
+        print("  sgpc_listing_api=invalid_payload top_level_type=" + type(payload).__name__)
+        return
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        print(f"  sgpc_listing_api=unexpected_shape top_level_keys={sorted(payload)[:20]}")
+        return
+    items = result.get("items")
+    if not isinstance(items, list):
+        print(f"  sgpc_listing_api=unexpected_shape result_keys={sorted(result)[:30]}")
+        return
+    print(
+        f"  sgpc_listing_api=valid http={response.status_code} items={len(items)} "
+        f"result_keys={sorted(result)[:30]}"
+    )
+    for item in items[:5]:
+        if not isinstance(item, dict):
+            print(f"    sgpc_item_type={type(item).__name__}")
+            continue
+        selected = {
+            key: value for key, value in item.items()
+            if any(token in key.casefold() for token in ("title", "date", "url", "link", "agency", "subject", "type", "id"))
+        }
+        safe = {key: str(value)[:240] for key, value in list(selected.items())[:12]}
+        print(f"    sgpc_item_fields={json.dumps(safe, ensure_ascii=False, sort_keys=True)}")
+
+
+def _probe_same_host_script_assets(
+    client: BoundedHttpClient, label: str, html: str, page_url: str, expected_host: str
+) -> None:
+    """Inspect a few same-host JS bundles for API routes without calling those routes."""
+    scripts = _same_host_script_urls(html, page_url, expected_host)
+    print(f"  same_host_script_assets={len(scripts)} host={expected_host}")
+    for script_url in scripts:
+        try:
+            response = client.get(script_url)
+        except (DiscoveryHttpError, TypeError) as exc:
+            print(f"  script_asset_unavailable url={script_url} reason={type(exc).__name__}")
+            continue
+        final_host = urlsplit(response.url).hostname
+        if final_host != expected_host:
+            print(f"  script_asset_skipped_cross_host requested={script_url} final_host={final_host or 'missing'}")
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if "javascript" not in content_type and not urlsplit(response.url).path.lower().endswith((".js", ".mjs")):
+            print(f"  script_asset_skipped_unexpected_type url={script_url} type={content_type or 'missing'}")
+            continue
+        body = response.content.decode("utf-8", errors="replace")
+        routes = _candidate_api_routes(body)
+        print(f"  script_asset url={script_url} http={response.status_code} bytes={len(response.content)} candidate_routes={len(routes)}")
+        for route in routes:
+            print(f"    candidate_same_site_route={route}")
+            context = _route_context(body, route)
+            if context:
+                print(f"    route_context={context}")
 
 
 def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, list[str]]:
@@ -339,6 +479,11 @@ def main() -> None:
                 print(f"  robots_sitemap={sitemap}")
         if "html" in content_type or b"<html" in response.content[:500].lower():
             feeds, articles = _links(text, response.url, host)
+            if label in {"MAS news index", "SG Press Centre root", "SG Press Centre releases page"}:
+                final_host = urlsplit(response.url).hostname or ""
+                _probe_same_host_script_assets(client, label, text, response.url, final_host)
+            if label == "SG Press Centre releases page":
+                _probe_sgpc_listing_api(client)
             metadata = _page_metadata(text, response.url, host)
             for key, values in sorted(metadata.items()):
                 for value in values[:3]:
