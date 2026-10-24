@@ -1176,19 +1176,48 @@ def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> 
     title = _clean(re.sub(r"<[^>]+>", " ", heading.group(1)))
     if not title:
         return None
-    date_attrs = list(re.finditer(
-        r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
-        text, re.IGNORECASE | re.DOTALL,
-    ))
-    if date_attrs:
-        nearest_attr = min(date_attrs, key=lambda item: abs(item.start() - heading.start()))
-        published = _parse_date(nearest_attr.group("date"), source.get("numeric_date_order", "mdy"))
+    # Some official article pages publish their date only in a dedicated
+    # metadata field. Accept only explicit publication-date keys; never use
+    # generic page dates, sitemap lastmod, or the collection timestamp.
+    publication_meta_keys = {
+        "article:published_time", "og:published_time", "publish-date",
+        "published_time", "datepublished",
+    }
+    meta_dates: set[datetime] = set()
+    for meta in re.finditer(r"<meta\b(?P<attrs>[^>]*)>", text, re.IGNORECASE | re.DOTALL):
+        attrs = {
+            key.casefold(): next(value for value in values if value is not None)
+            for key, *values in re.findall(
+                r"""([a-zA-Z_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""",
+                meta.group("attrs"),
+            )
+        }
+        meta_key = (attrs.get("property") or attrs.get("name") or attrs.get("itemprop") or "").casefold()
+        if meta_key not in publication_meta_keys:
+            continue
+        parsed = _parse_date(attrs.get("content"), source.get("numeric_date_order", "mdy"))
+        if parsed is not None:
+            meta_dates.add(parsed)
+
+    if len(meta_dates) == 1:
+        published = next(iter(meta_dates))
+    elif len(meta_dates) > 1:
+        # Conflicting explicit publication dates are ambiguous; don't guess.
+        return None
     else:
-        dates = list(_DATE_RE.finditer(text))
-        if not dates:
-            return None
-        nearest = min(dates, key=lambda item: abs(item.start() - heading.start()))
-        published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
+        date_attrs = list(re.finditer(
+            r"<time\b[^>]*\bdatetime=['\"](?P<date>[^'\"]+)['\"][^>]*>",
+            text, re.IGNORECASE | re.DOTALL,
+        ))
+        if date_attrs:
+            nearest_attr = min(date_attrs, key=lambda item: abs(item.start() - heading.start()))
+            published = _parse_date(nearest_attr.group("date"), source.get("numeric_date_order", "mdy"))
+        else:
+            dates = list(_DATE_RE.finditer(text))
+            if not dates:
+                return None
+            nearest = min(dates, key=lambda item: abs(item.start() - heading.start()))
+            published = _parse_date(nearest.group(0), source.get("numeric_date_order", "mdy"))
     if published is None:
         return None
     return {"url": safe[0], "native_id": safe[1], "title": title, "date": published}
