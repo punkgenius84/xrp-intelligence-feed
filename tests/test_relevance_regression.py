@@ -260,6 +260,29 @@ def test_sec_filing_context_requires_a_concrete_digital_asset_action(title, summ
         assert score < 30, f"generic risk-factor filing should stay below gate: {score}, {reasons}"
 
 
+def test_swift_conventional_cross_border_payment_action_does_not_claim_digital_asset_link():
+    item = NewsItem(
+        title="Swift to launch AI-powered fraud defence for cross-border payments",
+        summary="Swift is launching AI-powered fraud defence for cross-border payments.",
+        url="https://news.google.com/rss/articles/example-swift-fraud-defence",
+        source="Swift",
+        source_id="swift-google-news-discovery",
+        source_quality="primary",
+        authority_tier=1,
+        category="institutional",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Swift" in item.detected_entities
+    assert "institutional_payment_action" in item.relevance_categories
+    assert "institutional_digital_asset_payment" not in item.relevance_categories
+    assert score >= 30, f"important payment-network action should clear gate: {score}, {reasons}"
+
+
 def test_swift_blockchain_shared_ledger_mvp_milestone_clears_relevance_gate():
     item = NewsItem(
         title="Swift’s blockchain-based shared ledger progresses to MVP implementation",
