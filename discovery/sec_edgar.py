@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time as day_time, timezone
+from html import unescape
 from hashlib import sha256
 import json
 import os
@@ -28,8 +29,9 @@ def validate_sec_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "issuer_ciks", "filing_forms", "contact_email_env",
         "application_name", "max_issuers_per_run",
     }
-    if not isinstance(source, dict) or set(source) != required:
-        raise ValueError(f"SEC source must have exactly {sorted(required)}")
+    optional = {"detail_enrichment_limit"}
+    if not isinstance(source, dict) or not required.issubset(source) or set(source) - required - optional:
+        raise ValueError(f"SEC source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url",
                 "contact_email_env", "application_name"):
         if not isinstance(source[key], str) or not source[key].strip():
@@ -63,6 +65,9 @@ def validate_sec_source(source: object) -> dict[str, Any]:
     maximum = source["max_issuers_per_run"]
     if type(maximum) is not int or not 1 <= maximum <= 10:
         raise ValueError("max_issuers_per_run must be from 1 to 10")
+    enrichment_limit = source.get("detail_enrichment_limit", 0)
+    if type(enrichment_limit) is not int or not 0 <= enrichment_limit <= 2:
+        raise ValueError("detail_enrichment_limit must be from 0 to 2")
     return source
 
 
@@ -82,6 +87,45 @@ def _filing_url(cik: str, accession: str, primary_document: str) -> str:
     accession_path = accession.replace("-", "")
     tail = quote(document, safe="-_.") if document else ""
     return f"{SEC_ARCHIVES_ROOT}{int(cik)}/{accession_path}/" + tail
+
+
+def _filing_index_url(cik: str, accession: str) -> str:
+    if not _CIK_RE.fullmatch(cik) or not _ACCESSION_RE.fullmatch(accession):
+        raise ValueError("invalid SEC filing identity")
+    if accession[:10] != cik.zfill(10):
+        raise ValueError("SEC accession CIK does not match requested CIK")
+    return f"{SEC_ARCHIVES_ROOT}{int(cik)}/{accession.replace('-', '')}/{accession}-index.htm"
+
+
+def _extract_filing_context(content: bytes) -> dict[str, Any]:
+    """Extract bounded Item and exhibit context from a SEC filing index page."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("SEC filing index is not valid UTF-8") from exc
+
+    def plain(fragment: str) -> str:
+        return " ".join(unescape(re.sub(r"<[^>]*>", " ", fragment)).split())
+
+    items = ""
+    match = re.search(
+        r"<div\b[^>]*class=[\"'][^\"']*\binfoHead\b[^\"']*[\"'][^>]*>\s*Items\s*</div>\s*"
+        r"<div\b[^>]*class=[\"'][^\"']*\binfo\b[^\"']*[\"'][^>]*>(.*?)</div>",
+        html, re.IGNORECASE | re.DOTALL,
+    )
+    if match:
+        items = plain(match.group(1))[:500]
+
+    exhibits: list[str] = []
+    for row in re.findall(r"<tr\b[^>]*>.*?</tr\s*>", html, re.IGNORECASE | re.DOTALL):
+        row_text = plain(row)
+        if re.search(r"\bEX-?\d", row_text, re.IGNORECASE):
+            exhibits.append(row_text[:250])
+            if len(exhibits) >= 3:
+                break
+    if not items and not exhibits:
+        raise ValueError("SEC filing index contained no recognizable Items or exhibit context")
+    return {"filing_items": items, "exhibit_descriptions": exhibits}
 
 
 def _parallel_rows(recent: dict[str, Any]) -> list[dict[str, str]]:
@@ -129,6 +173,7 @@ class SECEdgarDiscovery:
         self.request_interval = max(1.0, request_interval)
         self.now = now
         self._last_request: float | None = None
+        self._detail_enrichment_remaining = 0
 
     def _pace(self) -> None:
         if self._last_request is not None:
@@ -234,6 +279,32 @@ class SECEdgarDiscovery:
                 last_seen_at=fetched_at,
             ))
         candidates.sort(key=lambda item: (item.published_at or fetched_at, item.source_native_id), reverse=True)
+        for candidate in candidates:
+            if self._detail_enrichment_remaining <= 0:
+                break
+            if candidate.document_type.casefold() != "8-k":
+                continue
+            accession = candidate.source_native_metadata.get("accession_number", "")
+            index_url = _filing_index_url(cik, accession)
+            try:
+                self._detail_enrichment_remaining -= 1
+                self._pace()
+                detail = self.http.get(index_url, expected_content_types=("text/html", "application/xhtml+xml"))
+                context = _extract_filing_context(detail.content)
+                candidate.source_native_metadata["filing_index_url"] = index_url
+                candidate.source_native_metadata.update(context)
+                context_parts = []
+                if context["filing_items"]:
+                    context_parts.append("Filing items: " + context["filing_items"])
+                if context["exhibit_descriptions"]:
+                    context_parts.append("Exhibits: " + "; ".join(context["exhibit_descriptions"]))
+                if context_parts:
+                    candidate.summary = (candidate.summary + " " + " ".join(context_parts))[:2000]
+                    candidate.provenance = list(dict.fromkeys([*candidate.provenance, index_url]))
+            except (DiscoveryHttpError, ValueError, TypeError) as exc:
+                errors.append(f"CIK {cik}: filing-index enrichment failed for {accession}: {exc}")
+                candidate.source_status = "partial"
+                candidate.source_error = "filing-index enrichment failed"
         status = "partial" if errors else "success"
         return candidates, validators, status if not errors else "; ".join(errors)
 
@@ -258,6 +329,7 @@ class SECEdgarDiscovery:
         ciks = ordered_ciks[:self.source["max_issuers_per_run"]]
         next_index = (start_index + len(ciks)) % len(all_ciks)
 
+        self._detail_enrichment_remaining = self.source.get("detail_enrichment_limit", 0)
         candidates: list[DiscoveryCandidate] = []
         updates: dict[str, dict[str, str]] = {}
         errors: list[str] = []
