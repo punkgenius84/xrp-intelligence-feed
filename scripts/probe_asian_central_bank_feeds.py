@@ -254,6 +254,20 @@ def main() -> None:
             for key, values in sorted(metadata.items()):
                 for value in values[:3]:
                     print(f"  page_metadata {key}={value!r}")
+            if urlsplit(url).path.endswith("public-hearing-20261020-Stablecoin.html"):
+                print(
+                    "  bot_stablecoin_page_markup "
+                    f"h1={len(re.findall(r'<h1\\b', text, re.IGNORECASE))} "
+                    f"time={len(re.findall(r'<time\\b', text, re.IGNORECASE))} "
+                    f"published_meta={len(re.findall(r'article:published_time|datePublished|publish-date', text, re.IGNORECASE))} "
+                    f"jsonld={len(re.findall(r'application/ld\\+json', text, re.IGNORECASE))}"
+                )
+                for keyword in ("เผยแพร่", "วันที่", "ตุลาคม", "2569", "2026", "publication", "published"):
+                    matches = list(re.finditer(keyword, text, re.IGNORECASE))
+                    for match in matches[:2]:
+                        snippet = re.sub(r"<[^>]+>", " ", text[max(0, match.start()-180):match.end()+220])
+                        snippet = " ".join(unescape(snippet).split())
+                        print(f"  bot_stablecoin_context keyword={keyword!r} text={snippet[:420]!r}")
             if host == "www.mas.gov.sg":
                 for keyword in ("BLOOM", "stablecoin", "Ripple", "XRP"):
                     matches = list(re.finditer(keyword, text, re.IGNORECASE))
