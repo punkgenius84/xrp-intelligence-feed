@@ -197,7 +197,14 @@ class CanadaGazetteRSSDiscovery:
                 if index_response.status_code != 200:
                     raise ValueError(f"issue index returned HTTP {index_response.status_code}")
                 parser = _IssueIndexParser()
-                parser.feed(index_response.content.decode("utf-8-sig"))
+                try:
+                    index_html = index_response.content.decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    # Canada Gazette pages can contain legacy punctuation encoded
+                    # outside UTF-8; Windows-1252 is a lossless fallback for these
+                    # official HTML pages and keeps article titles intact.
+                    index_html = index_response.content.decode("windows-1252")
+                parser.feed(index_html)
                 visible = " ".join(parser.visible_text.split())
                 if route_date.strftime("%B %d, %Y").replace(" 0", " ") not in visible:
                     raise ValueError("official issue date is missing from the issue index")
