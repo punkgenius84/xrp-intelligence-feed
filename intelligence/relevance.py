@@ -29,9 +29,10 @@ def _classify(item, combined: str) -> list[str]:
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
     government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
-    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY"})
+    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
+        "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
@@ -42,6 +43,7 @@ def _classify(item, combined: str) -> list[str]:
     ))
     digital_or_payment = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
+        "CBDC", "central bank digital currency", "central bank digital currencies",
         "crypto", "stablecoin", "stablecoins", "payment", "payments",
         "payment stablecoin", "virtual currency", "digital money", "cross-border settlement", "digital asset service provider",
         "genius act", "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
