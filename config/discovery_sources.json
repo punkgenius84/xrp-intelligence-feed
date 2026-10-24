@@ -19,7 +19,8 @@
       ],
       "contact_email_env": "SEC_CONTACT_EMAIL",
       "application_name": "XRPIntelligenceFeed/0.3",
-      "max_issuers_per_run": 5
+      "max_issuers_per_run": 5,
+      "detail_enrichment_limit": 0
     },
     {
       "source_id": "sec-press-releases",
