@@ -1,4 +1,9 @@
-from scripts.probe_asian_central_bank_feeds import TARGETS, _page_metadata
+from scripts.probe_asian_central_bank_feeds import (
+    TARGETS,
+    _candidate_api_routes,
+    _page_metadata,
+    _same_host_script_urls,
+)
 
 
 def test_probe_targets_known_official_bloom_and_thai_stablecoin_pages():
@@ -52,3 +57,48 @@ def test_page_metadata_rejects_external_canonical_and_deduplicates_values():
     assert "canonical" not in metadata
     assert metadata["og:title"] == ["BLOOM announcement"]
     assert metadata["twitter:title"] == ["BLOOM announcement"]
+
+
+
+def test_probe_includes_singapore_government_press_centre_routes():
+    targets = {label: (url, host) for label, url, host in TARGETS}
+    assert targets["SG Press Centre root"] == (
+        "https://www.sgpc.gov.sg/",
+        "www.sgpc.gov.sg",
+    )
+    assert targets["SG Press Centre releases page"] == (
+        "https://www.sgpc.gov.sg/home?Page=1",
+        "www.sgpc.gov.sg",
+    )
+
+
+def test_same_host_script_discovery_rejects_external_assets_and_caps_results():
+    html = """
+    <script src="/assets/app.js"></script>
+    <script src="https://www.mas.gov.sg/static/site.mjs"></script>
+    <script src="https://cdn.example.invalid/app.js"></script>
+    <script src="/assets/ignored.js"></script>
+    """
+    found = _same_host_script_urls(
+        html, "https://www.mas.gov.sg/news?page=1", "www.mas.gov.sg", limit=2
+    )
+    assert found == [
+        "https://www.mas.gov.sg/assets/app.js",
+        "https://www.mas.gov.sg/static/site.mjs",
+    ]
+
+
+def test_candidate_api_routes_extracts_routes_without_requesting_them():
+    script = r'''
+      const searchPath = "/api/v1/search?section=news";
+      const contentPath = "\\/api/v2/releases";
+      const graphqlPath = "/graphql";
+      const asset = "/assets/app.js";
+      const absolute = "https://third-party.invalid/api/data";
+    '''
+    routes = _candidate_api_routes(script)
+    assert "/api/v1/search?section=news" in routes
+    assert "/api/v2/releases" in routes
+    assert "/graphql" in routes
+    assert all(not route.startswith("https://") for route in routes)
+    assert "/assets/app.js" not in routes
