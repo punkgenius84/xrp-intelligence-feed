@@ -303,3 +303,17 @@ def test_generic_crypto_commentary_without_concrete_action_does_not_clear_gate()
     assert "crypto_ecosystem_action" not in item.relevance_categories
     assert score < 30
 
+
+def test_crypto_market_commentary_is_not_mislabeled_as_concrete_ecosystem_action():
+    item = NewsItem(
+        "Circle defends USDC economics as stablecoin rivals court its partners with bigger cut",
+        "https://example.com/circle-market-commentary",
+        "Example Crypto News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score_relevance(item)
+    assert "Circle" in item.detected_entities
+    assert "crypto_ecosystem_action" not in item.relevance_categories
+
