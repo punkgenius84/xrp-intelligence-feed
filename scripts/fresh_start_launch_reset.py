@@ -108,6 +108,47 @@ def _archive_state(state_dir: Path, archive_path: Path, *, now: datetime) -> dic
     return manifest
 
 
+def _verify_archive(archive_path: Path) -> None:
+    """Verify ZIP integrity and every archived state file before any reset writes."""
+    try:
+        with ZipFile(archive_path, "r") as archive:
+            corrupt_member = archive.testzip()
+            if corrupt_member is not None:
+                raise RuntimeError(f"archive CRC check failed for {corrupt_member!r}")
+            manifest = json.loads(archive.read("manifest.json"))
+            entries = manifest.get("files") if isinstance(manifest, dict) else None
+            if manifest.get("repository_state_reset") is not True or not isinstance(entries, list):
+                raise RuntimeError("archive manifest is missing required reset metadata")
+            listed_paths: set[str] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise RuntimeError("archive manifest contains an invalid file entry")
+                name = entry.get("path")
+                expected_bytes = entry.get("bytes")
+                expected_sha256 = entry.get("sha256")
+                if (
+                    not isinstance(name, str)
+                    or not name.startswith("state/")
+                    or name in listed_paths
+                    or type(expected_bytes) is not int
+                    or not isinstance(expected_sha256, str)
+                ):
+                    raise RuntimeError("archive manifest contains invalid file metadata")
+                data = archive.read(name)
+                if len(data) != expected_bytes:
+                    raise RuntimeError(f"archive size mismatch for {name!r}")
+                if hashlib.sha256(data).hexdigest() != expected_sha256:
+                    raise RuntimeError(f"archive SHA-256 mismatch for {name!r}")
+                listed_paths.add(name)
+            actual_paths = {name for name in archive.namelist() if name.startswith("state/")}
+            if listed_paths != actual_paths:
+                raise RuntimeError("archive manifest does not match the archived state files")
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"pre-reset archive verification failed: {exc}") from exc
+
+
 def fresh_start_reset(
     *,
     state_dir: str | Path = "state",
@@ -131,7 +172,11 @@ def fresh_start_reset(
     stamp = now or datetime.now(timezone.utc)
     if stamp.tzinfo is None:
         stamp = stamp.replace(tzinfo=timezone.utc)
-    _archive_state(root, Path(archive_path), now=stamp)
+    archive = Path(archive_path)
+    _archive_state(root, archive, now=stamp)
+    # Fail closed: never clear state unless the complete audit archive can be
+    # reopened, passes ZIP CRC checks, and matches its manifest hashes.
+    _verify_archive(archive)
 
     # Clear operational memory and both normal/intelligence delivery ledgers.
     # The quarantine store remains intact as an audit-only record.
