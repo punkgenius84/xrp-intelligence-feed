@@ -123,6 +123,8 @@ def _extract_filing_context(content: bytes) -> dict[str, Any]:
             exhibits.append(row_text[:250])
             if len(exhibits) >= 3:
                 break
+    if not items and not exhibits:
+        raise ValueError("SEC filing index contained no recognizable Items or exhibit context")
     return {"filing_items": items, "exhibit_descriptions": exhibits}
 
 
