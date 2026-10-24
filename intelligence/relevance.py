@@ -45,21 +45,35 @@ def _classify(item, combined: str) -> list[str]:
         "pilot", "pilots", "pilot program", "proof of concept", "proof-of-concept",
         "proposal", "proposals", "public hearing", "public comment", "request for comment", "requests comment",
     ))
-    digital_or_payment = any(_contains(combined, term) for term in (
+    digital_asset_topic = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
         "CBDC", "central bank digital currency", "central bank digital currencies",
-        "crypto", "stablecoin", "stablecoins", "payment", "payments",
-        "payment stablecoin", "virtual currency", "digital money", "cross-border settlement", "digital asset service provider",
-        "genius act", "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
+        "crypto", "stablecoin", "stablecoins", "payment stablecoin",
+        "virtual currency", "digital money", "digital asset service provider",
+        "genius act", "tokenized deposit", "tokenized deposits", "tokenised deposit",
+        "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
+        "tokenization", "tokenisation", "tokenized", "tokenised",
+        "real world asset", "real-world asset", "RWA",
     ))
-    if regulatory and action and digital_or_payment:
+    payment_topic = any(_contains(combined, term) for term in (
+        "payment", "payments", "cross-border settlement", "settlement",
+    ))
+    if regulatory and action and digital_asset_topic:
         categories.append("relevant_regulatory_digital_asset_payments")
+    elif regulatory and action and payment_topic:
+        categories.append("relevant_regulatory_payment_action")
     if government:
         categories.append("government")
-    if government and action and digital_or_payment:
+    if government and action and digital_asset_topic:
         categories.append("government_digital_asset_action")
-    if institutional and action and digital_or_payment:
+    elif government and action and payment_topic:
+        categories.append("government_payment_action")
+    if institutional and action and digital_asset_topic:
         categories.append("institutional_digital_asset_payment")
+    elif institutional and action and payment_topic:
+        # Preserve payment-network relevance without implying a digital-asset
+        # link when the source only describes conventional payments.
+        categories.append("institutional_payment_action")
 
     broad_tokenization = any(_contains(combined, term) for term in (
         "tokenization", "tokenisation", "tokenized", "tokenised",
@@ -87,10 +101,15 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     combined = f"{item.title} {item.summary}"
     categories = _classify(item, combined)
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
-    regulatory_relevance = "relevant_regulatory_digital_asset_payments" in categories
-    government_relevance = "government_digital_asset_action" in categories
+    regulatory_relevance = bool(set(categories) & {
+        "relevant_regulatory_digital_asset_payments", "relevant_regulatory_payment_action",
+    })
+    government_relevance = bool(set(categories) & {
+        "government_digital_asset_action", "government_payment_action",
+    })
     institutional_relevance = (
         "institutional_digital_asset_payment" in categories
+        or "institutional_payment_action" in categories
         or "institutional_tokenization_action" in categories
     )
     topical = (
