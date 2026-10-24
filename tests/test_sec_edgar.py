@@ -11,6 +11,9 @@ from discovery.http import DiscoveryHttpError, HttpResponse
 from discovery.sec_edgar import (SEC_ARCHIVES_ROOT, SECEdgarDiscovery,
                                  SEC_SUBMISSIONS_ROOT, _extract_filing_context,
                                  _filing_index_url, _filing_url, validate_sec_source)
+from intelligence.entities import detect_entities
+from intelligence.relevance import score_relevance
+from intelligence.source_quality import classify_source_quality
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sec_submissions.json"
@@ -416,3 +419,53 @@ def test_user_agent_uses_app_name_or_configured_real_contact(environment, expect
     result = SECEdgarDiscovery(sec_source(), session=Session(), environ=environment,
                                now=lambda: STAMP, request_interval=0).collect()
     assert result.status == "success"
+
+
+
+@pytest.mark.parametrize(
+    ("index_html", "expected_relevant"),
+    [
+        (
+            b"""<html><div class="infoHead">Items</div><div class="info">8.01 Other Events</div>
+            <table><tr><td>EX-99.1</td><td class="desc">Press release announcing stablecoin settlement and cross-border payments integration</td></tr></table></html>""",
+            True,
+        ),
+        (
+            b"""<html><div class="infoHead">Items</div><div class="info">5.02 Departure of Directors or Certain Officers; 9.01 Financial Statements and Exhibits</div>
+            <table><tr><td>EX-10.1</td><td class="desc">Executive employment agreement and compensation terms</td></tr></table></html>""",
+            False,
+        ),
+    ],
+)
+def test_sec_filing_context_separates_relevant_stablecoin_filing_from_generic_issuer_filing(
+    index_html, expected_relevant
+):
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["cik"] = "1679788"
+    payload["name"] = "Coinbase Global, Inc."
+    source = sec_source(issuer_ciks=["1679788"], detail_enrichment_limit=1)
+    index_url = _filing_index_url("1679788", "9999999999-26-000001")
+    http = FakeHttp([
+        response(payload),
+        HttpResponse(200, {"content-type": "text/html"}, index_html, index_url),
+    ])
+
+    result = SECEdgarDiscovery(
+        source, http=http, now=lambda: STAMP, request_interval=0, environ={}
+    ).collect()
+
+    assert result.status == "success"
+    candidate = next(item for item in result.candidates if item.document_type == "8-K")
+    assert candidate.source_native_metadata["filing_index_url"] == index_url
+    detect_entities(candidate)
+    classify_source_quality(candidate)
+    score, reasons = score_relevance(candidate)
+
+    if expected_relevant:
+        assert "Coinbase" in candidate.detected_entities
+        assert "institutional_digital_asset_payment" in candidate.relevance_categories
+        assert score >= 30, f"relevant filing missed gate: score={score}, reasons={reasons}"
+        assert "stablecoin settlement" in candidate.summary
+    else:
+        assert "Coinbase" in candidate.detected_entities
+        assert score < 30, f"generic filing unexpectedly cleared gate: score={score}, reasons={reasons}"
