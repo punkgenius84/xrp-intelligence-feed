@@ -19,6 +19,7 @@ SEC_ROOT = "https://data.sec.gov/submissions/"
 ARCHIVES_ROOT = "https://www.sec.gov/Archives/edgar/data/"
 # CIKs are included only for this read-only diagnostics probe. This does not
 # activate the production collector or modify its source configuration.
+TRACKED_FORMS = {"8-K", "10-K", "10-Q", "S-1", "S-3"}
 ISSUERS = (
     ("Coinbase Global, Inc.", "1679788"),
     ("Circle Internet Group, Inc.", "1876042"),
@@ -59,6 +60,8 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         descriptions = []
 
     counts: Counter[str] = Counter()
+    tracked_counts: Counter[str] = Counter()
+    skip_reasons: Counter[str] = Counter()
     valid_rows: list[dict[str, str]] = []
     skipped = 0
     for index in range(row_count):
@@ -68,14 +71,17 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         match = ACCESSION_RE.fullmatch(accession)
         if not match or match.group(1) != expected_cik.zfill(10):
             skipped += 1
+            skip_reasons["invalid_accession_or_cik"] += 1
             continue
         try:
             date.fromisoformat(filed)
         except ValueError:
             skipped += 1
+            skip_reasons["invalid_filing_date"] += 1
             continue
         if not form:
             skipped += 1
+            skip_reasons["missing_form"] += 1
             continue
         # primaryDocument can legitimately contain SEC-generated subpaths
         # (for example inline-XBRL directories). This probe builds only the
@@ -83,6 +89,8 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         # must not cause otherwise valid submissions rows to be discarded.
         description = str(descriptions[index] or "").strip() if index < len(descriptions) else ""
         counts[form] += 1
+        if form.upper() in TRACKED_FORMS:
+            tracked_counts[form] += 1
         accession_path = accession.replace("-", "")
         index_url = f"{ARCHIVES_ROOT}{int(expected_cik)}/{accession_path}/{accession}-index.htm"
         valid_rows.append({
@@ -100,8 +108,11 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         "recent_rows": row_count,
         "valid_rows": len(valid_rows),
         "skipped_rows": skipped,
+        "skip_reasons": dict(sorted(skip_reasons.items())),
         "form_counts": dict(sorted(counts.items())),
-        "sample": valid_rows[:3],
+        "tracked_rows": sum(tracked_counts.values()),
+        "tracked_form_counts": dict(sorted(tracked_counts.items())),
+        "sample": [row for row in valid_rows if row["form"].upper() in TRACKED_FORMS][:3],
     }
 
 
@@ -145,7 +156,9 @@ def main() -> int:
         print(
             f"issuer={label!r} cik={cik} status=valid response_name={summary['issuer_name']!r} "
             f"recent_rows={summary['recent_rows']} valid_rows={summary['valid_rows']} "
-            f"skipped_rows={summary['skipped_rows']} form_counts={json.dumps(summary['form_counts'], sort_keys=True)}"
+            f"skipped_rows={summary['skipped_rows']} tracked_rows={summary['tracked_rows']} "
+            f"tracked_form_counts={json.dumps(summary['tracked_form_counts'], sort_keys=True)} "
+            f"skip_reasons={json.dumps(summary['skip_reasons'], sort_keys=True)}"
         )
         for row in summary["sample"]:
             print(
