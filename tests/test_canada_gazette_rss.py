@@ -50,7 +50,7 @@ def response(body, *, url, status=200, headers=None, content_type="application/r
     return HttpResponse(status, headers or {"content-type": content_type, "etag": '"v1"'}, body, url)
 
 
-def rss(issue=ISSUE, date="Sat, 24 Oct 2026 00:00:00 GMT"):
+def rss(issue=ISSUE, date="Fri, 23 Oct 2026 18:00:00 GMT"):
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<rss version="2.0"><channel><title>Canada Gazette Part I</title>'
@@ -124,7 +124,7 @@ def test_rejects_non_official_issue_and_conflicting_issue_date():
     assert result.candidates == []
     assert result.state_updates == {}
 
-    http = FakeHttp([response(rss(date="Fri, 23 Oct 2026 00:00:00 GMT"), url=FEED_URL)])
+    http = FakeHttp([response(rss(date="Mon, 12 Oct 2026 00:00:00 GMT"), url=FEED_URL)])
     result = run(http)
     assert result.status == "failed"
     assert result.candidates == []
