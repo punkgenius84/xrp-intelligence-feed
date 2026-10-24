@@ -186,7 +186,7 @@ def _probe_same_host_script_assets(
     print(f"  same_host_script_assets={len(scripts)} host={expected_host}")
     for script_url in scripts:
         try:
-            response = client.get(script_url, max_bytes=1_000_000)
+            response = client.get(script_url)
         except (DiscoveryHttpError, TypeError) as exc:
             print(f"  script_asset_unavailable url={script_url} reason={type(exc).__name__}")
             continue
