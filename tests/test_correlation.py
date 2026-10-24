@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
-from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
+from intelligence.correlation import (correlate, filter_secondary_opinion_commentary,
+                                      suppress_correlated_secondary_duplicates)
 from models import NewsItem
 
 
@@ -375,3 +376,53 @@ def test_does_not_suppress_secondary_for_prior_primary_outside_one_day():
 
     assert kept == [secondary]
     assert suppressed == []
+
+
+
+def test_holds_secondary_price_prediction_but_keeps_factual_development():
+    opinion = item(
+        "XRP price prediction: analysts expect the token could reach $5",
+        "coindesk-google-news-discovery",
+        "coindesk:prediction",
+        ["XRP"],
+    )
+    opinion.source_quality = "high_signal"
+    opinion.relevance_score = 55
+    factual = item(
+        "Coinbase launches institutional custody support for a new stablecoin",
+        "theblock-google-news-discovery",
+        "theblock:custody",
+        ["Coinbase"],
+    )
+    factual.source_quality = "high_signal"
+    factual.relevance_score = 41
+
+    kept, held = filter_secondary_opinion_commentary([opinion, factual])
+
+    assert kept == [factual]
+    assert held == [opinion]
+    assert opinion.relevance_score == 55
+
+
+def test_secondary_commentary_gate_does_not_filter_primary_or_plain_price_news():
+    primary_opinion = item(
+        "XRP price prediction: analysts expect the token could reach $5",
+        "ripple-press-center",
+        "ripple:prediction",
+        ["XRP"],
+    )
+    primary_opinion.source_quality = "primary"
+    primary_opinion.relevance_score = 55
+    factual_price_news = item(
+        "XRP price rises after the regulator publishes a final rule",
+        "theblock-google-news-discovery",
+        "theblock:rule",
+        ["XRP"],
+    )
+    factual_price_news.source_quality = "high_signal"
+    factual_price_news.relevance_score = 40
+
+    kept, held = filter_secondary_opinion_commentary([primary_opinion, factual_price_news])
+
+    assert kept == [primary_opinion, factual_price_news]
+    assert held == []
