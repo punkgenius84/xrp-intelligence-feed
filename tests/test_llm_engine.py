@@ -465,5 +465,5 @@ def test_prompt_tells_model_to_cite_title_when_summary_omits_key_details():
     first = item("Common Monetary Area: Project Sunbird and Cross-Border Payments with CBDC")
     first.summary = ""
     cluster_prompt = build_cluster_user_prompt([first])
-    assert "cite the title when a claim describes the headline" in cluster_prompt
+    assert "Cite the title when a claim describes the headline" in cluster_prompt
     assert "cite the summary only for anchors actually present in the summary" in cluster_prompt
