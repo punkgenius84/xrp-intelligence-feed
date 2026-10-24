@@ -188,6 +188,8 @@ def test_unrecognized_filing_index_keeps_candidate_but_marks_source_partial():
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():
     with pytest.raises(ValueError, match="detail_enrichment_limit"):
         validate_sec_source(sec_source(detail_enrichment_limit=6))
+    with pytest.raises(ValueError, match="lookback_days"):
+        validate_sec_source(sec_source(lookback_days=366))
     with pytest.raises(DiscoveryRegistryError, match="duplicate discovery source_id"):
         validate_discovery_sources({"schema_version": 1, "sources": [sec_source(), sec_source()]})
     with pytest.raises(ValueError, match="issuer_ciks"):
