@@ -23,7 +23,7 @@ SGPC_HOSTS = {"www.sgpc.gov.sg", "sgpc.gov.sg"}
 SINGAPORE_TZ = ZoneInfo("Asia/Singapore")
 _NATIVE_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,100}$")
 _AGENCY_ABBR_RE = re.compile(r"""['"]AgencyAbbr['"]\s*:\s*['"]([A-Z0-9-]{2,20})['"]""")
-_MAX_TERMS_HARD = 12
+_MAX_TERMS_HARD = 16
 _MAX_TERMS_PER_RUN_HARD = 5
 _MAX_ITEMS_HARD = 100
 
