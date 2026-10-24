@@ -92,7 +92,16 @@ def _google_link(value: object) -> str | None:
 
 
 def _published(entry: Any) -> datetime:
-    value = entry.get("published_parsed") or entry.get("updated_parsed")
+    # Check the textual field before accessing its parsed counterpart. Feedparser
+    # currently emits a DeprecationWarning when published_parsed is absent but
+    # updated_parsed exists, because it temporarily aliases one parsed field to
+    # the other. Choose the actual published/updated field explicitly instead.
+    published_text = entry.get("published")
+    if isinstance(published_text, str) and published_text.strip():
+        value = entry.get("published_parsed")
+    else:
+        updated_text = entry.get("updated")
+        value = entry.get("updated_parsed") if isinstance(updated_text, str) and updated_text.strip() else None
     if value is None or len(value) < 6:
         raise ValueError("missing or invalid publication date")
     try:
