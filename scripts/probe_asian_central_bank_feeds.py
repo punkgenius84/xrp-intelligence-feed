@@ -183,7 +183,7 @@ def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
 
 def _route_context(script_text: str, route: str, radius: int = 220) -> str:
     """Return a short, whitespace-normalized context around a route string."""
-    normalized = script_text.replace(r"\\/", "/").replace(r"\\u002F", "/")
+    normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
     index = normalized.find(route)
     if index < 0:
         return ""
