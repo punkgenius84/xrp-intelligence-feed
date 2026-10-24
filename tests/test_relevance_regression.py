@@ -141,6 +141,7 @@ def test_observed_relevance_audit_scores_candidates_before_seen_filtering(capsys
     assert "observed=2" in output
     assert "score>=30=1" in output
     assert "Ripple announces institutional payments integration" in output
+    assert "Relevance audit qualifying candidates by source" in output
     assert direct.relevance_score >= 30
     assert generic.relevance_score < 30
 
