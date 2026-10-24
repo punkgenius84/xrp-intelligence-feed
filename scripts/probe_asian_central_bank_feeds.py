@@ -49,6 +49,18 @@ TARGETS = (
 )
 
 
+# Inspect a bounded number of same-host JavaScript bundles only on relevant official
+# index pages. The probe reports candidate API routes but never calls guessed routes.
+SCRIPT_ASSET_PROBE_LABELS = frozenset({
+    "MAS news index",
+    "SG Press Centre root",
+    "SG Press Centre releases page",
+    "BOT English news",
+    "BOT English hearings",
+    "BOT Thai hearings",
+})
+
+
 def _probe_configured_google_news_collectors() -> None:
     """Exercise the real collector in memory without enabling or saving any source."""
     print("\nREAD-ONLY collector validation; enabled flags are overridden in memory only")
@@ -561,7 +573,7 @@ def main() -> None:
                 print(f"  robots_sitemap={sitemap}")
         if "html" in content_type or b"<html" in response.content[:500].lower():
             feeds, articles = _links(text, response.url, host)
-            if label in {"MAS news index", "SG Press Centre root", "SG Press Centre releases page"}:
+            if label in SCRIPT_ASSET_PROBE_LABELS:
                 final_host = urlsplit(response.url).hostname or ""
                 _probe_same_host_script_assets(client, label, text, response.url, final_host)
             if label == "SG Press Centre releases page":
