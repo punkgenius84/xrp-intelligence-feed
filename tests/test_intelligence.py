@@ -278,3 +278,17 @@ def test_institutional_rollout_verbs_surface_tokenized_deposit_developments():
     unrelated_score, _ = score_relevance(unrelated)
     assert unrelated_score == 0
     assert "institutional_tokenization_action" not in unrelated.relevance_categories
+
+
+def test_franklin_templeton_fund_shares_on_xrp_ledger_are_classified_as_tokenization():
+    item = NewsItem(
+        "Franklin Templeton adds $150 million in fund shares to XRP Ledger, all in one wallet",
+        "https://example.com/franklin-xrp-ledger-fund-shares",
+        "CoinDesk",
+        authority_tier=2,
+        detected_entities=["XRP"],
+    )
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "xrp_ledger_tokenization_development" in item.relevance_categories
+    assert score > 0, f"XRP Ledger fund-share activity should be relevant: {reasons}"
