@@ -315,10 +315,11 @@ Do not enable routine intelligence publishing until the one-event test and subse
 
 The manual **Safe Merged Branch Cleanup** workflow can prune stale branches without reviewing the branch list by hand.
 
-- The default is **dry run**. It lists eligible branches and deletes nothing.
+- The default mode is **preview**. It lists eligible branches and deletes nothing.
 - A branch is eligible only if its current tip exactly matches the head SHA of a pull request merged into the default branch at least seven days ago.
 - Protected branches, the default branch, branches with an open pull request, branches whose tip moved after the merged PR, and branches from forks are excluded.
-- Apply mode requires setting dry run to `false` and entering the exact confirmation `DELETE-MERGED-BRANCHES`.
+- Apply mode requires explicitly selecting **delete** and entering the exact confirmation `DELETE-MERGED-BRANCHES`.
+- The job timeout is 15 minutes to accommodate repository-wide branch/PR pagination and per-branch safety rechecks.
 - Before each deletion, the workflow rechecks the branch SHA. Branches changed after inventory are skipped.
 - GitHub branch rules or permissions may still reject an individual deletion; failures are logged and do not bypass protections.
 
