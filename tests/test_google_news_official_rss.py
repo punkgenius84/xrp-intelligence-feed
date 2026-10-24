@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
+import warnings
+
+import feedparser
 
 import pytest
 
 from discovery.google_news_official_rss import (
-    GoogleNewsOfficialRSSDiscovery, METHOD, validate_google_news_source,
+    GoogleNewsOfficialRSSDiscovery, METHOD, _published, validate_google_news_source,
 )
 from discovery.dispatch import DiscoveryRegistryError, collect_source, validate_discovery_sources
 from discovery.http import DiscoveryHttpError, HttpResponse
@@ -188,3 +191,22 @@ def test_future_dated_items_are_rejected():
     result = run(FakeHttp(rss(item(date="Sun, 25 Oct 2026 12:00:00 GMT"))))
     assert result.status == "failed"
     assert result.candidates == []
+
+
+
+def test_updated_only_atom_date_does_not_use_feedparser_deprecated_alias():
+    payload = b"""<?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <title>Example feed</title>
+      <entry>
+        <title>Updated-only item</title>
+        <updated>2026-10-23T09:00:00Z</updated>
+      </entry>
+    </feed>"""
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always")
+        parsed = feedparser.parse(payload)
+        stamp = _published(parsed.entries[0])
+
+    assert stamp == datetime(2026, 10, 23, 9, tzinfo=timezone.utc)
+    assert not [warning for warning in captured if issubclass(warning.category, DeprecationWarning)]
