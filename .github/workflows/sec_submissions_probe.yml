@@ -10,6 +10,7 @@ on:
       - "tests/test_sec_submissions_probe.py"
       - "tests/fixtures/sec_submissions.json"
       - "discovery/http.py"
+      - "discovery/sec_edgar.py"
   push:
     branches: ["main"]
     paths:
@@ -18,6 +19,7 @@ on:
       - "tests/test_sec_submissions_probe.py"
       - "tests/fixtures/sec_submissions.json"
       - "discovery/http.py"
+      - "discovery/sec_edgar.py"
 
 permissions:
   contents: read

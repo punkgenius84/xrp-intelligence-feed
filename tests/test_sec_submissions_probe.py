@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.probe_sec_submissions import summarize_payload
+from scripts.probe_sec_submissions import select_index_targets, summarize_payload
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sec_submissions.json"
@@ -72,3 +72,35 @@ def test_probe_accepts_missing_optional_document_arrays():
     result = summarize_payload(data, "9999999999")
     assert result["valid_rows"] == 3
     assert all(row["description"] == "" for row in result["sample"])
+
+
+
+def test_filing_index_probe_selects_at_most_two_8k_pages():
+    summaries = [
+        ("Coinbase", "1679788", {"sample": [
+            {"form": "10-Q", "filing_index_url": "https://www.sec.gov/q"},
+            {"form": "8-K", "accession": "a", "filing_index_url": "https://www.sec.gov/a"},
+        ]}),
+        ("Circle", "1876042", {"sample": [
+            {"form": "8-K", "accession": "b", "filing_index_url": "https://www.sec.gov/b"},
+        ]}),
+        ("Visa", "1403161", {"sample": [
+            {"form": "8-K", "accession": "c", "filing_index_url": "https://www.sec.gov/c"},
+        ]}),
+    ]
+    targets = select_index_targets(summaries)
+    assert [(label, row["accession"]) for label, _, row in targets] == [
+        ("Coinbase", "a"), ("Circle", "b")
+    ]
+
+
+def test_filing_index_probe_limit_is_hard_capped_at_two():
+    with pytest.raises(ValueError, match="from 0 to 2"):
+        select_index_targets([], limit=3)
+
+
+def test_filing_index_probe_can_be_disabled_for_contract_tests():
+    summaries = [("Circle", "1876042", {"sample": [
+        {"form": "8-K", "accession": "b", "filing_index_url": "https://www.sec.gov/b"},
+    ]})]
+    assert select_index_targets(summaries, limit=0) == []
