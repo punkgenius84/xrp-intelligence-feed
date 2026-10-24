@@ -50,9 +50,13 @@ def validate_google_news_source(source: object) -> dict[str, Any]:
         raise ValueError("publisher_host must be a valid hostname")
     parts = urlsplit(source["source_url"])
     query = parse_qs(parts.query).get("q", [""])[0].casefold()
+    site_filters = re.findall(r"(?<!\\S)site:([a-z0-9.-]+)(?:/|\\s|$)", query)
+    site_operator_count = len(re.findall(r"site:", query))
+    broadened_query = bool(re.search(r"\\bor\\b|-site:", query))
     if (parts.scheme != "https" or parts.hostname not in GOOGLE_HOSTS
-            or parts.path != "/rss/search" or f"site:{host}" not in query):
-        raise ValueError("source_url must be Google News RSS search restricted to publisher_host")
+            or parts.path != "/rss/search" or site_filters != [host]
+            or site_operator_count != 1 or broadened_query):
+        raise ValueError("source_url must be a Google News RSS search restricted only to publisher_host")
     return source
 
 
