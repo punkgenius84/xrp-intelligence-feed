@@ -370,6 +370,15 @@ jobs:
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
+
+      - name: Preview queued intelligence events after inference (read-only)
+        if: github.event_name == 'schedule' && steps.feed.outcome == 'success'
+        run: python scripts/preview_intelligence_outbox.py --limit 20
+
+      - name: Preview quarantined intelligence events after inference (read-only)
+        if: github.event_name == 'schedule' && steps.feed.outcome == 'success'
+        run: python scripts/preview_intelligence_quarantine.py --limit 20
+
       - name: Save intelligence model cache
         if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) && success() && steps.ollama_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
