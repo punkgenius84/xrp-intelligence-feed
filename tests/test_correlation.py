@@ -171,7 +171,7 @@ def test_suppresses_secondary_bloom_report_when_qualifying_primary_exists():
         "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
         "mas-google-news-discovery",
         "mas:bloom",
-        ["Ripple", "Visa", "Mastercard"],
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
         day="2026-10-23",
     )
     secondary = item(
