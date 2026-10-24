@@ -7,6 +7,8 @@ from intelligence.historical_context import (
     format_historical_context,
     load_historical_context,
     select_historical_context,
+    select_prior_event_context,
+    format_prior_event_context,
 )
 from intelligence.llm.prompts import build_user_prompt
 
@@ -120,3 +122,78 @@ def test_context_captures_recent_regulatory_prime_brokerage_and_treasury_history
     treasury_record = [record for record in treasury if record["id"] == "ripple-treasury-native-digital-assets-2026"]
     assert treasury_record
     assert "not evidence that all customers use XRP or RLUSD" in treasury_record[0]["classification"]
+
+
+
+def test_prior_event_retrieval_uses_relevant_older_events_as_context():
+    events = {
+        "evt-old": {
+            "status": "superseded",
+            "summary": "Ripple announced an institutional payments partnership with a bank.",
+            "significance": "The relationship could affect cross-border settlement.",
+            "entities": ["Ripple", "institutional payments"],
+            "evidence": [{
+                "title": "Ripple and bank announce institutional payments partnership",
+                "url": "https://example.test/old-partnership",
+                "published_at": "2025-06-10T12:00:00+00:00",
+            }],
+        },
+        "evt-unrelated": {
+            "status": "active",
+            "summary": "Ripple sponsors a sports event.",
+            "significance": "A brand marketing activity.",
+            "entities": ["Ripple"],
+            "evidence": [{
+                "title": "Ripple announces sports sponsorship",
+                "url": "https://example.test/sports",
+                "published_at": "2026-10-01T12:00:00+00:00",
+            }],
+        },
+    }
+
+    records = select_prior_event_context(
+        "Ripple expands institutional payments for bank settlement",
+        "The service supports cross-border settlement.",
+        events,
+    )
+
+    assert [record["id"] for record in records] == ["evt-old"]
+    assert records[0]["status"] == "superseded"
+    assert records[0]["date"] == "2025-06-10"
+    rendered = format_prior_event_context(records)
+    assert "not current-event evidence" in rendered
+    assert "must not cite them for claims about the supplied current articles" in rendered
+
+
+def test_prior_event_retrieval_excludes_current_source_and_undated_history():
+    events = {
+        "evt-same-source": {
+            "status": "active",
+            "summary": "Ripple announced institutional payments partnership settlement.",
+            "significance": "Relevant historical background.",
+            "entities": ["Ripple"],
+            "evidence": [{
+                "title": "Ripple institutional payments partnership settlement",
+                "url": "https://example.test/current",
+                "published_at": "2026-10-20T12:00:00+00:00",
+            }],
+        },
+        "evt-undated": {
+            "status": "active",
+            "summary": "Ripple announced institutional payments partnership settlement.",
+            "significance": "Relevant historical background.",
+            "entities": ["Ripple"],
+            "evidence": [{
+                "title": "Ripple institutional payments partnership settlement",
+                "url": "https://example.test/undated",
+                "published_at": "",
+            }],
+        },
+    }
+
+    assert select_prior_event_context(
+        "Ripple institutional payments partnership settlement",
+        "A bank service was announced.",
+        events,
+        exclude_urls={"https://example.test/current"},
+    ) == []
