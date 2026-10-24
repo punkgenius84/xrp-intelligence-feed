@@ -281,3 +281,97 @@ def test_does_not_suppress_regional_cross_border_headlines_without_financial_con
 
     assert kept == [primary, secondary]
     assert suppressed == []
+
+
+
+def test_suppresses_secondary_when_primary_was_seen_in_a_previous_run():
+    from intelligence.correlation import build_correlation_card
+
+    primary = item(
+        "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        "mas-google-news-discovery",
+        "mas:bloom-prior",
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 32
+    card = build_correlation_card(primary)
+
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-later",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[card]
+    )
+
+    assert kept == []
+    assert suppressed == [secondary]
+    assert secondary.relevance_score == 55
+
+
+def test_does_not_suppress_secondary_from_legacy_history_without_quality_metadata():
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-legacy",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+    legacy_card = {
+        "candidate_id": "mas:bloom-legacy",
+        "source_id": "mas-google-news-discovery",
+        "published_at": "2026-10-23T00:00:00+00:00",
+        "high_value_entities": ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        "title_tokens": ["mas", "bank", "negara", "malaysia", "thailand", "partner", "advance", "cross", "border", "settlement", "digital", "money", "bloom"],
+        "content_hash": "legacy",
+        "last_seen": "2026-10-23T00:00:00+00:00",
+    }
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[legacy_card]
+    )
+
+    assert kept == [secondary]
+    assert suppressed == []
+
+
+def test_does_not_suppress_secondary_for_prior_primary_outside_one_day():
+    from intelligence.correlation import build_correlation_card
+
+    primary = item(
+        "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        "mas-google-news-discovery",
+        "mas:bloom-old",
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        day="2026-10-21",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 32
+    card = build_correlation_card(primary)
+
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-new",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[card]
+    )
+
+    assert kept == [secondary]
+    assert suppressed == []
