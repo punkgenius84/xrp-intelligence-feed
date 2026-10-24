@@ -48,7 +48,7 @@ REQUIRED_WEIGHTS = (
     "high_keyword", "medium_keyword", "context_keyword",
     "primary_source_bonus", "multiple_entity_bonus", "title_match_bonus", "institutional_source_bonus",
     "technical_protocol_bonus",
-    "xrp_ledger_tokenization_bonus",
+    "xrp_ledger_tokenization_bonus", "crypto_ecosystem_action_bonus",
 )
 
 
