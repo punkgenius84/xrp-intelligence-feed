@@ -27,12 +27,12 @@ def _classify(item, combined: str) -> list[str]:
             or (_contains(combined, "ODL") and bool(entities & {"Ripple", "XRP"}))):
         categories.append("ripple_payments_network")
 
-    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England"})
-    government = bool(entities & {"White House", "DOJ", "Treasury"})
+    regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
+    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
-        "propose", "proposes", "identified", "identifies", "issues", "issued", "publishes", "published",
+        "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
         "launch", "launched", "expands", "expanded", "partner", "partners", "partnered",
@@ -43,7 +43,7 @@ def _classify(item, combined: str) -> list[str]:
     digital_or_payment = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
         "crypto", "stablecoin", "stablecoins", "payment", "payments",
-        "payment stablecoin", "virtual currency", "digital asset service provider",
+        "payment stablecoin", "virtual currency", "digital money", "cross-border settlement", "digital asset service provider",
         "genius act", "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
     ))
     if regulatory and action and digital_or_payment:

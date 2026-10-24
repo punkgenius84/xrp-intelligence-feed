@@ -416,6 +416,23 @@
       "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     },
     {
+      "source_id": "mas-media-releases",
+      "name": "Monetary Authority of Singapore",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.mas.gov.sg/news/media-releases",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.mas.gov.sg",
+        "mas.gov.sg"
+      ],
+      "article_path_regex": "/news/media-releases/\\d{4}/[^/?#]+",
+      "detail_fallback_limit": 2
+    },
+    {
       "source_id": "ecb-press-releases",
       "name": "European Central Bank",
       "authority_tier": 1,
@@ -436,6 +453,17 @@
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50
+    },
+    {
+      "source_id": "canada-gazette-part-i",
+      "name": "Canada Gazette Part I",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "canada_gazette_rss",
+      "source_url": "https://gazette.gc.ca/rss/p1-eng.xml",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 100
     },
     {
       "source_id": "bank-of-england-news",

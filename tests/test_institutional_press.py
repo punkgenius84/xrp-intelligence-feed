@@ -1834,3 +1834,21 @@ def test_sitemap_parser_rejects_untrusted_urls_and_malformed_xml():
     assert kind == "urlset"
     assert entries == [("https://www.citigroup.com/global/sitemap.xml", "")]
     assert _parse_sitemap_entries(source_config, b"<broken") == ("invalid_xml", [])
+
+
+def test_mas_bloom_release_is_registered_for_official_discovery():
+    source_row = next(
+        row for row in load_discovery_sources() if row["source_id"] == "mas-media-releases"
+    )
+    assert source_row["source_url"] == "https://www.mas.gov.sg/news/media-releases"
+    assert source_row["enabled"] is True
+    assert source_row["authority_tier"] == 1
+    assert source_row["allowed_hosts"] == ["www.mas.gov.sg", "mas.gov.sg"]
+    assert _official_article(
+        source_row,
+        "https://www.mas.gov.sg/news/media-releases/2026/mas-bnm-and-bot-partner-with-industry-to-advance-cross-border-settlement-in-digital-money",
+    ) is not None
+    assert _official_article(
+        source_row,
+        "https://www.mas.gov.sg/schemes-and-initiatives/BLOOM",
+    ) is None

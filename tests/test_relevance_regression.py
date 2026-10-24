@@ -237,3 +237,49 @@ def test_generic_tokenization_commentary_remains_below_relevance_gate():
 
     assert "broad_tokenization" in item.relevance_categories
     assert score < 30, f"generic tokenization commentary unexpectedly cleared gate: {score}, {reasons}"
+
+
+def test_canada_gazette_stablecoin_regulations_clear_relevance_gate():
+    item = NewsItem(
+        title="Stablecoin Regulations",
+        summary="Canada Gazette Part I; Proposed Regulations — Finance, Dept. of — Stablecoin Act and Retail Payment Activities Act",
+        url="https://gazette.gc.ca/rp-pr/p1/2026/2026-10-24/html/reg1-eng.html",
+        source="Canada Gazette Part I",
+        source_id="canada-gazette-part-i",
+        authority_tier=1,
+        category="regulatory",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Government of Canada" in item.detected_entities
+    assert "Department of Finance Canada" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"official stablecoin regulations should clear gate: {score}, {reasons}"
+
+
+def test_bloom_central_bank_settlement_expansion_clears_relevance_gate():
+    item = NewsItem(
+        title="MAS, Bank Negara Malaysia and Bank of Thailand Partner with Industry to Advance Cross-Border Settlement in Digital Money through BLOOM",
+        summary="The initiative includes Ripple and focuses on cross-border use of digital money, tokenized deposits and regulated stablecoins.",
+        url="https://www.mas.gov.sg/news/media-releases/2026/mas-bnm-and-bot-partner-with-industry-to-advance-cross-border-settlement-in-digital-money",
+        source="Monetary Authority of Singapore",
+        source_id="mas-media-releases",
+        authority_tier=1,
+        category="regulatory",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Monetary Authority of Singapore" in item.detected_entities
+    assert "Bank Negara Malaysia" in item.detected_entities
+    assert "Bank of Thailand" in item.detected_entities
+    assert "Ripple" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"BLOOM settlement expansion should clear gate: {score}, {reasons}"
