@@ -8,8 +8,13 @@
       "category": "regulatory",
       "discovery_method": "sec_submissions",
       "source_url": "https://data.sec.gov/submissions/",
-      "enabled": true,
-      "issuer_ciks": [],
+      "enabled": false,
+      "issuer_ciks": [
+        "1679788",
+        "1876042",
+        "1633917",
+        "1403161"
+      ],
       "filing_forms": [
         "8-K",
         "10-K",
