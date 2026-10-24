@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
-from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
+from intelligence.correlation import (correlate, filter_secondary_opinion_commentary,
+                                      suppress_correlated_secondary_duplicates)
 from models import NewsItem
 
 
@@ -281,3 +282,157 @@ def test_does_not_suppress_regional_cross_border_headlines_without_financial_con
 
     assert kept == [primary, secondary]
     assert suppressed == []
+
+
+
+def test_suppresses_secondary_when_primary_was_seen_in_a_previous_run():
+    from intelligence.correlation import build_correlation_card
+
+    primary = item(
+        "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        "mas-google-news-discovery",
+        "mas:bloom-prior",
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 32
+    card = build_correlation_card(primary)
+
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-later",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[card]
+    )
+
+    assert kept == []
+    assert suppressed == [secondary]
+    assert secondary.relevance_score == 55
+
+
+def test_does_not_suppress_secondary_from_legacy_history_without_quality_metadata():
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-legacy",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+    legacy_card = {
+        "candidate_id": "mas:bloom-legacy",
+        "source_id": "mas-google-news-discovery",
+        "published_at": "2026-10-23T00:00:00+00:00",
+        "high_value_entities": ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        "title_tokens": ["mas", "bank", "negara", "malaysia", "thailand", "partner", "advance", "cross", "border", "settlement", "digital", "money", "bloom"],
+        "content_hash": "legacy",
+        "last_seen": "2026-10-23T00:00:00+00:00",
+    }
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[legacy_card]
+    )
+
+    assert kept == [secondary]
+    assert suppressed == []
+
+
+def test_does_not_suppress_secondary_for_prior_primary_outside_one_day():
+    from intelligence.correlation import build_correlation_card
+
+    primary = item(
+        "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        "mas-google-news-discovery",
+        "mas:bloom-old",
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        day="2026-10-21",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 32
+    card = build_correlation_card(primary)
+
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom-new",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-24",
+    )
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [secondary], publish_score=30, history=[card]
+    )
+
+    assert kept == [secondary]
+    assert suppressed == []
+
+
+
+def test_holds_secondary_price_prediction_but_keeps_factual_development():
+    opinion = item(
+        "XRP price prediction: analysts expect the token could reach $5",
+        "coindesk-google-news-discovery",
+        "coindesk:prediction",
+        ["XRP"],
+    )
+    opinion.source_quality = "high_signal"
+    opinion.relevance_score = 55
+    factual = item(
+        "Coinbase launches institutional custody support for a new stablecoin",
+        "theblock-google-news-discovery",
+        "theblock:custody",
+        ["Coinbase"],
+    )
+    factual.source_quality = "high_signal"
+    factual.relevance_score = 41
+
+    kept, held = filter_secondary_opinion_commentary([opinion, factual])
+
+    assert kept == [factual]
+    assert held == [opinion]
+    assert opinion.relevance_score == 55
+
+
+def test_secondary_commentary_gate_does_not_filter_primary_or_plain_price_news():
+    primary_opinion = item(
+        "XRP price prediction: analysts expect the token could reach $5",
+        "ripple-press-center",
+        "ripple:prediction",
+        ["XRP"],
+    )
+    primary_opinion.source_quality = "primary"
+    primary_opinion.relevance_score = 55
+    factual_price_news = item(
+        "XRP price rises after the regulator publishes a final rule",
+        "theblock-google-news-discovery",
+        "theblock:rule",
+        ["XRP"],
+    )
+    factual_price_news.source_quality = "high_signal"
+    factual_price_news.relevance_score = 40
+    adoption_report = item(
+        "CBDC pilot could reach 10 million users after cross-border expansion",
+        "theblock-google-news-discovery",
+        "theblock:adoption",
+        ["CBDC"],
+    )
+    adoption_report.source_quality = "high_signal"
+    adoption_report.relevance_score = 38
+
+    kept, held = filter_secondary_opinion_commentary(
+        [primary_opinion, factual_price_news, adoption_report]
+    )
+
+    assert kept == [primary_opinion, factual_price_news, adoption_report]
+    assert held == []

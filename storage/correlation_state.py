@@ -20,6 +20,7 @@ _CARD_FIELDS = {
     "content_hash",
     "last_seen",
 }
+_CARD_METADATA_FIELDS = {"source_quality", "relevance_score"}
 
 
 class CorrelationStateError(RuntimeError):
@@ -71,7 +72,7 @@ class JsonCorrelationState:
                 not isinstance(candidate_id, str)
                 or not candidate_id
                 or not isinstance(card, dict)
-                or set(card) != _CARD_FIELDS
+                or (set(card) != _CARD_FIELDS and set(card) != (_CARD_FIELDS | _CARD_METADATA_FIELDS))
                 or card.get("candidate_id") != candidate_id
                 or not isinstance(card["source_id"], str)
                 or not card["source_id"]
@@ -82,6 +83,9 @@ class JsonCorrelationState:
                 or any(not isinstance(item, str) for item in card["title_tokens"])
                 or not isinstance(card["content_hash"], str)
                 or not _valid_timestamp(card["last_seen"])
+                or ("source_quality" in card and card["source_quality"] not in {"primary", "high_signal", "discovery"})
+                or ("relevance_score" in card and (type(card["relevance_score"]) is not int or not 0 <= card["relevance_score"] <= 100))
+                or (("source_quality" in card) != ("relevance_score" in card))
             ):
                 raise CorrelationStateError("Correlation state contains an invalid card")
 
@@ -162,6 +166,8 @@ class JsonCorrelationState:
         title_tokens: list[str],
         content_hash: str,
         last_seen: datetime,
+        source_quality: str = "discovery",
+        relevance_score: int = 0,
     ) -> None:
         if not candidate_id:
             raise ValueError("correlation card candidate_id cannot be empty")
@@ -175,13 +181,20 @@ class JsonCorrelationState:
             "title_tokens": sorted(set(title_tokens)),
             "content_hash": content_hash,
             "last_seen": last_seen.astimezone(timezone.utc).isoformat(),
+            "source_quality": source_quality,
+            "relevance_score": relevance_score,
         }
 
 
     @staticmethod
-    def touch_card(state: dict[str, Any], *, candidate_id: str, last_seen: datetime) -> None:
-        """Refresh observation time without changing the bounded card contents."""
+    def touch_card(
+        state: dict[str, Any], *, candidate_id: str, last_seen: datetime,
+        source_quality: str = "discovery", relevance_score: int = 0,
+    ) -> None:
+        """Refresh observation time and upgrade legacy cards with scoring metadata."""
         card = state["cards"].get(candidate_id)
         if card is None:
             return
         card["last_seen"] = last_seen.astimezone(timezone.utc).isoformat()
+        card["source_quality"] = source_quality
+        card["relevance_score"] = relevance_score

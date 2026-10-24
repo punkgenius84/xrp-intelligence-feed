@@ -132,6 +132,8 @@ def _card_from_item(item: NewsItem) -> dict:
         "title_tokens": sorted(_tokens(item)),
         "content_hash": item.content_hash,
         "last_seen": item.collected_at.astimezone(timezone.utc).isoformat(),
+        "source_quality": item.source_quality,
+        "relevance_score": item.relevance_score,
     }
 
 
@@ -231,96 +233,151 @@ def correlate(
 
 
 
-def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
+def _same_event_duplicate_score_fields(*, left_source_id, left_entities, left_tokens, left_day, right_source_id, right_entities, right_tokens, right_day) -> int:
     """Conservative delivery-duplicate match, separate from relevance scoring."""
-    score = _candidate_score(left, right)
+    if left_source_id and left_source_id == right_source_id:
+        return 0
+    score, _ = _score_fields(left_source_id=left_source_id, left_entities=left_entities,
+                            left_tokens=left_tokens, left_day=left_day,
+                            right_source_id=right_source_id, right_entities=right_entities,
+                            right_tokens=right_tokens, right_day=right_day)
     if score >= 75:
         return score
-
-    shared_entities = (
-        set(left.detected_entities)
-        & set(right.detected_entities)
-        & _CORRELATION_ENTITIES
-    )
-    if abs((_day(left) - _day(right)).days) > 1:
+    shared_entities = left_entities & right_entities & _CORRELATION_ENTITIES
+    if abs((left_day - right_day).days) > 1:
         return score
-
-    overlap = _tokens(left) & _tokens(right)
-    event_terms = {
-        "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
-        "payment", "payments", "custody", "wallet", "ledger", "initiative",
-        "partnership", "digital", "blockchain",
-    }
-    # A few shared high-value institutions plus concrete event vocabulary can
-    # identify the same announcement even when publishers frame their headlines
-    # differently. Shared entity names alone never qualify.
+    overlap = left_tokens & right_tokens
+    event_terms = {"cross", "border", "settlement", "stablecoin", "tokenized", "tokenised", "payment", "payments", "custody", "wallet", "ledger", "initiative", "partnership", "digital", "blockchain"}
     if len(shared_entities) >= 3 and len(overlap) >= 4 and overlap & event_terms:
         return 85
-
-    # Some reports name the countries in a regional initiative rather than the
-    # same institutions. Require two shared geography tokens, multiple shared
-    # headline tokens, a cross-border/digital-finance term, and a one-day window.
-    regional_tokens = {
-        "singapore", "malaysia", "thailand", "indonesia", "philippines",
-        "vietnam", "cambodia", "laos", "myanmar", "brunei", "brazil",
-        "canada", "mexico", "india", "china", "japan", "korea", "australia",
-        "switzerland", "uae", "saudi", "europe",
-    }
+    regional_tokens = {"singapore", "malaysia", "thailand", "indonesia", "philippines", "vietnam", "cambodia", "laos", "myanmar", "brunei", "brazil", "canada", "mexico", "india", "china", "japan", "korea", "australia", "switzerland", "uae", "saudi", "europe"}
     shared_regions = overlap & regional_tokens
-    regional_finance_terms = {
-        "settlement", "stablecoin", "tokenized", "tokenised", "payment",
-        "payments", "digital", "money", "blockchain", "ledger",
-    }
-    if (
-        len(shared_regions) >= 2
-        and len(overlap) >= 4
-        and {"cross", "border"}.issubset(overlap)
-        and bool((_tokens(left) | _tokens(right)) & regional_finance_terms)
-    ):
+    regional_finance_terms = {"settlement", "stablecoin", "tokenized", "tokenised", "payment", "payments", "digital", "money", "blockchain", "ledger"}
+    if len(shared_regions) >= 2 and len(overlap) >= 4 and {"cross", "border"}.issubset(overlap) and bool((left_tokens | right_tokens) & regional_finance_terms):
         return 85
     return score
 
+def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
+    return _same_event_duplicate_score_fields(
+        left_source_id=left.source_id, left_entities=set(left.detected_entities),
+        left_tokens=_tokens(left), left_day=_day(left),
+        right_source_id=right.source_id, right_entities=set(right.detected_entities),
+        right_tokens=_tokens(right), right_day=_day(right),
+    )
+
+def _history_card_item(card: dict) -> NewsItem | None:
+    """Build a minimal comparison item from a recent card with scoring metadata."""
+    if card.get("source_quality") not in {"primary", "high_signal", "discovery"} or type(card.get("relevance_score")) is not int:
+        return None
+    try:
+        published_at = datetime.fromisoformat(card["published_at"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError):
+        return None
+    if published_at.tzinfo is None:
+        published_at = published_at.replace(tzinfo=timezone.utc)
+    return NewsItem(title=" ".join(card.get("title_tokens", [])), url="",
+                    source=card.get("source_id", ""), source_id=card.get("source_id", ""),
+                    candidate_id=card.get("candidate_id", ""),
+                    detected_entities=list(card.get("high_value_entities", [])),
+                    published_at=published_at, source_quality=card["source_quality"],
+                    relevance_score=card["relevance_score"])
 
 def suppress_correlated_secondary_duplicates(
-    items: list[NewsItem], *, publish_score: int
+    items: list[NewsItem], *, publish_score: int, history: list[dict] | None = None
 ) -> tuple[list[NewsItem], list[NewsItem]]:
-    """Prefer a qualifying tier-1 item over a correlated tier-2 copy at delivery time.
+    """Prefer a qualifying tier-1 report over a correlated tier-2 copy.
 
-    This does not alter relevance scores or the observed-candidate audit. The
-    caller should pass only currently queueable items so a stale primary story
-    cannot suppress a fresh secondary report.
+    Recent persisted primary cards can suppress later secondary coverage of an
+    event already seen in an earlier run. Legacy cards without quality/score
+    metadata fail open. This never changes relevance scores.
     """
-    primary_items = [
-        item for item in items
-        if item.source_quality == "primary" and item.relevance_score >= publish_score
-    ]
+    primary_items = [item for item in items if item.source_quality == "primary" and item.relevance_score >= publish_score]
+    historical_primaries = []
+    for card in history or []:
+        if card.get("source_quality") != "primary":
+            continue
+        if type(card.get("relevance_score")) is not int or card["relevance_score"] < publish_score:
+            continue
+        historical = _history_card_item(card)
+        if historical is not None:
+            historical_primaries.append(historical)
     kept: list[NewsItem] = []
     suppressed: list[NewsItem] = []
     for item in items:
         if item.source_quality != "high_signal" or item.relevance_score < publish_score:
             kept.append(item)
             continue
-        matches = [
-            primary for primary in primary_items
-            if primary is not item and _same_event_duplicate_score(item, primary) >= 75
-        ]
+        matches = [(primary, _same_event_duplicate_score(item, primary)) for primary in primary_items if primary is not item]
+        item_id = item.candidate_id or item.fingerprint
+        for primary in historical_primaries:
+            primary_id = primary.candidate_id or primary.fingerprint
+            if primary_id == item_id or primary.source_id == item.source_id:
+                continue
+            if abs((_day(item) - _day(primary)).days) > 1:
+                continue
+            matches.append((primary, _same_event_duplicate_score(item, primary)))
+        matches = [(candidate, score) for candidate, score in matches if score >= 75]
         if not matches:
             kept.append(item)
             continue
-        preferred = max(
-            matches,
-            key=lambda candidate: (
-                _same_event_duplicate_score(item, candidate),
-                candidate.relevance_score,
-                candidate.source_id,
-            ),
-        )
-        if item.source_id and item.source_id not in preferred.duplicate_sources:
-            preferred.duplicate_sources.append(item.source_id)
-        if item.url and item.url not in preferred.duplicate_urls:
-            preferred.duplicate_urls.append(item.url)
+        preferred, _ = max(matches, key=lambda pair: (pair[1], pair[0].relevance_score, pair[0].source_id))
+        if preferred in primary_items:
+            if item.source_id and item.source_id not in preferred.duplicate_sources:
+                preferred.duplicate_sources.append(item.source_id)
+            if item.url and item.url not in preferred.duplicate_urls:
+                preferred.duplicate_urls.append(item.url)
         suppressed.append(item)
     return kept, suppressed
+
+_SECONDARY_COMMENTARY_MARKERS = (
+    "price prediction",
+    "price predictions",
+    "price forecast",
+    "price forecasts",
+    "price outlook",
+    "price target",
+    "price targets",
+    "price analysis",
+    "technical analysis",
+    "chart analysis",
+    "analyst predicts",
+    "analysts predict",
+    "analyst expects",
+    "analysts expect",
+    "expert predicts",
+    "experts predict",
+    "price could reach",
+    "price could hit",
+    "price may reach",
+    "price might reach",
+    "could reach $",
+    "could hit $",
+    "may reach $",
+    "might reach $",
+    "how high can xrp",
+    "how high will xrp",
+)
+
+
+def filter_secondary_opinion_commentary(
+    items: list[NewsItem],
+) -> tuple[list[NewsItem], list[NewsItem]]:
+    """Hold clearly speculative price/technical-analysis headlines from tier-2 outlets.
+
+    This is a delivery eligibility gate only: it does not alter relevance scores
+    or suppress primary-source reporting. Markers are intentionally narrow so
+    factual launch, regulation, custody, payments, and protocol stories remain.
+    """
+    kept: list[NewsItem] = []
+    held: list[NewsItem] = []
+    for item in items:
+        title = unicodedata.normalize("NFKC", item.title).casefold()
+        is_commentary = item.source_quality == "high_signal" and any(
+            marker in title for marker in _SECONDARY_COMMENTARY_MARKERS
+        )
+        (held if is_commentary else kept).append(item)
+    return kept, held
+
 
 def build_correlation_card(item: NewsItem) -> dict:
     """Return the bounded memory representation for one enriched candidate."""

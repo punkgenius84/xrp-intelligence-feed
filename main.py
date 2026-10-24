@@ -20,6 +20,7 @@ from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
 from intelligence.correlation import (build_correlation_card, correlate,
+                                      filter_secondary_opinion_commentary,
                                       suppress_correlated_secondary_duplicates)
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
@@ -344,12 +345,16 @@ def run_pipeline(
                 last_seen=datetime.fromisoformat(
                     card["last_seen"].replace("Z", "+00:00")
                 ),
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
         else:
             JsonCorrelationState.touch_card(
                 correlation_state_value,
                 candidate_id=candidate_id,
                 last_seen=item.collected_at,
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
 
     # Correlation is downstream of relevance scoring and never changes scores.
@@ -360,13 +365,23 @@ def run_pipeline(
         fresh, publish_score=thresholds["publish_score"]
     )
     publishable = [item for item in fresh if item.relevance_score >= thresholds["publish_score"]]
+    publishable, held_commentary = filter_secondary_opinion_commentary(publishable)
+    if held_commentary:
+        print(
+            f"Discord: held {len(held_commentary)} secondary-source opinion/price-commentary "
+            "headline(s) from normal-feed eligibility; relevance scores unchanged"
+        )
+        for item in held_commentary[:5]:
+            print(f"  held secondary commentary: [{item.relevance_score}] {item.title} — {item.source}")
     if outbox_state is not None:
         queueable, too_old = split_stale(publishable, max_age_days)
         if too_old:
             print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
                   "were not queued for delivery")
         queueable, suppressed_duplicates = suppress_correlated_secondary_duplicates(
-            queueable, publish_score=thresholds["publish_score"]
+            queueable,
+            publish_score=thresholds["publish_score"],
+            history=list(correlation_state_value["cards"].values()),
         )
         if suppressed_duplicates:
             suppressed_ids = {id(item) for item in suppressed_duplicates}
@@ -429,6 +444,8 @@ def run_pipeline(
                 last_seen=datetime.fromisoformat(
                     card["last_seen"].replace("Z", "+00:00")
                 ),
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
     correlation_store.save(correlation_state_value)
 

@@ -18,6 +18,8 @@ def _card(candidate_id, published_at=STAMP, last_seen=STAMP, source_id="sec"):
         "title_tokens": ["asset", "digital", "ripple", "sec"],
         "content_hash": "hash-1",
         "last_seen": last_seen.isoformat(),
+        "source_quality": "primary",
+        "relevance_score": 42,
     }
 
 
@@ -40,12 +42,16 @@ def test_card_round_trips_as_thin_bounded_memory(tmp_path):
         title_tokens=["ripple", "sec", "digital", "asset"],
         content_hash="hash-1",
         last_seen=STAMP,
+        source_quality="primary",
+        relevance_score=42,
     )
     store.save(state, now=STAMP)
 
     loaded = store.load()
     assert loaded["cards"]["sec:1"] == _card("sec:1")
     assert "summary" not in loaded["cards"]["sec:1"]
+    assert loaded["cards"]["sec:1"]["source_quality"] == "primary"
+    assert loaded["cards"]["sec:1"]["relevance_score"] == 42
 
 
 def test_upsert_same_candidate_replaces_card_instead_of_duplicating(tmp_path):
@@ -60,6 +66,8 @@ def test_upsert_same_candidate_replaces_card_instead_of_duplicating(tmp_path):
         title_tokens=["old", "title"],
         content_hash="old-hash",
         last_seen=STAMP,
+        source_quality="primary",
+        relevance_score=31,
     )
     updated = STAMP + timedelta(hours=1)
     JsonCorrelationState.upsert_card(
@@ -71,10 +79,13 @@ def test_upsert_same_candidate_replaces_card_instead_of_duplicating(tmp_path):
         title_tokens=["new", "title"],
         content_hash="new-hash",
         last_seen=updated,
+        source_quality="primary",
+        relevance_score=44,
     )
     assert list(state["cards"]) == ["sec:1"]
     assert state["cards"]["sec:1"]["content_hash"] == "new-hash"
     assert state["cards"]["sec:1"]["title_tokens"] == ["new", "title"]
+    assert state["cards"]["sec:1"]["relevance_score"] == 44
 
 
 def test_retention_uses_published_at_and_then_oldest_last_seen(tmp_path):
@@ -135,9 +146,11 @@ def test_touch_card_updates_last_seen_without_replacing_card(tmp_path):
         last_seen=STAMP,
     )
     later = STAMP + timedelta(hours=2)
-    JsonCorrelationState.touch_card(state, candidate_id="sec:1", last_seen=later)
+    JsonCorrelationState.touch_card(state, candidate_id="sec:1", last_seen=later, source_quality="primary", relevance_score=43)
     assert state["cards"]["sec:1"]["content_hash"] == "hash-1"
     assert state["cards"]["sec:1"]["last_seen"] == later.isoformat()
+    assert state["cards"]["sec:1"]["source_quality"] == "primary"
+    assert state["cards"]["sec:1"]["relevance_score"] == 43
 
 
 def test_touch_missing_card_is_noop(tmp_path):
@@ -146,3 +159,25 @@ def test_touch_missing_card_is_noop(tmp_path):
         state, candidate_id="missing", last_seen=STAMP,
     )
     assert state["cards"] == {}
+
+
+
+def test_legacy_card_shape_loads_and_touch_upgrades_scoring_metadata(tmp_path):
+    store = JsonCorrelationState(tmp_path / "correlation.json")
+    legacy = _card("legacy")
+    legacy.pop("source_quality")
+    legacy.pop("relevance_score")
+    state = {"schema_version": 1, "cards": {"legacy": legacy}}
+
+    assert store._validate(state) == state
+    JsonCorrelationState.touch_card(
+        state,
+        candidate_id="legacy",
+        last_seen=STAMP + timedelta(minutes=1),
+        source_quality="primary",
+        relevance_score=37,
+    )
+
+    assert state["cards"]["legacy"]["source_quality"] == "primary"
+    assert state["cards"]["legacy"]["relevance_score"] == 37
+    assert store._validate(state) == state
