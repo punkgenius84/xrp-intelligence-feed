@@ -305,6 +305,8 @@ Inspect saved observations locally without changing state or posting to Discord:
 
 Omit `--source-id` to inspect observations from all opted-in sources. Use `--path` to inspect a copied `state/discovery.json` file. The preview is read-only.
 
+The read-only probe also tests the JSON backend behind the SEC's official full-text filing search for recent 8-K matches across the four issuers. This backend is not treated as a production API or enabled source unless the runner response, accession identity, filing items, and official document links are validated. It makes one bounded request and never downloads filing bodies.
+
 The probe keeps its newest tracked 8-K separate from the three-row summary so the bounded index-parser check is not accidentally skipped when the latest general filings are 10-Q/10-K reports.
 
 **Accession-number rule:** the first ten digits identify the EDGAR submitting account, which may be a third-party filing agent rather than the registrant. The collector must therefore validate the accession format, but build the archive path using the issuer CIK from the issuer-scoped submissions response. See the [SEC Webmaster FAQ](https://www.sec.gov/files/about/webmaster-faq.htm) for the official explanation.
