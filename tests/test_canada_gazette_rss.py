@@ -88,6 +88,18 @@ def test_canada_gazette_part_i_is_registered_as_official_source():
     assert validate_discovery_sources({"schema_version": 1, "sources": [configured]}) == [configured]
 
 
+def test_issue_index_decodes_legacy_windows_1252_html():
+    body = INDEX.replace(b"Finance, Dept. of", b"Finance, Dept. of \xee")
+    http = FakeHttp([
+        response(rss(), url=FEED_URL),
+        response(body, url=ISSUE, content_type="text/html"),
+    ])
+    result = run(http)
+    assert result.status == "success", result.errors
+    stablecoin = next(item for item in result.candidates if item.title == "Stablecoin Regulations")
+    assert "Finance, Dept. of" in stablecoin.summary
+
+
 def test_issue_index_extracts_individual_proposed_regulation_with_context():
     http = FakeHttp([
         response(rss(), url=FEED_URL),
