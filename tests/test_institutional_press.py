@@ -244,9 +244,13 @@ def test_registered_institutional_sources_are_bounded():
         "citi-press-releases", "circle-pressroom", "mastercard-press-releases",
         "coinbase-blog", "coinbase-investor-news", "jpmorgan-payments-newsroom", "bny-newsroom",
         "imf-blogs", "imf-global-financial-stability-report",
+        "swift-google-news-discovery", "imf-google-news-discovery",
     } <= ids
     assert all(item["authority_tier"] == 1 for item in sources if item["discovery_method"] == METHOD)
-    imf_sources = {item["source_id"]: item for item in sources if item["source_id"].startswith("imf-")}
+    imf_sources = {
+        item["source_id"]: item for item in sources
+        if item["source_id"].startswith("imf-") and item["discovery_method"] == METHOD
+    }
     assert set(imf_sources) == {"imf-blogs", "imf-global-financial-stability-report", "imf-media-center-news"}
     assert imf_sources["imf-blogs"]["enabled"] is False
     assert next(item for item in sources if item["source_id"] == "coinbase-blog")["track_undated_observations"] is True

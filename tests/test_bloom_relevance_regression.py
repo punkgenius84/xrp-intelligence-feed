@@ -98,6 +98,33 @@ def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
     assert "institutional_digital_asset_payment" in item.relevance_categories
 
 
+def test_imf_cbdc_cross_border_payment_report_clears_relevance_gate():
+    item = NewsItem(
+        title=(
+            "Common Monetary Area: Technical Assistance Report-Project Sunbird "
+            "and Cross-Border Payments with CBDC - International Monetary Fund | IMF"
+        ),
+        summary="Google News discovery; publisher attribution: International Monetary Fund.",
+        url="https://news.google.com/rss/articles/example-imf-cbdc-report",
+        source="International Monetary Fund",
+        source_id="imf-google-news-discovery",
+        source_quality="primary",
+        authority_tier=1,
+        category="institutional",
+        published_at=STAMP,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    item.relevance_score, item.score_reasons = score_relevance(item)
+
+    assert "International Monetary Fund" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"IMF CBDC cross-border report unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+
+
 def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     item = score_item(
         "MAS Announces Senior Leadership Changes",
@@ -123,13 +150,20 @@ def test_only_runner_validated_google_news_sources_are_enabled():
         "bot-google-news-english-discovery",
         "bot-google-news-thai-stablecoin-hearing",
         "coinbase-google-news-discovery",
+        "swift-google-news-discovery",
+        "imf-google-news-discovery",
     }
 
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # The English BOT query returned only unrelated candidates.
+    # These queries remain disabled until the live probe proves useful,
+    # correctly attributed candidates pass the relevance gate.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
+    # SWIFT's recent candidates were generic; IMF has one validated CBDC
+    # cross-border payment report that clears the relevance gate.
+    assert sources["swift-google-news-discovery"]["enabled"] is False
+    assert sources["imf-google-news-discovery"]["enabled"] is True
     # Coinbase was enabled only after the live collector found a relevant
     # stablecoin-payout story with a defensible RSS publication timestamp.
     assert sources["coinbase-google-news-discovery"]["enabled"] is True

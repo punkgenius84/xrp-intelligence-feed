@@ -62,6 +62,10 @@
       "BNY",
       "Bank of New York Mellon",
       "BNY Mellon"
+    ],
+    "International Monetary Fund": [
+      "International Monetary Fund",
+      "IMF"
     ]
   },
   "regulators": {
