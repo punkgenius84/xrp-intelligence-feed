@@ -632,3 +632,83 @@ def test_publish_feed_retains_outbox_if_delivery_history_cannot_be_saved(monkeyp
 
     assert [queued.key for queued in outbox.load()] == [item.key]
 
+
+
+
+def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monkeypatch, tmp_path, capsys):
+    from storage.correlation_state import JsonCorrelationState
+    from storage.database import JsonState
+
+    stamp = datetime(2026, 10, 23, 12, tzinfo=timezone.utc)
+    primary = main.NewsItem(
+        title="MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        url="https://www.mas.gov.sg/news/media-releases/2026/bloom",
+        source="Monetary Authority of Singapore",
+        published_at=stamp,
+        collected_at=stamp,
+        source_id="mas-google-news-discovery",
+        authority_tier=1,
+        category="regulatory",
+        candidate_id="mas:bloom-prior",
+        content_hash="primary-hash",
+        detected_entities=["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        source_quality="primary",
+        relevance_score=32,
+    )
+    card = main.build_correlation_card(primary)
+    correlation_store = JsonCorrelationState(tmp_path / "correlation.json")
+    correlation_state = correlation_store.load()
+    JsonCorrelationState.upsert_card(
+        correlation_state,
+        candidate_id=card["candidate_id"],
+        source_id=card["source_id"],
+        published_at=stamp,
+        high_value_entities=card["high_value_entities"],
+        title_tokens=card["title_tokens"],
+        content_hash=card["content_hash"],
+        last_seen=stamp,
+        source_quality="primary",
+        relevance_score=32,
+    )
+    correlation_store.save(correlation_state, now=stamp)
+
+    secondary = main.NewsItem(
+        title="Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard - The Block",
+        url="https://news.google.com/rss/articles/example",
+        source="The Block",
+        published_at=datetime(2026, 10, 24, 10, tzinfo=timezone.utc),
+        collected_at=datetime(2026, 10, 24, 10, tzinfo=timezone.utc),
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        category="technology",
+        candidate_id="theblock:bloom-later",
+    )
+
+    def collect_secondary(self):
+        return [secondary]
+
+    monkeypatch.setattr(main.RSSCollector, "collect", collect_secondary)
+    monkeypatch.setattr(
+        main,
+        "load_intelligence_config",
+        lambda: SimpleNamespace(enabled=False),
+    )
+    source = {
+        "source_id": "theblock-google-news-discovery",
+        "name": "The Block",
+        "url": "https://example.test/feed",
+        "authority_tier": 2,
+        "category": "technology",
+        "entity_coverage": ["XRP", "Ripple"],
+        "collection_type": "rss",
+    }
+
+    result = main.run_pipeline(
+        sources=[source],
+        state=JsonState(tmp_path / "seen.json"),
+        correlation_state=correlation_store,
+    )
+
+    assert result.publishable == []
+    assert secondary.relevance_score >= 30
+    assert "suppressed 1 correlated tier-2 duplicate" in capsys.readouterr().out
