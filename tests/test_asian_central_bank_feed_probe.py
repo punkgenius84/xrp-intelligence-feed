@@ -2,6 +2,7 @@ from scripts.probe_asian_central_bank_feeds import (
     TARGETS,
     _candidate_api_routes,
     _page_metadata,
+    _probe_sgpc_listing_api,
     _route_context,
     _same_host_script_urls,
 )
@@ -114,3 +115,44 @@ def test_route_context_reports_bounded_call_site_without_fetching_route():
     assert 'method: "POST"' in context
     assert len(context) <= 1500
     assert _route_context(script, "/api/missing") == ""
+
+
+
+def test_sgpc_listing_api_probe_validates_json_shape_and_reports_dated_items(capsys):
+    class Response:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        url = "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData"
+        content = (
+            b'{"result":{"items":[{"Title":"BLOOM announcement",'
+            b'"PublishDate":"23-Oct-2026","Url":"/news/media-releases/2026/bloom",'
+            b'"Agency":"MAS"}]}}'
+        )
+
+    class Client:
+        def get(self, url, *, expected_content_types):
+            assert url.startswith("https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData?")
+            assert "StartDate=" in url and "EndDate=" in url and "page=1" in url
+            assert expected_content_types == ("application/json", "text/json")
+            return Response()
+
+    _probe_sgpc_listing_api(Client())
+    output = capsys.readouterr().out
+    assert "sgpc_listing_api=valid http=200 items=1" in output
+    assert "BLOOM announcement" in output
+    assert "23-Oct-2026" in output
+
+
+def test_sgpc_listing_api_probe_rejects_redirect_to_unrelated_host(capsys):
+    class Response:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        url = "https://example.invalid/api/ApiMainListing/SubmitData"
+        content = b'{"result":{"items":[]}}'
+
+    class Client:
+        def get(self, url, *, expected_content_types):
+            return Response()
+
+    _probe_sgpc_listing_api(Client())
+    assert "sgpc_listing_api=rejected unexpected_final_host=example.invalid" in capsys.readouterr().out
