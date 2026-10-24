@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -127,13 +128,12 @@ def select_prior_event_context(
             if not url.startswith("https://") or url in excluded:
                 continue
             try:
-                parsed = __import__("datetime").datetime.fromisoformat(
+                parsed = datetime.fromisoformat(
                     published_at.strip().replace("Z", "+00:00")
                 )
             except ValueError:
                 continue
             if parsed.tzinfo is None:
-                from datetime import timezone
                 parsed = parsed.replace(tzinfo=timezone.utc)
             dated_evidence.append({
                 "title": evidence_title.strip(),
