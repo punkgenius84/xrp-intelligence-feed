@@ -92,14 +92,14 @@ def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
 
 def test_swift_google_news_fallback_is_publisher_restricted_and_enabled_after_live_validation():
     from discovery.dispatch import load_discovery_sources
-    from urllib.parse import unquote
+    from urllib.parse import unquote_plus
 
     configured = load_discovery_sources()
     source = next(item for item in configured if item["source_id"] == "swift-google-news-discovery")
     assert source["enabled"] is True
     assert source["publisher_host"] == "swift.com"
     assert validate_google_news_source(source) == source
-    query = unquote(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+    query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
     assert query.startswith("site:swift.com ")
     assert "blockchain" in query
     assert "tokenized deposits" in query
