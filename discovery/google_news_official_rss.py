@@ -54,7 +54,7 @@ def validate_google_news_source(source: object) -> dict[str, Any]:
     site_operator_count = len(re.findall(r"site:", query))
     depth = 0
     unsafe_or = False
-    for token in re.finditer(r"\(|\)|\bor\b", query):
+    for token in re.finditer(r"\(|\)|(?<![\w.-])or(?![\w.-])", query):
         if token.group() == "(":
             depth += 1
         elif token.group() == ")":
