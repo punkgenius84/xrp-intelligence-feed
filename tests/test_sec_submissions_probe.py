@@ -79,9 +79,21 @@ def test_probe_accepts_missing_optional_document_arrays():
 def test_probe_summary_preserves_latest_8k_even_when_general_sample_has_only_other_forms():
     data = payload()
     recent = data["filings"]["recent"]
-    recent["form"] = ["10-Q", "10-K", "8-K"]
+    recent["accessionNumber"] = [
+        "9999999999-26-000010",
+        "9999999999-26-000009",
+        "9999999999-26-000008",
+        "9999999999-26-000007",
+        "9999999999-26-000006",
+    ]
+    recent["form"] = ["10-Q", "10-K", "10-Q", "8-K", "8-K"]
+    recent["filingDate"] = [
+        "2026-10-10", "2026-10-09", "2026-10-08", "2026-10-07", "2026-10-06"
+    ]
     result = summarize_payload(data, "9999999999")
-    assert [row["form"] for row in result["sample"]] == ["8-K", "10-K", "10-Q"] or len(result["sample"]) == 3
+    assert [row["form"] for row in result["sample"]] == ["10-Q", "10-K", "10-Q"]
+    assert result["latest_8k"]["form"] == "8-K"
+    assert result["latest_8k"]["date"] == "2026-10-07"
     assert result["latest_8k"]["form"] == "8-K"
 
 
