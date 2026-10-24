@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time as day_time, timezone
+from datetime import datetime, time as day_time, timedelta, timezone
 from html import unescape
 from hashlib import sha256
 import json
@@ -29,7 +29,7 @@ def validate_sec_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "issuer_ciks", "filing_forms", "contact_email_env",
         "application_name", "max_issuers_per_run",
     }
-    optional = {"detail_enrichment_limit"}
+    optional = {"detail_enrichment_limit", "lookback_days"}
     if not isinstance(source, dict) or not required.issubset(source) or set(source) - required - optional:
         raise ValueError(f"SEC source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url",
@@ -68,6 +68,9 @@ def validate_sec_source(source: object) -> dict[str, Any]:
     enrichment_limit = source.get("detail_enrichment_limit", 0)
     if type(enrichment_limit) is not int or not 0 <= enrichment_limit <= 2:
         raise ValueError("detail_enrichment_limit must be from 0 to 2")
+    lookback_days = source.get("lookback_days", 30)
+    if type(lookback_days) is not int or not 1 <= lookback_days <= 365:
+        raise ValueError("lookback_days must be from 1 to 365")
     return source
 
 
@@ -236,6 +239,10 @@ class SECEdgarDiscovery:
             seen_accessions.add(accession)
             try:
                 published = _parse_filing_date(filing_date)
+                if published.date() < fetched_at.date() - timedelta(
+                    days=self.source.get("lookback_days", 30)
+                ):
+                    continue
                 filing_url = _filing_url(cik, accession, row["primaryDocument"])
             except ValueError as exc:
                 errors.append(str(exc))
