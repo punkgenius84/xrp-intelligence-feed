@@ -242,3 +242,64 @@ def test_institutional_rollout_verbs_surface_tokenized_deposit_developments():
     unrelated_score, _ = score_relevance(unrelated)
     assert unrelated_score == 0
     assert "institutional_tokenization_action" not in unrelated.relevance_categories
+
+
+def test_tether_investigative_payment_headline_clears_gate_without_xrp():
+    item = NewsItem(
+        "Sen. Blumenthal seeks answers from Tether over payments to firm founded by ex-White House crypto adviser",
+        "https://example.com/tether-inquiry",
+        "The Block",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "Tether" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"material crypto oversight investigation should clear gate: {score}, {reasons}"
+    assert "direct_xrp_xrpl" not in item.relevance_categories
+
+
+def test_non_xrp_protocol_upgrade_surfaces_as_crypto_ecosystem_action():
+    item = NewsItem(
+        "Ethereum announces blockchain protocol upgrade",
+        "https://example.com/ethereum-upgrade",
+        "Example Crypto News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "Ethereum" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"concrete non-XRP protocol development should clear gate: {score}, {reasons}"
+
+
+def test_crypto_entity_alone_does_not_make_unrelated_corporate_news_relevant():
+    item = NewsItem(
+        "Tether announces employee wellness program",
+        "https://example.com/tether-wellness",
+        "Example News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "Tether" in item.detected_entities
+    assert "crypto_ecosystem_action" not in item.relevance_categories
+    assert score == 0
+
+
+def test_generic_crypto_commentary_without_concrete_action_does_not_clear_gate():
+    item = NewsItem(
+        "Bitcoin and Ethereum remain topics of market commentary",
+        "https://example.com/crypto-commentary",
+        "Example News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "crypto_ecosystem_action" not in item.relevance_categories
+    assert score < 30
+
