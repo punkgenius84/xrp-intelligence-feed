@@ -123,13 +123,18 @@ def test_only_runner_validated_google_news_sources_are_enabled():
         "bot-google-news-english-discovery",
         "bot-google-news-thai-stablecoin-hearing",
         "coinbase-google-news-discovery",
+        "swift-google-news-discovery",
+        "imf-google-news-discovery",
     }
 
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # The English BOT query returned only unrelated candidates.
+    # These queries remain disabled until the live probe proves useful,
+    # correctly attributed candidates pass the relevance gate.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
+    assert sources["swift-google-news-discovery"]["enabled"] is False
+    assert sources["imf-google-news-discovery"]["enabled"] is False
     # Coinbase was enabled only after the live collector found a relevant
     # stablecoin-payout story with a defensible RSS publication timestamp.
     assert sources["coinbase-google-news-discovery"]["enabled"] is True
