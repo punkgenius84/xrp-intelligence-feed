@@ -168,6 +168,7 @@ def validate_institutional_source(source: object) -> dict[str, Any]:
             or any(
                 not isinstance(prefix, str)
                 or not prefix.startswith("/")
+                or prefix.startswith("//")
                 or not prefix.endswith("/")
                 or "?" in prefix
                 or "#" in prefix
