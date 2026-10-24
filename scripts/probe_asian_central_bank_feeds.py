@@ -163,7 +163,7 @@ def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
     """Extract likely same-site content/API route strings; never request them here."""
     normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
     pattern = re.compile(
-        r"""["'\x60]((?:/api(?:/v[0-9]+)?|/graphql|/search|/news(?:/|\\?)|"""
+        r"""["'\x60]((?:/api(?:/v[0-9]+)?|/graphql|/search|/news(?:/|\?)|"""
         r"""/media-releases/|/content/|/umbraco/)[^"'\x60\s]{0,160})["'\x60]""",
         re.IGNORECASE,
     )
