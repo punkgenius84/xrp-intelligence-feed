@@ -92,17 +92,21 @@ def _google_link(value: object) -> str | None:
 
 
 def _published(entry: Any) -> datetime:
-    # Check the textual field before accessing its parsed counterpart. Feedparser
-    # currently emits a DeprecationWarning when published_parsed is absent but
-    # updated_parsed exists, because it temporarily aliases one parsed field to
-    # the other. Choose the actual published/updated field explicitly instead.
-    published_text = entry.get("published")
-    if isinstance(published_text, str) and published_text.strip():
-        value = entry.get("published_parsed")
+    # FeedParserDict aliases updated -> published and updated_parsed ->
+    # published_parsed on lookup when the published fields are absent. Inspect
+    # actual keys first so we never invoke those deprecated aliases and never
+    # confuse an update timestamp with a publication timestamp.
+    keys = set(entry.keys()) if hasattr(entry, "keys") else set()
+    if "published" in keys:
+        text_value = entry.get("published")
+        value = entry.get("published_parsed") if "published_parsed" in keys else None
+    elif "updated" in keys:
+        text_value = entry.get("updated")
+        value = entry.get("updated_parsed") if "updated_parsed" in keys else None
     else:
-        updated_text = entry.get("updated")
-        value = entry.get("updated_parsed") if isinstance(updated_text, str) and updated_text.strip() else None
-    if value is None or len(value) < 6:
+        text_value = None
+        value = None
+    if not isinstance(text_value, str) or not text_value.strip() or value is None or len(value) < 6:
         raise ValueError("missing or invalid publication date")
     try:
         return datetime(*value[:6], tzinfo=timezone.utc)
