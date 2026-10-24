@@ -579,6 +579,71 @@
       "max_items": 100,
       "publisher_host": "imf.org",
       "publisher_name": "International Monetary Fund"
+    },
+    {
+      "source_id": "coindesk-google-news-discovery",
+      "name": "CoinDesk (Google News discovery probe)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coindesk.com",
+      "publisher_name": "CoinDesk"
+    },
+    {
+      "source_id": "cointelegraph-google-news-discovery",
+      "name": "Cointelegraph (Google News discovery probe)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acointelegraph.com%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "cointelegraph.com",
+      "publisher_name": "Cointelegraph"
+    },
+    {
+      "source_id": "theblock-google-news-discovery",
+      "name": "The Block (Google News discovery probe)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Atheblock.co%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "theblock.co",
+      "publisher_name": "The Block"
+    },
+    {
+      "source_id": "blockworks-google-news-discovery",
+      "name": "Blockworks (Google News discovery probe)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Ablockworks.co%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "blockworks.co",
+      "publisher_name": "Blockworks"
+    },
+    {
+      "source_id": "dlnews-google-news-discovery",
+      "name": "DL News (Google News discovery probe)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Adlnews.com%20(XRP%20OR%20Ripple%20OR%20RLUSD%20OR%20XRPL%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20CBDC%20OR%20blockchain%20OR%20%22cross-border%20payments%22%20OR%20Asia%20OR%20ETF%20OR%20regulation%20OR%20%22digital%20assets%22%20OR%20%22digital%20asset%22%20OR%20%22bank%20partnership%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "dlnews.com",
+      "publisher_name": "DL News"
     }
   ]
 }

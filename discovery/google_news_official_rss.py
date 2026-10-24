@@ -37,8 +37,8 @@ def validate_google_news_source(source: object) -> dict[str, Any]:
         hint = source["context_hint"]
         if not isinstance(hint, str) or not hint.strip() or len(hint.strip()) > 200:
             raise ValueError("context_hint must be a non-empty string of at most 200 characters")
-    if type(source["authority_tier"]) is not int or source["authority_tier"] != 1:
-        raise ValueError("Google News official RSS authority_tier must be 1")
+    if type(source["authority_tier"]) is not int or source["authority_tier"] not in {1, 2}:
+        raise ValueError("Google News official RSS authority_tier must be 1 (official) or 2 (secondary media)")
     if type(source["enabled"]) is not bool:
         raise ValueError("enabled must be boolean")
     if type(source["lookback_days"]) is not int or not 1 <= source["lookback_days"] <= 365:
