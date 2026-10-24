@@ -132,6 +132,8 @@ def _card_from_item(item: NewsItem) -> dict:
         "title_tokens": sorted(_tokens(item)),
         "content_hash": item.content_hash,
         "last_seen": item.collected_at.astimezone(timezone.utc).isoformat(),
+        "source_quality": item.source_quality,
+        "relevance_score": item.relevance_score,
     }
 
 
