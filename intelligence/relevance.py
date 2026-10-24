@@ -54,10 +54,7 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
-    government = bool(entities & {
-        "White House", "DOJ", "Treasury", "Government of Canada",
-        "China", "Singapore", "Malaysia", "Thailand",
-    })
+    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
@@ -99,10 +96,7 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("relevant_regulatory_payment_action")
     if government:
         categories.append("government")
-    government_initiative_action = any(_contains(combined, phrase) for phrase in (
-        "join", "targets 2030", "network buildout", "buildout target",
-    ))
-    if government and (action or government_initiative_action) and digital_asset_topic:
+    if government and action and digital_asset_topic:
         categories.append("government_digital_asset_action")
     elif government and action and payment_topic:
         categories.append("government_payment_action")
