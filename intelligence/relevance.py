@@ -118,6 +118,7 @@ def _classify(item, combined: str) -> list[str]:
     ecosystem_context = any(_contains(combined, term) for term in (
         "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
         "payments", "payment", "blockchain", "token", "tokenized", "tokenised",
+        "stock", "stocks", "equity", "equities", "shares", "securities",
         "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
         "sanctions", "money laundering", "market manipulation", "fraud",
         "investigation", "investigates", "probes", "probe", "seeks answers",
@@ -128,7 +129,8 @@ def _classify(item, combined: str) -> list[str]:
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
         "announces", "announced", "partnered", "integrates",
-        "integrated", "upgrades", "upgraded", "mints", "minted", "issues",
+        "integrated", "upgrades", "upgraded", "mints", "minted", "lists",
+        "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
         "issued", "expands", "expanded", "connects", "connected", "adds",
         "added", "opens", "opened", "releases", "released", "rolls out",
         "rolled out", "goes live", "went live", "implements", "implemented",
