@@ -1186,7 +1186,7 @@ def _parse_article_detail(source: dict[str, Any], href: str, content: bytes) -> 
     meta_dates: set[datetime] = set()
     for meta in re.finditer(r"<meta\b(?P<attrs>[^>]*)>", text, re.IGNORECASE | re.DOTALL):
         attrs = {
-            key.casefold(): next(value for value in values if value != "")
+            key.casefold(): next((value for value in values if value != ""), "")
             for key, *values in re.findall(
                 r"""([a-zA-Z_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""",
                 meta.group("attrs"),
