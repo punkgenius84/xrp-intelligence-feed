@@ -200,6 +200,8 @@ def test_malformed_rows_mark_source_partial_without_dropping_valid_release():
     "https://www.sgpc.gov.sg.evil.example/media_releases/mas/press_release/P-20261023-1",
     "https://www.sgpc.gov.sg/other/route",
     "https://www.sgpc.gov.sg/media_releases/../private",
+    "https://www.sgpc.gov.sg/media_releases/%2e%2e/private",
+    "https://www.sgpc.gov.sg/media_releases/mas%2f..%2fprivate/press_release/P-20261023-1",
     "https://user:pass@www.sgpc.gov.sg/media_releases/mas/press_release/P-20261023-1",
 ])
 def test_official_article_url_rejects_untrusted_routes(url):
