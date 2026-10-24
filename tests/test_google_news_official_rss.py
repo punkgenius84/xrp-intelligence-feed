@@ -90,6 +90,30 @@ def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
         validate_google_news_source(invalid)
 
 
+def test_secondary_crypto_news_discovery_probes_are_restricted_and_disabled():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote_plus
+
+    configured = load_discovery_sources()
+    by_id = {item["source_id"]: item for item in configured}
+    expected = {
+        "coindesk-google-news-discovery": "coindesk.com",
+        "cointelegraph-google-news-discovery": "cointelegraph.com",
+        "theblock-google-news-discovery": "theblock.co",
+        "blockworks-google-news-discovery": "blockworks.co",
+        "dlnews-google-news-discovery": "dlnews.com",
+    }
+    for source_id, host in expected.items():
+        source = by_id[source_id]
+        assert source["enabled"] is False
+        assert source["authority_tier"] == 2
+        assert source["publisher_host"] == host
+        assert validate_google_news_source(source) == source
+        query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+        assert query.startswith(f"site:{host} ")
+        assert "XRP" in query and "stablecoin" in query and "blockchain" in query
+
+
 def test_swift_google_news_fallback_is_publisher_restricted_and_enabled_after_live_validation():
     from discovery.dispatch import load_discovery_sources
     from urllib.parse import unquote_plus
