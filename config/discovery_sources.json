@@ -594,6 +594,19 @@
       "publisher_name": "CoinDesk"
     },
     {
+      "source_id": "coindesk-xrpl-technical-google-news-discovery",
+      "name": "CoinDesk (XRPL protocol and institutional developments Google News discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com+(XRP+OR+Ripple+OR+XRPL+OR+RLUSD+OR+stablecoin+OR+blockchain)+(validator+OR+amendment+OR+bug+OR+upgrade+OR+protocol+OR+custody+OR+stablecoin+OR+payments+OR+tokenization)&hl=en&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coindesk.com",
+      "publisher_name": "CoinDesk"
+    },
+    {
       "source_id": "cointelegraph-google-news-discovery",
       "name": "Cointelegraph (Google News discovery probe)",
       "authority_tier": 2,
