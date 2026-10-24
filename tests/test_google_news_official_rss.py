@@ -143,7 +143,7 @@ def test_google_news_source_requires_domain_restricted_query():
     {"publisher_host": "mas.gov.sg.evil.example"},
     {"source_url": "https://evil.example/rss/search?q=site%3Amas.gov.sg"},
     {"enabled": "yes"},
-    {"authority_tier": 2},
+    {"authority_tier": 3},
     {"max_items": 101},
 ])
 def test_invalid_source_contract_fails_closed(changes):
