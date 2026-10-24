@@ -181,7 +181,7 @@ def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
     return routes
 
 
-def _route_context(script_text: str, route: str, radius: int = 220) -> str:
+def _route_context(script_text: str, route: str, radius: int = 650) -> str:
     """Return a short, whitespace-normalized context around a route string."""
     normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
     index = normalized.find(route)
@@ -189,7 +189,7 @@ def _route_context(script_text: str, route: str, radius: int = 220) -> str:
         return ""
     start = max(0, index - max(0, radius))
     end = min(len(normalized), index + len(route) + max(0, radius))
-    return " ".join(normalized[start:end].split())[:700]
+    return " ".join(normalized[start:end].split())[:1500]
 
 
 def _probe_same_host_script_assets(
