@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 import json
 import os
 from pathlib import Path
@@ -173,7 +173,7 @@ def summarize_efts_payload(payload: object, limit: int = 10) -> dict[str, object
 def _probe_efts(client: BoundedHttpClient, email: str) -> bool:
     """Read-only diagnostic for the JSON backend behind SEC full-text search."""
     today = date.today()
-    start = today - __import__("datetime").timedelta(days=30)
+    start = today - timedelta(days=30)
     params = {
         "q": 'stablecoin OR "digital asset" OR tokenization OR tokenisation OR blockchain OR CBDC OR "tokenized deposits"',
         "forms": "8-K",
