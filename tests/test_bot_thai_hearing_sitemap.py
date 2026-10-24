@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from discovery.dispatch import load_discovery_sources
 from discovery.http import HttpResponse
 from discovery.institutional_press import (
@@ -110,3 +112,15 @@ def test_bot_sitemap_collector_finds_dated_stablecoin_hearing_without_using_site
     assert OLD_URL in http.calls
     assert all("evil.example" not in url for url in http.calls)
     assert not any("/en/" in url for url in http.calls)
+
+
+def test_sitemap_path_prefix_configuration_fails_closed():
+    source = bot_source()
+    with pytest.raises(ValueError, match="sitemap_path_prefixes"):
+        validate_institutional_source({**source, "sitemap_path_prefixes": ["/th/../global/"]})
+    with pytest.raises(ValueError, match="sitemap_path_prefixes"):
+        validate_institutional_source({**source, "sitemap_path_prefixes": ["//evil/"]})
+    invalid = {**source}
+    invalid.pop("sitemap_url")
+    with pytest.raises(ValueError, match="sitemap_path_prefixes"):
+        validate_institutional_source(invalid)
