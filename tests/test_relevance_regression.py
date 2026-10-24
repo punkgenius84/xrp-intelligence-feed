@@ -283,3 +283,24 @@ def test_bloom_central_bank_settlement_expansion_clears_relevance_gate():
     assert "Ripple" in item.detected_entities
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
     assert score >= 30, f"BLOOM settlement expansion should clear gate: {score}, {reasons}"
+
+
+def test_bnm_tokenized_bond_launch_clears_relevance_gate():
+    item = NewsItem(
+        title="BNM launches SSDS+: Powering digital and tokenised bond and sukuk issuance",
+        summary="Bank Negara Malaysia launched a digital securities issuance service supporting tokenised bonds and sukuk.",
+        url="https://www.bnm.gov.my/-/ssds-plus",
+        source="Bank Negara Malaysia",
+        source_id="bnm-press-releases",
+        authority_tier=1,
+        category="regulatory",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Bank Negara Malaysia" in item.detected_entities
+    assert "regulatory_tokenization_action" in item.relevance_categories
+    assert score >= 30, f"central-bank tokenization launch should clear gate: {score}, {reasons}"
