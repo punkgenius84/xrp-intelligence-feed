@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
@@ -246,6 +247,49 @@ def _probe_sgpc_listing_api(client: BoundedHttpClient) -> None:
         print(f"    sgpc_item_fields={json.dumps(safe, ensure_ascii=False, sort_keys=True)}")
 
 
+def _probe_sgpc_search_terms(client: BoundedHttpClient) -> None:
+    """Check whether the first-party listing API supports targeted keyword queries."""
+    end_date = datetime.now(timezone.utc).date()
+    start_date = end_date - timedelta(days=30)
+    for index, term in enumerate(("BLOOM", "stablecoin", "digital money", "Ripple", "XRP")):
+        if index:
+            time.sleep(1.0)
+        params = {
+            "StartDate": start_date.strftime("%d-%b-%Y"),
+            "EndDate": end_date.strftime("%d-%b-%Y"),
+            "KeySearch": term,
+            "page": "1",
+        }
+        url = "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData?" + urlencode(params)
+        try:
+            response = client.get(url, expected_content_types=("application/json", "text/json"))
+        except DiscoveryHttpError as exc:
+            status = f" http_status={exc.status_code}" if exc.status_code else ""
+            print(f"  sgpc_search term={term!r} status=unavailable reason={exc.kind}{status}")
+            continue
+        if urlsplit(response.url).hostname != "www.sgpc.gov.sg":
+            print(f"  sgpc_search term={term!r} status=rejected final_host={urlsplit(response.url).hostname}")
+            continue
+        try:
+            payload = json.loads(response.content.decode("utf-8"))
+        except (UnicodeError, json.JSONDecodeError):
+            print(f"  sgpc_search term={term!r} status=invalid_json")
+            continue
+        result = payload.get("result") if isinstance(payload, dict) else None
+        items = result.get("items") if isinstance(result, dict) else None
+        if not isinstance(items, list):
+            print(f"  sgpc_search term={term!r} status=unexpected_shape")
+            continue
+        print(f"  sgpc_search term={term!r} status=valid items={len(items)}")
+        for item in items[:3]:
+            if isinstance(item, dict):
+                print(
+                    f"    sgpc_search_item title={str(item.get('Title', ''))[:180]!r} "
+                    f"date={str(item.get('DateTime', ''))[:40]!r} "
+                    f"url={str(item.get('Url', ''))[:200]!r}"
+                )
+
+
 def _probe_same_host_script_assets(
     client: BoundedHttpClient, label: str, html: str, page_url: str, expected_host: str
 ) -> None:
@@ -326,6 +370,44 @@ def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, li
                 add("jsonld." + key, value)
 
     return found
+
+
+def _probe_sgpc_collector() -> None:
+    """Exercise the configured SGPC collector in memory; never save state or publish."""
+    try:
+        sources = load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+        source = next(item for item in sources if item.get("source_id") == "sgpc-media-releases-api")
+    except Exception as exc:
+        print(f"sgpc_collector_registry_error={type(exc).__name__}: {exc}")
+        return
+    try:
+        result = collect_source(source, {})
+    except Exception as exc:
+        print(f"sgpc_collector status=error error={type(exc).__name__}: {exc}")
+        return
+    bloom = [item for item in result.candidates if "BLOOM" in item.title.upper()]
+    print(
+        f"sgpc_collector configured_enabled={source['enabled']} status={result.status} "
+        f"candidates={len(result.candidates)} errors={len(result.errors)} "
+        f"requests_made={result.pagination.get('requests_made', 0)} "
+        f"bloom_candidates={len(bloom)}"
+    )
+    for error in result.errors[:5]:
+        print(f"  sgpc_collector_error={error}")
+    for item in sorted(
+        result.candidates,
+        key=lambda candidate: (candidate.published_at or datetime.min.replace(tzinfo=timezone.utc), candidate.title),
+        reverse=True,
+    )[:8]:
+        detect_entities(item)
+        classify_source_quality(item)
+        score, reasons = score_relevance(item)
+        print(
+            f"  sgpc_candidate date={item.published_at.isoformat() if item.published_at else 'unknown'} "
+            f"score={score} title={item.title[:200]!r} url={item.url}"
+        )
+    if bloom:
+        print(f"  sgpc_bloom_official_url={bloom[0].url}")
 
 
 def _probe_secondary_source_duplicate_gate() -> None:
@@ -484,6 +566,7 @@ def main() -> None:
                 _probe_same_host_script_assets(client, label, text, response.url, final_host)
             if label == "SG Press Centre releases page":
                 _probe_sgpc_listing_api(client)
+                _probe_sgpc_search_terms(client)
             metadata = _page_metadata(text, response.url, host)
             for key, values in sorted(metadata.items()):
                 for value in values[:3]:
@@ -537,6 +620,7 @@ def main() -> None:
             if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
+    _probe_sgpc_collector()
     _probe_configured_google_news_collectors()
     _probe_secondary_source_duplicate_gate()
 

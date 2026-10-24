@@ -502,6 +502,36 @@
       "max_items": 50
     },
     {
+      "source_id": "sgpc-media-releases-api",
+      "name": "Singapore Government Press Centre",
+      "authority_tier": 1,
+      "category": "government",
+      "discovery_method": "sgpc_media_releases_api",
+      "source_url": "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData",
+      "enabled": true,
+      "lookback_days": 30,
+      "search_terms": [
+        "BLOOM",
+        "stablecoin",
+        "digital money",
+        "digital asset",
+        "Ripple",
+        "XRP",
+        "tokenized",
+        "tokenised",
+        "blockchain",
+        "CBDC",
+        "cross-border payments",
+        "payments",
+        "settlement",
+        "cross-border",
+        "central bank digital currency",
+        "digital currency"
+      ],
+      "max_terms_per_run": 4,
+      "max_items": 100
+    },
+    {
       "source_id": "mas-google-news-discovery",
       "name": "Monetary Authority of Singapore (Google News discovery)",
       "authority_tier": 1,

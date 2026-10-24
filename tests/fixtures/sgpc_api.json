@@ -1,0 +1,24 @@
+{
+  "result": {
+    "currentPage": 1,
+    "totalPagesCount": 1,
+    "items": [
+      {
+        "MediaReleaseId": "456e3db0-935f-4dde-9f17-6d4b01a8eb93",
+        "Title": "MAS, Bank Negara Malaysia and Bank of Thailand Partner with Industry to Advance Cross-Border Settlement in Digital Money through BLOOM",
+        "DateTime": "2026-10-23T10:00:00",
+        "Url": "/media_releases/mas/press_release/P-20261023-1",
+        "AgencyAbbr": null,
+        "SgpcAgencyAgency": "{'AgencyAbbr': 'MAS'}"
+      },
+      {
+        "MediaReleaseId": "169e5852-f217-4871-a72f-9c2ed59c6fae",
+        "Title": "FPDA Militaries Participate in Exercise Bersama Lima 2026",
+        "DateTime": "2026-10-23T18:28:00",
+        "Url": "/media_releases/mindef/press_release/P-20261023-4",
+        "AgencyAbbr": null,
+        "SgpcAgencyAgency": "{'AgencyAbbr': 'MINDEF'}"
+      }
+    ]
+  }
+}

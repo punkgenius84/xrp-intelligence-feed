@@ -31,6 +31,7 @@ from discovery.ripple_press_center import RipplePressCenterDiscovery, validate_r
 from discovery.xrpl_blog import XRPLBlogDiscovery, validate_xrpl_source
 from discovery.white_house_actions import WhiteHouseActionsDiscovery, validate_white_house_source
 from discovery.google_news_official_rss import GoogleNewsOfficialRSSDiscovery, validate_google_news_source
+from discovery.sgpc_api import SGPCMediaReleasesDiscovery, validate_sgpc_source
 
 
 class DiscoveryRegistryError(ValueError):
@@ -75,6 +76,7 @@ def validate_discovery_sources(payload: object) -> list[dict[str, Any]]:
             "ripple_press_center_html": validate_ripple_source,
             "xrpl_blog_html": validate_xrpl_source,
             "google_news_official_rss": validate_google_news_source,
+            "sgpc_media_releases_api": validate_sgpc_source,
         }.get(method)
         if validator is None:
             raise DiscoveryRegistryError(f"{label}: unsupported discovery_method {method!r}")
@@ -144,6 +146,8 @@ def create_strategy(source: dict[str, Any], **kwargs: Any) -> DiscoveryStrategy:
         return XRPLBlogDiscovery(source, **kwargs)
     if method == "google_news_official_rss":
         return GoogleNewsOfficialRSSDiscovery(source, **kwargs)
+    if method == "sgpc_media_releases_api":
+        return SGPCMediaReleasesDiscovery(source, **kwargs)
     raise DiscoveryDispatchError(
         f"Unsupported discovery_method {method!r} for {source.get('source_id', 'unknown source')}"
     )
