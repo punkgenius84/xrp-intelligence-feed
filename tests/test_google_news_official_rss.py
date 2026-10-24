@@ -10,6 +10,7 @@ from discovery.google_news_official_rss import (
 )
 from discovery.dispatch import DiscoveryRegistryError, collect_source, validate_discovery_sources
 from discovery.http import DiscoveryHttpError, HttpResponse
+from intelligence.source_quality import classify_source_quality
 
 STAMP = datetime(2026, 10, 24, 3, tzinfo=timezone.utc)
 MAS_URL = "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen"
@@ -250,3 +251,25 @@ def test_updated_only_atom_date_does_not_use_feedparser_deprecated_alias():
 
     assert stamp == datetime(2026, 10, 23, 9, tzinfo=timezone.utc)
     assert not [warning for warning in captured if issubclass(warning.category, DeprecationWarning)]
+
+
+
+def test_secondary_google_news_candidate_preserves_tier_two_source_quality():
+    from discovery.dispatch import load_discovery_sources
+
+    source = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "theblock-google-news-discovery"
+    )
+    http = FakeHttp(rss(item(
+        title="Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        publisher="The Block",
+        href="https://www.theblock.co/",
+    )))
+    result = run(http, source)
+
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert candidate.authority_tier == 2
+    assert classify_source_quality(candidate) == "high_signal"
