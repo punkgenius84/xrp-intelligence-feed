@@ -252,3 +252,32 @@ def test_does_not_suppress_unrelated_secondary_story_sharing_ripple():
 
     assert kept == [primary, secondary]
     assert suppressed == []
+
+
+
+def test_does_not_suppress_regional_cross_border_headlines_without_financial_context():
+    primary = item(
+        "Singapore, Malaysia and Thailand expand cross-border rail freight corridor",
+        "primary-news",
+        "primary:rail",
+        [],
+        day="2026-10-23",
+    )
+    secondary = item(
+        "Singapore, Malaysia and Thailand announce cross-border rail schedule changes",
+        "secondary-news",
+        "secondary:rail",
+        [],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 40
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 40
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [primary, secondary], publish_score=30
+    )
+
+    assert kept == [primary, secondary]
+    assert suppressed == []
