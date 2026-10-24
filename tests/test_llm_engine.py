@@ -455,3 +455,15 @@ def test_prompt_treats_xrpl_and_xrp_ledger_as_the_same_network():
     assert "XRPL and XRP Ledger refer to the same network" in SYSTEM_PROMPT
     assert "never describe movement \"from XRP Ledger to XRPL\"" in SYSTEM_PROMPT
     assert "Only claim a network migration when the source explicitly identifies a distinct origin and destination network." in SYSTEM_PROMPT
+
+
+def test_prompt_tells_model_to_cite_title_when_summary_omits_key_details():
+    from intelligence.llm.prompts import SYSTEM_PROMPT, build_cluster_user_prompt
+
+    assert 'cite "source title"' in SYSTEM_PROMPT
+    assert "If the summary is empty or omits an anchor that appears in the title" in SYSTEM_PROMPT
+    first = item("Common Monetary Area: Project Sunbird and Cross-Border Payments with CBDC")
+    first.summary = ""
+    cluster_prompt = build_cluster_user_prompt([first])
+    assert "Cite the title when a claim describes the headline" in cluster_prompt
+    assert "cite the summary only for anchors actually present in the summary" in cluster_prompt

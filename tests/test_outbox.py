@@ -125,3 +125,25 @@ def test_remove_is_idempotent(tmp_path):
     assert store.load() == []
     store.remove({queued[0].key})
     assert store.load() == []
+
+
+@pytest.mark.parametrize(
+    ("candidate_id", "content_hash"),
+    [
+        ("", "hash-only"),
+        ("candidate-only", ""),
+    ],
+)
+def test_partial_legacy_identity_keeps_canonical_key_and_can_be_removed(
+    tmp_path, candidate_id, content_hash
+):
+    store = JsonOutboxState(tmp_path / "outbox.json")
+    original = item(candidate_id=candidate_id, content_hash=content_hash)
+    queued = store.enqueue([original])
+    canonical_key = queued[0].key
+
+    loaded = store.load()
+    assert publication_key(loaded[0]) == canonical_key
+
+    store.remove({canonical_key})
+    assert store.load() == []
