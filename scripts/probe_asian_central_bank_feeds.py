@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlencode, urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -190,6 +190,59 @@ def _route_context(script_text: str, route: str, radius: int = 650) -> str:
     start = max(0, index - max(0, radius))
     end = min(len(normalized), index + len(route) + max(0, radius))
     return " ".join(normalized[start:end].split())[:1500]
+
+
+def _probe_sgpc_listing_api(client: BoundedHttpClient) -> None:
+    """Probe the first-party SG Press Centre listing API with a bounded date window."""
+    end_date = datetime.now(timezone.utc).date()
+    start_date = end_date - timedelta(days=30)
+    query = urlencode({
+        "StartDate": start_date.strftime("%d-%b-%Y"),
+        "EndDate": end_date.strftime("%d-%b-%Y"),
+        "page": "1",
+    })
+    url = "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData?" + query
+    print(f"  sgpc_listing_api_request={url}")
+    try:
+        response = client.get(url, expected_content_types=("application/json", "text/json"))
+    except DiscoveryHttpError as exc:
+        status = f" http_status={exc.status_code}" if exc.status_code else ""
+        print(f"  sgpc_listing_api=unavailable reason={exc.kind}{status}")
+        return
+    final_host = urlsplit(response.url).hostname
+    if final_host != "www.sgpc.gov.sg":
+        print(f"  sgpc_listing_api=rejected unexpected_final_host={final_host or 'missing'}")
+        return
+    try:
+        payload = json.loads(response.content.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        print(f"  sgpc_listing_api=invalid_json error={type(exc).__name__}")
+        return
+    if not isinstance(payload, dict):
+        print("  sgpc_listing_api=invalid_payload top_level_type=" + type(payload).__name__)
+        return
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        print(f"  sgpc_listing_api=unexpected_shape top_level_keys={sorted(payload)[:20]}")
+        return
+    items = result.get("items")
+    if not isinstance(items, list):
+        print(f"  sgpc_listing_api=unexpected_shape result_keys={sorted(result)[:30]}")
+        return
+    print(
+        f"  sgpc_listing_api=valid http={response.status_code} items={len(items)} "
+        f"result_keys={sorted(result)[:30]}"
+    )
+    for item in items[:5]:
+        if not isinstance(item, dict):
+            print(f"    sgpc_item_type={type(item).__name__}")
+            continue
+        selected = {
+            key: value for key, value in item.items()
+            if any(token in key.casefold() for token in ("title", "date", "url", "link", "agency", "subject", "type", "id"))
+        }
+        safe = {key: str(value)[:240] for key, value in list(selected.items())[:12]}
+        print(f"    sgpc_item_fields={json.dumps(safe, ensure_ascii=False, sort_keys=True)}")
 
 
 def _probe_same_host_script_assets(
@@ -428,6 +481,8 @@ def main() -> None:
             if label in {"MAS news index", "SG Press Centre root", "SG Press Centre releases page"}:
                 final_host = urlsplit(response.url).hostname or ""
                 _probe_same_host_script_assets(client, label, text, response.url, final_host)
+            if label == "SG Press Centre releases page":
+                _probe_sgpc_listing_api(client)
             metadata = _page_metadata(text, response.url, host)
             for key, values in sorted(metadata.items()):
                 for value in values[:3]:
