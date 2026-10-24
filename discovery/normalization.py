@@ -35,7 +35,7 @@ def canonicalize_url(value: str) -> str:
 
 
 def normalize_candidate(candidate: DiscoveryCandidate) -> DiscoveryCandidate:
-    candidate.title = unicodedata.normalize("NFKC", " ".join(candidate.title.split()))
+    candidate.title = unicodedata.normalize("NFKC", html.unescape(" ".join(candidate.title.split())))
     candidate.summary = unicodedata.normalize("NFKC", plain_text(candidate.summary))
     candidate.url = canonicalize_url(candidate.url)
     if candidate.primary_url:
