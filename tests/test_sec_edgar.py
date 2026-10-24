@@ -9,7 +9,8 @@ from discovery.dispatch import (DiscoveryRegistryError, load_discovery_sources,
                                 validate_discovery_sources)
 from discovery.http import DiscoveryHttpError, HttpResponse
 from discovery.sec_edgar import (SEC_ARCHIVES_ROOT, SECEdgarDiscovery,
-                                 SEC_SUBMISSIONS_ROOT, _filing_url, validate_sec_source)
+                                 SEC_SUBMISSIONS_ROOT, _extract_filing_context,
+                                 _filing_index_url, _filing_url, validate_sec_source)
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sec_submissions.json"
@@ -103,7 +104,49 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
     }
 
 
+def test_filing_index_context_extracts_items_and_bounded_exhibit_rows():
+    html = b"""<html><body>
+    <div class="infoHead">Items</div><div class="info">1.01 Entry into a Material Definitive Agreement; 8.01 Other Events</div>
+    <table><tr><td>EX-99.1</td><td class="desc">Press release announcing stablecoin settlement and cross-border payments</td></tr>
+    <tr><td>EX-10.1</td><td class="desc">Purchase agreement</td></tr></table>
+    </body></html>"""
+    context = _extract_filing_context(html)
+    assert context["filing_items"] == "1.01 Entry into a Material Definitive Agreement; 8.01 Other Events"
+    assert len(context["exhibit_descriptions"]) == 2
+    assert "stablecoin settlement" in context["exhibit_descriptions"][0]
+    assert _filing_index_url("1876042", "0001876042-26-000267").endswith(
+        "/187604226000267/0001876042-26-000267-index.htm"
+    )
+    with pytest.raises(ValueError, match="does not match"):
+        _filing_index_url("1876042", "0000000001-26-000267")
+
+
+def test_sec_index_enrichment_is_opt_in_and_bounded_to_recent_8k():
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    index_html = b"""<html><div class="infoHead">Items</div><div class="info">1.01 Material Agreement</div>
+    <table><tr><td>EX-99.1</td><td class="desc">Stablecoin settlement partnership announcement</td></tr></table></html>"""
+    index_url = _filing_index_url("9999999999", "9999999999-26-000001")
+    http = FakeHttp([
+        response(payload),
+        HttpResponse(200, {"content-type": "text/html"}, index_html, index_url),
+    ])
+    result = SECEdgarDiscovery(
+        sec_source(detail_enrichment_limit=1), http=http, now=lambda: STAMP,
+        request_interval=0, environ={},
+    ).collect()
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert candidate.source_native_metadata["filing_index_url"] == index_url
+    assert candidate.source_native_metadata["filing_items"] == "1.01 Material Agreement"
+    assert "Stablecoin settlement partnership announcement" in candidate.summary
+    assert index_url in candidate.provenance
+    assert len(http.calls) == 2
+
+
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():
+    with pytest.raises(ValueError, match="detail_enrichment_limit"):
+        validate_sec_source(sec_source(detail_enrichment_limit=6))
     with pytest.raises(DiscoveryRegistryError, match="duplicate discovery source_id"):
         validate_discovery_sources({"schema_version": 1, "sources": [sec_source(), sec_source()]})
     with pytest.raises(ValueError, match="issuer_ciks"):
