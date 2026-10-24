@@ -188,7 +188,7 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
         # article, which is worse than marking the page partial.
         local_after = text[match.end():following]
         published = None
-        datetime_matches = list(re.finditer(r"\\bdatetime=['\\"]([^'\\"]+)['\\"]", local_after, re.IGNORECASE))
+        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", local_after, re.IGNORECASE))
         if datetime_matches:
             published = _parse_date(datetime_matches[0].group(1))
         if published is None:
