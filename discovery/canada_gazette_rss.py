@@ -31,7 +31,7 @@ class _IssueIndexParser(HTMLParser):
         self.heading_text = ""
         self.heading_tag = ""
         self.anchor: dict[str, str] | None = None
-        self.rows: list[tuple[str, str]] = []
+        self.rows: list[tuple[str, str, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
@@ -61,7 +61,7 @@ class _IssueIndexParser(HTMLParser):
             href = self.anchor["href"].strip()
             title = " ".join(self.anchor["text"].split())
             if href and title:
-                self.rows.append((href, title))
+                self.rows.append((href, title, " — ".join(self.headings[-3:])))
             self.anchor = None
 
 
@@ -193,7 +193,7 @@ class CanadaGazetteRSSDiscovery:
                     raise ValueError(f"issue index returned HTTP {index_response.status_code}")
                 parser = _IssueIndexParser()
                 parser.feed(index_response.content.decode("utf-8-sig"))
-                for href, title in parser.rows:
+                for href, title, context in parser.rows:
                     url = _safe_url(urljoin(issue_url, href), article=True)
                     if url is None:
                         continue
