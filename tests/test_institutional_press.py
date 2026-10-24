@@ -819,6 +819,41 @@ def test_official_article_canonical_url_is_idempotently_allowlisted():
 
 
 
+def test_coinbase_article_detail_accepts_explicit_publication_meta_date():
+    coinbase = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-blog"
+    )
+    url = (
+        "https://www.coinbase.com/blog/"
+        "coinbase-opens-stock-trading-to-everyone-in-the-us-partners-with-yahoo-finance-to-power-discovery"
+    )
+    html = b"""<html><head>
+    <meta content="2026-10-20T09:00:00Z" property="article:published_time">
+    <meta content="2026-10-22T09:00:00Z" property="og:updated_time">
+    </head><body><h1>Coinbase Opens Stock Trading to Everyone in the US</h1></body></html>"""
+
+    row = _parse_article_detail(coinbase, url, html)
+
+    assert row is not None
+    assert row["title"] == "Coinbase Opens Stock Trading to Everyone in the US"
+    assert row["date"] == datetime(2026, 10, 20, 9, tzinfo=timezone.utc)
+
+
+def test_coinbase_article_detail_rejects_conflicting_publication_meta_dates():
+    coinbase = next(
+        item for item in load_discovery_sources()
+        if item["source_id"] == "coinbase-blog"
+    )
+    url = "https://www.coinbase.com/blog/example-article"
+    html = b"""<html><head>
+    <meta property="article:published_time" content="2026-10-20T09:00:00Z">
+    <meta name="publish-date" content="2026-10-21T09:00:00Z">
+    </head><body><h1>Example article</h1></body></html>"""
+
+    assert _parse_article_detail(coinbase, url, html) is None
+
+
 def test_coinbase_investor_news_uses_official_dated_article_routes():
     investor = next(
         item for item in load_discovery_sources()
