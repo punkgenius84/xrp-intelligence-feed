@@ -215,3 +215,30 @@ def test_event_metadata_grounding_accepts_xrpl_alias_from_xrp_ledger():
             )
 
     assert analyze_item(source, Provider()).entities == ["Ripple", "XRPL"]
+
+
+def test_institutional_rollout_verbs_surface_tokenized_deposit_developments():
+    item = NewsItem(
+        "J.P. Morgan rolls out tokenized deposit platform",
+        "https://example.com/a",
+        "J.P. Morgan",
+        summary="The bank deploys a new tokenized deposit service.",
+        authority_tier=1,
+        detected_entities=["J.P. Morgan"],
+    )
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert score >= 30, f"concrete institutional tokenized-deposit rollout should clear gate: {score}, {reasons}"
+    assert "institutional_tokenization_action" in item.relevance_categories
+
+    unrelated = NewsItem(
+        "J.P. Morgan unveils employee wellness program",
+        "https://example.com/b",
+        "J.P. Morgan",
+        authority_tier=1,
+        detected_entities=["J.P. Morgan"],
+    )
+    classify_source_quality(unrelated)
+    unrelated_score, _ = score_relevance(unrelated)
+    assert unrelated_score == 0
+    assert "institutional_tokenization_action" not in unrelated.relevance_categories

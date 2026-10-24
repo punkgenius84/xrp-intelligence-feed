@@ -64,6 +64,8 @@ def _classify(item, combined: str) -> list[str]:
         "settlement", "licenses", "licensing", "sanctions", "charges",
         "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening",
         "collaborate", "collaboration", "connect", "connects", "connected", "connecting", "integrate", "integration",
+        "roll out", "rolls out", "rolled out", "unveil", "unveils", "unveiled", "deploy", "deploys", "deployed",
+        "go live", "goes live", "went live",
         "designation", "designations", "designates", "removal", "removals", "delisting",
         "announcement", "announcements", "partnership", "partnerships",
         "agreement", "agreements", "integration", "integrations", "issuance", "issuances",
