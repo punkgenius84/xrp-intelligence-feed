@@ -248,6 +248,12 @@ def _probe_secondary_source_duplicate_gate() -> None:
         for error in result.errors[:2]:
             print(f"  duplicate_gate_error={error[:260]}")
 
+    for item in sorted(items, key=lambda value: (value.source_id, value.title.casefold())):
+        print(
+            f"  duplicate_gate_candidate source={item.source_id} quality={item.source_quality} "
+            f"score={item.relevance_score} date={item.published_at.isoformat() if item.published_at else 'unknown'} "
+            f"entities={','.join(item.detected_entities) or 'none'} title={item.title[:160]!r}"
+        )
     correlate(items)
     kept, suppressed = suppress_correlated_secondary_duplicates(items, publish_score=30)
     print(
