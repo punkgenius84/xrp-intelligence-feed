@@ -533,8 +533,7 @@
       "publisher_host": "bot.or.th",
       "publisher_name": "Bank of Thailand",
       "context_hint": "public hearing on THB stablecoin regulation"
-    }
-    ,
+    },
     {
       "source_id": "coinbase-google-news-discovery",
       "name": "Coinbase (Google News discovery)",
