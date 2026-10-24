@@ -481,3 +481,27 @@ def test_xrp_price_opinion_does_not_receive_xrpl_protocol_bonus():
     assert "XRP" in item.detected_entities
     assert "xrp_protocol_development" not in item.relevance_categories
     assert score < 30, f"price commentary must not qualify as protocol news: {score}, {reasons}"
+
+
+
+def test_franklin_templeton_fund_shares_on_xrpl_clear_gate_for_secondary_media():
+    item = NewsItem(
+        title="Franklin Templeton adds $150 million in fund shares to XRP Ledger, all in one wallet",
+        summary="The report describes fund shares recorded on the XRP Ledger as tokenized investment-fund ownership.",
+        url="https://news.google.com/rss/articles/example-franklin-templeton-xrpl-fund-shares",
+        source="CoinDesk",
+        source_id="coindesk-xrpl-technical-google-news-discovery",
+        authority_tier=2,
+        category="technology",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "XRP" in item.detected_entities
+    assert item.source_quality == "high_signal"
+    assert "xrp_ledger_tokenization_development" in item.relevance_categories
+    assert score >= 30, f"material XRPL fund-share tokenization should clear gate: {score}, {reasons}"
+    assert any("tokenized fund/share development" in reason for reason in reasons)
