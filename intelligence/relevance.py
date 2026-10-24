@@ -100,7 +100,7 @@ def _classify(item, combined: str) -> list[str]:
     if government:
         categories.append("government")
     government_initiative_action = any(_contains(combined, phrase) for phrase in (
-        "join Singapore", "targets 2030", "network buildout", "buildout target",
+        "join", "targets 2030", "network buildout", "buildout target",
     ))
     if government and (action or government_initiative_action) and digital_asset_topic:
         categories.append("government_digital_asset_action")
