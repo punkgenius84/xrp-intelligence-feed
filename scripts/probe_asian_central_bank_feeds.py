@@ -115,6 +115,13 @@ def main() -> None:
                     for entry in parsed.entries[:12]:
                         source = entry.get("source", {})
                         print(f"  rss_item date={entry.get('published', entry.get('updated', 'unknown'))!r} title={entry.get('title', '')[:180]!r} source={source.get('title', '')!r} source_url={source.get('href', '')!r} feed_link={entry.get('link', '')!r}")
+                        title = entry.get("title", "")
+                        if any(term in title.casefold() for term in ("bloom", "stablecoin")):
+                            try:
+                                resolved = client.get(entry.get("link", ""))
+                                print(f"  rss_relevant_link_resolution final_url={resolved.url} type={resolved.headers.get('content-type', 'unknown')} bytes={len(resolved.content)}")
+                            except DiscoveryHttpError as exc:
+                                print(f"  rss_relevant_link_resolution_error={exc.kind} status={exc.status_code or 'unknown'}")
                 except Exception as exc:
                     print(f"  rss_parse_error={type(exc).__name__}: {exc}")
                 continue
