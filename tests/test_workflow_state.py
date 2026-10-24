@@ -222,7 +222,7 @@ def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
     assert "default: false" in workflow
     assert "CLEAN-INTELLIGENCE-QUEUE" in workflow
     assert "if: inputs.apply_reset && steps.state_cache.outputs.cache-matched-key == ''" in workflow
-    assert "group: xrp-intelligence-feed" in workflow
+    assert "group: xrp-intelligence-feed-stateful" in workflow
     assert "cancel-in-progress: false" in workflow
     assert "python scripts/clean_intelligence_launch_queue.py" in workflow
     assert "python main.py" not in workflow
@@ -258,3 +258,24 @@ def test_workflow_previews_quarantined_intelligence_on_diagnostic_runs():
     assert "inputs.preview_intelligence && inputs.dry_run" in preview
     assert "DISCORD_WEBHOOK_URL" not in preview
     assert "INTELLIGENCE_PUBLISH" not in preview
+
+
+def test_fresh_start_reset_workflow_is_preview_first_archived_and_stateful():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/fresh_start_launch_reset.yml").read_text(encoding="utf-8")
+    script = Path("scripts/fresh_start_launch_reset.py").read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "default: false" in workflow
+    assert "FRESH-START-XRP-INTELLIGENCE" in workflow
+    assert "group: xrp-intelligence-feed-stateful" in workflow
+    assert "cancel-in-progress: false" in workflow
+    assert "cache-matched-key" in workflow
+    assert "actions/upload-artifact@" in workflow
+    assert "retention-days: 90" in workflow
+    assert "python scripts/fresh_start_launch_reset.py --verify-empty" in workflow
+    assert "No Discord messages were sent." in workflow
+    assert "JsonIntelligenceQuarantineState" in script
+    assert "quarantine audit records changed during reset" in script
+    assert "def fresh_start_reset" in script
