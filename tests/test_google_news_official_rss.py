@@ -24,6 +24,20 @@ SOURCE = {
     "publisher_name": "Monetary Authority of Singapore",
 }
 LINK = "https://news.google.com/rss/articles/CBMiQ0FVX3lxTE5ExampleStableArticleKey?oc=5"
+BOT_THAI_SOURCE = {
+    "source_id": "bot-google-news-thai-stablecoin-hearing",
+    "name": "Bank of Thailand (Google News Thai stablecoin hearing discovery)",
+    "authority_tier": 1,
+    "category": "regulatory",
+    "discovery_method": METHOD,
+    "source_url": "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath",
+    "enabled": True,
+    "lookback_days": 30,
+    "max_items": 100,
+    "publisher_host": "bot.or.th",
+    "publisher_name": "Bank of Thailand",
+    "context_hint": "public hearing on THB stablecoin regulation",
+}
 
 
 def rss(*items):
@@ -76,6 +90,23 @@ def test_google_news_source_requires_domain_restricted_query():
 def test_invalid_source_contract_fails_closed(changes):
     with pytest.raises((ValueError, DiscoveryRegistryError)):
         validate_google_news_source({**SOURCE, **changes})
+
+
+
+def test_query_context_is_labeled_as_context_not_article_text():
+    title = "การเปิดรับฟังความคิดเห็นต่อ หลักการกำกับดูแลผู้ประกอบธุรกิจที่เกี่ยวข้องกับ THB Stablecoin - Bank of Thailand"
+    http = FakeHttp(rss(item(
+        title=title,
+        publisher="Bank of Thailand",
+        href="https://www.bot.or.th/",
+    )))
+    result = run(http, BOT_THAI_SOURCE)
+
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert "Search context (not article text): public hearing on THB stablecoin regulation." in candidate.summary
+    assert candidate.source_native_metadata["query_context_hint"] == "public hearing on THB stablecoin regulation"
 
 
 def test_disabled_source_does_not_make_request():
