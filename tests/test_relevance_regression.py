@@ -220,6 +220,46 @@ def test_official_tokenization_and_plural_asset_actions_clear_gate(
     assert score >= 30, f"expected official digital-asset action to clear gate; score={score}, reasons={reasons}"
 
 
+@pytest.mark.parametrize(
+    ("title", "summary", "should_clear"),
+    [
+        (
+            "SEC Form 8-K filing: Circle Internet Group, Inc.",
+            "Circle Internet Group, Inc. filed SEC Form 8-K. Filing items: 1.01 Entry into a Material Definitive Agreement. Exhibit EX-99.1: Stablecoin settlement partnership announcement.",
+            True,
+        ),
+        (
+            "SEC Form 8-K filing: Circle Internet Group, Inc.",
+            "Circle Internet Group, Inc. filed SEC Form 8-K. Filing items: Risk Factors. Exhibit EX-99.1: General corporate risk factors discussing stablecoin market volatility and liquidity conditions.",
+            False,
+        ),
+    ],
+)
+def test_sec_filing_context_requires_a_concrete_digital_asset_action(title, summary, should_clear):
+    item = NewsItem(
+        title=title,
+        summary=summary,
+        url="https://www.sec.gov/Archives/edgar/data/1876042/000187604226000246/0001876042-26-000246-index.htm",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-edgar-submissions",
+        authority_tier=1,
+        category="regulatory",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Circle" in item.detected_entities
+    if should_clear:
+        assert "institutional_digital_asset_payment" in item.relevance_categories
+        assert score >= 30, f"actionable SEC filing context should clear gate: {score}, {reasons}"
+    else:
+        assert "institutional_digital_asset_payment" not in item.relevance_categories
+        assert score < 30, f"generic risk-factor filing should stay below gate: {score}, {reasons}"
+
+
 def test_generic_tokenization_commentary_remains_below_relevance_gate():
     item = NewsItem(
         title="Market Research Highlights Tokenization Trends",
