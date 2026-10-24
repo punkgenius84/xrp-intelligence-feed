@@ -1,0 +1,46 @@
+name: SEC Submissions Runner Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/sec_submissions_probe.yml"
+      - "scripts/probe_sec_submissions.py"
+      - "tests/test_sec_submissions_probe.py"
+      - "tests/fixtures/sec_submissions.json"
+      - "discovery/http.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/sec_submissions_probe.yml"
+      - "scripts/probe_sec_submissions.py"
+      - "tests/test_sec_submissions_probe.py"
+      - "tests/fixtures/sec_submissions.json"
+      - "discovery/http.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sec-submissions-runner-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Validate probe contracts
+        run: python -m pytest -q tests/test_sec_submissions_probe.py
+      - name: Probe official SEC submissions endpoint (read-only)
+        continue-on-error: true
+        env:
+          SEC_CONTACT_EMAIL: ${{ vars.SEC_CONTACT_EMAIL }}
+        run: python scripts/probe_sec_submissions.py
