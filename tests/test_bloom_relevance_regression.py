@@ -98,7 +98,7 @@ def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     )
 
 
-def test_only_runner_validated_asian_google_news_sources_are_enabled():
+def test_only_runner_validated_google_news_sources_are_enabled():
     payload = json.loads(
         (ROOT / "config" / "discovery_sources.json").read_text(encoding="utf-8")
     )
@@ -107,13 +107,16 @@ def test_only_runner_validated_asian_google_news_sources_are_enabled():
         "mas-google-news-discovery",
         "bot-google-news-english-discovery",
         "bot-google-news-thai-stablecoin-hearing",
+        "coinbase-google-news-discovery",
     }
 
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # The English feed returned only unrelated items during the live runner probe.
+    # These queries returned no relevant BOT English candidates; Coinbase is
+    # staged for a separate live probe before activation.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
+    assert sources["coinbase-google-news-discovery"]["enabled"] is False
     # Google News RSS returns up to 100 entries by default; avoid self-inflicted
     # truncation/partial health on every run while retaining a hard upper bound.
     assert all(sources[source_id]["max_items"] == 100 for source_id in expected)
