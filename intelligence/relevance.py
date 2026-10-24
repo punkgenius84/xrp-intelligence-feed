@@ -41,6 +41,8 @@ def _classify(item, combined: str) -> list[str]:
         "designation", "designations", "designates", "removal", "removals", "delisting",
         "announcement", "announcements", "partnership", "partnerships",
         "agreement", "agreements", "integration", "integrations", "issuance", "issuances",
+        "progresses", "progressed", "progressing", "MVP implementation", "minimum viable product",
+        "pilot", "pilots", "pilot program", "proof of concept", "proof-of-concept",
         "proposal", "proposals", "public hearing", "public comment", "request for comment", "requests comment",
     ))
     digital_or_payment = any(_contains(combined, term) for term in (
