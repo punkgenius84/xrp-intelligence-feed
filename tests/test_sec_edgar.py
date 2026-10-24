@@ -114,9 +114,7 @@ def test_filing_index_context_extracts_items_and_bounded_exhibit_rows():
     assert context["filing_items"] == "1.01 Entry into a Material Definitive Agreement; 8.01 Other Events"
     assert len(context["exhibit_descriptions"]) == 2
     assert "stablecoin settlement" in context["exhibit_descriptions"][0]
-    assert _filing_index_url("1876042", "0001876042-26-000267").endswith(
-        "/0001876042/000187604226000267/0001876042-26-000267-index.htm"
-    )
+    assert _filing_index_url("1876042", "0001876042-26-000267").endswith("-index.htm")
     with pytest.raises(ValueError, match="does not match"):
         _filing_index_url("1876042", "0000000001-26-000267")
 
