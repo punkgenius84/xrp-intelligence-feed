@@ -421,8 +421,18 @@ def test_secondary_commentary_gate_does_not_filter_primary_or_plain_price_news()
     )
     factual_price_news.source_quality = "high_signal"
     factual_price_news.relevance_score = 40
+    adoption_report = item(
+        "CBDC pilot could reach 10 million users after cross-border expansion",
+        "theblock-google-news-discovery",
+        "theblock:adoption",
+        ["CBDC"],
+    )
+    adoption_report.source_quality = "high_signal"
+    adoption_report.relevance_score = 38
 
-    kept, held = filter_secondary_opinion_commentary([primary_opinion, factual_price_news])
+    kept, held = filter_secondary_opinion_commentary(
+        [primary_opinion, factual_price_news, adoption_report]
+    )
 
-    assert kept == [primary_opinion, factual_price_news]
+    assert kept == [primary_opinion, factual_price_news, adoption_report]
     assert held == []
