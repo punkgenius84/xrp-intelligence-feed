@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 from discovery.dispatch import collect_source, load_discovery_sources
+from discovery.normalization import normalize_candidate
 from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
