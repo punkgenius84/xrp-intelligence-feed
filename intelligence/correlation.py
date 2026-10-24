@@ -242,12 +242,9 @@ def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
         & set(right.detected_entities)
         & _CORRELATION_ENTITIES
     )
-    if len(shared_entities) < 3 or abs((_day(left) - _day(right)).days) > 1:
+    if abs((_day(left) - _day(right)).days) > 1:
         return score
 
-    day_gap = abs((_day(left) - _day(right)).days)
-    if day_gap > 1:
-        return score
     overlap = _tokens(left) & _tokens(right)
     event_terms = {
         "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
