@@ -58,10 +58,24 @@ def test_probe_skips_bad_accession_but_ignores_unused_primary_document_path():
     recent["primaryDocument"][1] = "xslF345X05/inline-form.htm"
     result = summarize_payload(data, "9999999999")
     assert result["skipped_rows"] == 1
-    assert result["skip_reasons"] == {"invalid_accession_or_cik": 1}
+    assert result["skip_reasons"] == {"accession_cik_mismatch": 1}
+    assert result["foreign_filer_prefix_counts"] == {"0000000001": 1}
     assert result["valid_rows"] == 2
     assert result["tracked_rows"] == 2
     assert all(row["filing_index_url"].startswith("https://www.sec.gov/Archives/edgar/data/") for row in result["sample"])
+
+
+def test_probe_distinguishes_bad_accession_format_from_foreign_filer_prefix():
+    data = payload()
+    recent = data["filings"]["recent"]
+    recent["accessionNumber"][0] = "not-an-accession"
+    recent["accessionNumber"][1] = "0000000001-26-000002"
+    result = summarize_payload(data, "9999999999")
+    assert result["skip_reasons"] == {
+        "accession_cik_mismatch": 1,
+        "invalid_accession_format": 1,
+    }
+    assert result["foreign_filer_prefix_counts"] == {"0000000001": 1}
 
 
 def test_probe_accepts_missing_optional_document_arrays():
