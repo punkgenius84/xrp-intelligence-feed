@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import re
+import sys
 from html import unescape
+from pathlib import Path
 from urllib.parse import urljoin, urlsplit
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 
