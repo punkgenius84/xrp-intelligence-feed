@@ -90,7 +90,7 @@ def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
         validate_google_news_source(invalid)
 
 
-def test_secondary_crypto_news_discovery_probes_are_restricted_and_disabled():
+def test_secondary_crypto_news_discovery_probes_are_restricted_and_selectively_enabled():
     from discovery.dispatch import load_discovery_sources
     from urllib.parse import unquote_plus
 
@@ -105,7 +105,7 @@ def test_secondary_crypto_news_discovery_probes_are_restricted_and_disabled():
     }
     for source_id, host in expected.items():
         source = by_id[source_id]
-        assert source["enabled"] is False
+        assert source["enabled"] is (source_id == "theblock-google-news-discovery")
         assert source["authority_tier"] == 2
         assert source["publisher_host"] == host
         assert validate_google_news_source(source) == source
