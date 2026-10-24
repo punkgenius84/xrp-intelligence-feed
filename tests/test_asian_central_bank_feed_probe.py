@@ -74,7 +74,8 @@ def test_probe_includes_singapore_government_press_centre_routes():
 
 def test_same_host_script_discovery_rejects_external_assets_and_caps_results():
     html = """
-    <script src="/assets/app.js"></script>
+    <script src="/ResourcePackages/site/assets/js/jquery.min.js"></script>
+    <script src="/ResourcePackages/site/assets/js/app.js"></script>
     <script src="https://www.mas.gov.sg/static/site.mjs"></script>
     <script src="https://cdn.example.invalid/app.js"></script>
     <script src="/assets/ignored.js"></script>
@@ -83,7 +84,7 @@ def test_same_host_script_discovery_rejects_external_assets_and_caps_results():
         html, "https://www.mas.gov.sg/news?page=1", "www.mas.gov.sg", limit=2
     )
     assert found == [
-        "https://www.mas.gov.sg/assets/app.js",
+        "https://www.mas.gov.sg/ResourcePackages/site/assets/js/app.js",
         "https://www.mas.gov.sg/static/site.mjs",
     ]
 
