@@ -160,9 +160,12 @@ def test_only_runner_validated_google_news_sources_are_enabled():
     # These queries remain disabled until the live probe proves useful,
     # correctly attributed candidates pass the relevance gate.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
-    # SWIFT's recent candidates were generic; IMF has one validated CBDC
-    # cross-border payment report that clears the relevance gate.
-    assert sources["swift-google-news-discovery"]["enabled"] is False
+    # SWIFT's publisher-restricted query now returns two concrete payment/
+    # blockchain milestones that clear the existing relevance gate. Its
+    # first-party HTML collector remains disabled because the runner gets 403.
+    assert sources["swift-google-news-discovery"]["enabled"] is True
+    assert sources["swift-press-releases"]["enabled"] is False
+    # IMF has a validated CBDC cross-border payment report that clears the gate.
     assert sources["imf-google-news-discovery"]["enabled"] is True
     # Coinbase was enabled only after the live collector found a relevant
     # stablecoin-payout story with a defensible RSS publication timestamp.
