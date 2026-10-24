@@ -19,7 +19,7 @@ from discord.publisher import (DEFAULT_MAX_AGE_DAYS, publish, settings_from_env,
 from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
-from intelligence.correlation import build_correlation_card, correlate
+from intelligence.correlation import (build_correlation_card, correlate,\n                                      suppress_correlated_secondary_duplicates)
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
 from intelligence.pipeline import enrich_clusters, select_items
@@ -363,6 +363,18 @@ def run_pipeline(
         if too_old:
             print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
                   "were not queued for delivery")
+        queueable, suppressed_duplicates = suppress_correlated_secondary_duplicates(
+            queueable, publish_score=thresholds["publish_score"]
+        )
+        if suppressed_duplicates:
+            suppressed_ids = {id(item) for item in suppressed_duplicates}
+            publishable = [item for item in publishable if id(item) not in suppressed_ids]
+            print(
+                f"Discord: suppressed {len(suppressed_duplicates)} correlated tier-2 "
+                "duplicate(s); qualifying tier-1 source retained"
+            )
+            for item in suppressed_duplicates[:5]:
+                print(f"  suppressed secondary duplicate: [{item.relevance_score}] {item.title} — {item.source}")
         outbox_state.enqueue(queueable)
 
     intelligence_events = []
