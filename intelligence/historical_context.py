@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -66,6 +67,157 @@ def select_historical_context(
             matches.append((-len(matched), record["date"], record))
     matches.sort(key=lambda item: (item[0], item[1], item[2]["id"]))
     return [record for _, _, record in matches[:max_records]]
+
+
+
+_PRIOR_CONTEXT_STOPWORDS = {
+    "about", "after", "again", "also", "among", "announced", "announcement",
+    "before", "being", "could", "from", "have", "into", "more", "over",
+    "reported", "reports", "said", "says", "that", "their", "there", "these",
+    "they", "this", "those", "through", "under", "using", "with", "would",
+}
+
+
+def select_prior_event_context(
+    title: str,
+    summary: str,
+    events: dict[str, Any] | None,
+    *,
+    exclude_urls: set[str] | None = None,
+    max_records: int = 3,
+) -> list[dict[str, Any]]:
+    """Select relevant, source-linked prior intelligence as context, not evidence.
+
+    Superseded and stale events remain eligible as historical background. Their
+    lifecycle status is preserved so a past event is never presented as current.
+    """
+    if max_records < 0:
+        raise ValueError("max_records must be non-negative")
+    if not isinstance(events, dict) or max_records == 0:
+        return []
+
+    current_text = f"{title}\n{summary}"
+    current_lower = current_text.casefold()
+    current_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", current_lower)
+        if len(token) > 2 and token not in _PRIOR_CONTEXT_STOPWORDS
+    }
+    excluded = {url.strip() for url in (exclude_urls or set()) if isinstance(url, str)}
+    matches: list[tuple[int, str, str, dict[str, Any]]] = []
+
+    for event_id, record in events.items():
+        if not isinstance(event_id, str) or not isinstance(record, dict):
+            continue
+        status = record.get("status", "active")
+        if status not in {"active", "superseded", "stale"}:
+            continue
+        evidence = record.get("evidence", [])
+        if not isinstance(evidence, list):
+            continue
+
+        dated_evidence: list[dict[str, str]] = []
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url")
+            evidence_title = item.get("title")
+            published_at = item.get("published_at")
+            if not all(isinstance(value, str) and value.strip()
+                       for value in (url, evidence_title, published_at)):
+                continue
+            if not url.startswith("https://") or url in excluded:
+                continue
+            try:
+                parsed = datetime.fromisoformat(
+                    published_at.strip().replace("Z", "+00:00")
+                )
+            except ValueError:
+                continue
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            dated_evidence.append({
+                "title": evidence_title.strip(),
+                "url": url.strip(),
+                "published_at": parsed.date().isoformat(),
+            })
+        if not dated_evidence:
+            continue
+
+        summary_text = record.get("summary", "")
+        significance = record.get("significance", "")
+        entities = record.get("entities", [])
+        if not isinstance(summary_text, str) or not isinstance(significance, str):
+            continue
+        if not isinstance(entities, list):
+            entities = []
+        entity_matches = {
+            entity.casefold()
+            for entity in entities
+            if isinstance(entity, str) and entity.strip()
+            and re.search(r"(?<!\w)" + re.escape(entity.strip()) + r"(?!\w)",
+                          current_text, flags=re.IGNORECASE)
+        }
+        historical_text = " ".join(
+            [summary_text, significance, " ".join(str(x) for x in entities),
+             " ".join(item["title"] for item in dated_evidence)]
+        ).casefold()
+        historical_tokens = {
+            token for token in re.findall(r"[a-z0-9]+", historical_text)
+            if len(token) > 2 and token not in _PRIOR_CONTEXT_STOPWORDS
+        }
+        overlap = current_tokens & historical_tokens
+        entity_tokens = {
+            token
+            for entity in entity_matches
+            for token in re.findall(r"[a-z0-9]+", entity.casefold())
+        }
+        lexical_overlap = overlap - entity_tokens
+        # An entity alone (especially XRP, Ripple, SEC, or a bank name) is too
+        # broad. Require two additional matching terms to avoid unrelated matches.
+        if not entity_matches or len(lexical_overlap) < 2:
+            continue
+        latest_date = max(item["published_at"] for item in dated_evidence)
+        score = len(entity_matches) * 3 + len(overlap)
+        matches.append((score, latest_date, event_id, {
+            "id": event_id,
+            "date": latest_date,
+            "status": status,
+            "summary": summary_text,
+            "significance": significance,
+            "entities": [x for x in entities if isinstance(x, str)],
+            "evidence": dated_evidence[:3],
+            "overlap_count": len(overlap),
+        }))
+
+    matches.sort(key=lambda item: (-item[0], item[1], item[2]))
+    return [record for _, _, _, record in matches[:max_records]]
+
+
+def format_prior_event_context(records: list[dict[str, Any]]) -> str:
+    if not records:
+        return ""
+    lines = [
+        "PRIOR INTELLIGENCE HISTORY (source-linked historical context; not current-event evidence):"
+    ]
+    for record in records:
+        evidence = "; ".join(
+            f"[{item['published_at']}] {item['title']} ({item['url']})"
+            for item in record["evidence"]
+        )
+        lines.append(
+            f"- Event {record['id']} | status={record['status']} | latest source date={record['date']}. "
+            f"Prior summary: {record['summary']} Significance recorded then: "
+            f"{record['significance']} Entities: {', '.join(record['entities'])}. "
+            f"Historical sources: {evidence}"
+        )
+    lines.append(
+        "These are prior model-generated event records, not new reporting. Use them only to identify "
+        "continuity, change, or possible significance. Do not treat their summaries or significance "
+        "as independently verified current facts. You must not cite them for claims about the supplied "
+        "current articles, and do not imply an old relationship or status remains active without "
+        "current-source confirmation. Prefer a clearly described change over repeating an old event."
+    )
+    return "\n".join(lines)
 
 
 def format_historical_context(records: list[dict[str, Any]]) -> str:

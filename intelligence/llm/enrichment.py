@@ -8,7 +8,10 @@ from models import NewsItem
 from ..evidence import build_evidence_bundle
 from ..event_clustering import EventCluster
 from ..events import IntelligenceEvent
-from ..historical_context import format_historical_context, select_historical_context
+from ..historical_context import (
+    format_historical_context, format_prior_event_context,
+    select_historical_context, select_prior_event_context,
+)
 from .base import LLMError, LLMProvider
 from .prompts import SYSTEM_PROMPT, build_cluster_user_prompt, build_user_prompt
 from .schemas import IntelligenceAnalysis, parse_analysis
@@ -162,10 +165,22 @@ def _validate_event_type(analysis: IntelligenceAnalysis, source_text: str) -> In
     return analysis
 
 
-def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
+def analyze_item(
+    item: NewsItem,
+    provider: LLMProvider,
+    historical_events: dict | None = None,
+) -> IntelligenceAnalysis:
     try:
         context_records = select_historical_context(item.title, item.summary)
-        historical_context = format_historical_context(context_records)
+        prior_records = select_prior_event_context(
+            item.title, item.summary, historical_events, exclude_urls={item.url}
+        )
+        historical_context = "\n\n".join(
+            part for part in (
+                format_historical_context(context_records),
+                format_prior_event_context(prior_records),
+            ) if part
+        )
         response = provider.generate(
             system=SYSTEM_PROMPT,
             user=build_user_prompt(
@@ -200,6 +215,7 @@ def analyze_item(item: NewsItem, provider: LLMProvider) -> IntelligenceAnalysis:
 def analyze_cluster(
     cluster: EventCluster,
     provider: LLMProvider,
+    historical_events: dict | None = None,
 ) -> IntelligenceAnalysis:
     primary = cluster.primary
     try:
@@ -207,7 +223,18 @@ def analyze_cluster(
         context_records = select_historical_context(
             "\n".join(item.title for item in cluster.members), combined_text
         )
-        historical_context = format_historical_context(context_records)
+        prior_records = select_prior_event_context(
+            "\n".join(item.title for item in cluster.members),
+            combined_text,
+            historical_events,
+            exclude_urls={item.url for item in cluster.members},
+        )
+        historical_context = "\n\n".join(
+            part for part in (
+                format_historical_context(context_records),
+                format_prior_event_context(prior_records),
+            ) if part
+        )
         response = provider.generate(
             system=SYSTEM_PROMPT,
             user=build_cluster_user_prompt(cluster.members, historical_context),

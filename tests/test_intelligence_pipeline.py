@@ -565,3 +565,59 @@ def test_acquisition_guard_rejects_potentially_acquire_language():
 
     with pytest.raises(LLMError, match="acquisition event type"):
         analyze_item(source, Provider())
+
+
+
+def test_cluster_enrichment_includes_prior_events_only_as_context():
+    from intelligence.llm.base import LLMResponse
+
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=1,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+    current = item(90, "current-settlement")
+    current.title = "Ripple expands institutional payments for bank settlement"
+    current.summary = "The service supports cross-border settlement."
+    current.url = "https://example.test/current-settlement"
+    current.source_id = "current-source"
+    captured = {}
+
+    class Provider:
+        def generate(self, **kwargs):
+            captured["user"] = kwargs["user"]
+            return LLMResponse(
+                '{"event_type":"institutional_adoption",'
+                '"event_summary":"The source reports a cross-border settlement service.",'
+                '"significance":"This could matter for institutional payments.",'
+                '"entities":["Ripple"],'
+                '"claims":[{"text":"The source reports a cross-border settlement service.",'
+                '"evidence":["source-1 summary"]}]}',
+                model="test-model",
+            )
+
+    history = {
+        "evt-historical-bank": {
+            "status": "superseded",
+            "summary": "Ripple announced an institutional payments partnership with a bank.",
+            "significance": "The relationship could affect cross-border settlement.",
+            "entities": ["Ripple", "institutional payments"],
+            "evidence": [{
+                "title": "Ripple and bank announce institutional payments partnership",
+                "url": "https://example.test/historical-bank",
+                "published_at": "2025-06-10T12:00:00+00:00",
+            }],
+        }
+    }
+
+    events, failures = enrich_clusters([current], Provider(), config, history)
+
+    assert failures == []
+    assert len(events) == 1
+    assert "PRIOR INTELLIGENCE HISTORY" in captured["user"]
+    assert "evt-historical-bank" in captured["user"]
+    assert "status=superseded" in captured["user"]
+    assert "not current-event evidence" in captured["user"]
+    assert events[0].evidence[0].url == current.url
