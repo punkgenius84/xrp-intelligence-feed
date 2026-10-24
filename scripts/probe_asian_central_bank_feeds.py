@@ -115,26 +115,11 @@ def main() -> None:
                     for entry in parsed.entries[:12]:
                         source = entry.get("source", {})
                         print(f"  rss_item date={entry.get('published', entry.get('updated', 'unknown'))!r} title={entry.get('title', '')[:180]!r} source={source.get('title', '')!r} source_url={source.get('href', '')!r} feed_link={entry.get('link', '')!r}")
-                        title = entry.get("title", "")
-                        if any(term in title.casefold() for term in ("bloom", "stablecoin")):
-                            try:
-                                resolved = client.get(entry.get("link", ""))
-                                print(f"  rss_relevant_link_resolution final_url={resolved.url} type={resolved.headers.get('content-type', 'unknown')} bytes={len(resolved.content)}")
-                                body = resolved.content.decode("utf-8", errors="replace")
-                                body = body.replace("\\/", "/").replace("\\u003d", "=").replace("\\u0026", "&")
-                                for host_token in ("mas.gov.sg", "bot.or.th"):
-                                    host_matches = list(re.finditer(re.escape(host_token), body, re.IGNORECASE))
-                                    print(f"  landing_host_token={host_token} occurrences={len(host_matches)}")
-                                    if host_matches:
-                                        match = host_matches[0]
-                                        print(f"  landing_host_context={body[max(0, match.start()-160):match.end()+240].replace(chr(10), chr(32))[:420]}")
-                                official_urls = sorted(set(re.findall(r"https?://(?:www\\.)?(?:mas\\.gov\\.sg|bot\\.or\\.th)[^\\s\"<>]+", body, re.IGNORECASE)))
-                                for official_url in official_urls[:8]:
-                                    print(f"  resolved_official_url={unescape(official_url)[:300]}")
-                                if not official_urls:
-                                    print("  no canonical official article URL found in resolved RSS article HTML")
-                            except DiscoveryHttpError as exc:
-                                print(f"  rss_relevant_link_resolution_error={exc.kind} status={exc.status_code or 'unknown'}")
+                        # Keep the Google News article URL as the usable discovery link.
+                        # The feed carries publisher attribution and publication time; following
+                        # the Google landing page is unnecessary for this read-only probe.
+                        if entry.get("link"):
+                            print(f"  google_news_link={entry.get('link', '')}")
                 except Exception as exc:
                     print(f"  rss_parse_error={type(exc).__name__}: {exc}")
                 continue
