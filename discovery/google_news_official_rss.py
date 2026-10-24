@@ -212,7 +212,7 @@ class GoogleNewsOfficialRSSDiscovery:
                     summary=summary,
                     source_type="discovery",
                     source_id=self.source["source_id"],
-                    authority_tier=1,
+                    authority_tier=self.source["authority_tier"],
                     category=self.source["category"],
                     source_native_id=native_id,
                     candidate_id=f"{self.source['source_id']}:{native_id}",
