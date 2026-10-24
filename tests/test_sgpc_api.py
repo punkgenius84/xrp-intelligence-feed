@@ -254,13 +254,20 @@ def test_304_preserves_saved_request_validators():
 
 
 
-def test_pipeline_accepts_official_bloom_release_through_normal_relevance_path(tmp_path):
+def test_pipeline_accepts_official_bloom_release_through_normal_relevance_path(tmp_path, monkeypatch):
     import main
     from storage.database import JsonState
     from storage.discovery_state import JsonDiscoveryState
 
     http = FakeHttp([response(payload()), response(payload())])
     source = sgpc_source(search_terms=["BLOOM"], max_terms_per_run=1)
+    monkeypatch.setattr(
+        main,
+        "collect_source",
+        lambda configured, state: SGPCMediaReleasesDiscovery(
+            configured, http=http, sleep=lambda _: None, request_interval=0, now=lambda: STAMP
+        ).collect(state),
+    )
     result = main.run_pipeline(
         sources=[],
         state=JsonState(str(tmp_path / "seen.json")),
