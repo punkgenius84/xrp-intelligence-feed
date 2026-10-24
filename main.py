@@ -133,6 +133,23 @@ def _score_observed_relevance(items, publish_score: int) -> None:
         f"score>={publish_score}={qualifying}"
     )
 
+    qualifying_by_source: dict[str, int] = {}
+    for item in items:
+        if item.relevance_score >= publish_score:
+            source_key = item.source_id or item.source or "unknown-source"
+            qualifying_by_source[source_key] = qualifying_by_source.get(source_key, 0) + 1
+    if qualifying_by_source:
+        source_counts = sorted(
+            qualifying_by_source.items(), key=lambda pair: (-pair[1], pair[0])
+        )
+        print(
+            "Relevance audit qualifying candidates by source "
+            "(before seen/dedup; counts may include previously seen items): "
+            + ", ".join(f"{source}={count}" for source, count in source_counts)
+        )
+    else:
+        print("Relevance audit qualifying candidates by source: none")
+
     top_items = sorted(
         items,
         key=lambda item: (-item.relevance_score, item.title.casefold()),
@@ -145,8 +162,10 @@ def _score_observed_relevance(items, publish_score: int) -> None:
         for item in top_items:
             reasons = "; ".join(item.score_reasons[:2]) or "no configured relevance signals"
             entities = ", ".join(item.detected_entities) or "none"
+            published = getattr(item, "published_at", None) or getattr(item, "collected_at", None)
+            published_label = published.date().isoformat() if published is not None else "date unknown"
             print(
-                f"  [{item.relevance_score}] {item.title} — {item.source} "
+                f"  [{item.relevance_score}] [{published_label}] {item.title} — {item.source} "
                 f"| entities={entities} | {reasons}"
             )
 
