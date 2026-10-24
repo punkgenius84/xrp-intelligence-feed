@@ -23,14 +23,20 @@ def validate_google_news_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "lookback_days", "max_items", "publisher_host",
         "publisher_name",
     }
-    if not isinstance(source, dict) or set(source) != required:
-        raise ValueError(f"Google News official RSS source must have exactly {sorted(required)}")
+    allowed = required | {"context_hint"}
+    if (not isinstance(source, dict) or not required <= set(source)
+            or set(source) - allowed):
+        raise ValueError(f"Google News official RSS source must contain {sorted(required)} and optional context_hint")
     for key in ("source_id", "name", "category", "discovery_method", "source_url",
                 "publisher_host", "publisher_name"):
         if not isinstance(source[key], str) or not source[key].strip():
             raise ValueError(f"{key} must be a non-empty string")
     if source["discovery_method"] != METHOD:
         raise ValueError(f"discovery_method must be {METHOD!r}")
+    if "context_hint" in source:
+        hint = source["context_hint"]
+        if not isinstance(hint, str) or not hint.strip() or len(hint.strip()) > 200:
+            raise ValueError("context_hint must be a non-empty string of at most 200 characters")
     if type(source["authority_tier"]) is not int or source["authority_tier"] != 1:
         raise ValueError("Google News official RSS authority_tier must be 1")
     if type(source["enabled"]) is not bool:
@@ -161,6 +167,9 @@ class GoogleNewsOfficialRSSDiscovery:
                 native_id = link.rstrip("/").rsplit("/", 1)[-1]
                 summary_text = _clean(entry.get("summary"))[:MAX_SUMMARY]
                 summary = f"Google News discovery; publisher attribution: {attributed_name}."
+                context_hint = _clean(self.source.get("context_hint"))
+                if context_hint:
+                    summary += f" Search context (not article text): {context_hint}."
                 if summary_text:
                     summary += f" {summary_text}"
                 candidate = DiscoveryCandidate(
@@ -189,6 +198,7 @@ class GoogleNewsOfficialRSSDiscovery:
                         "publisher_href": attributed_url[:500],
                         "article_url_status": "google_news_clickthrough_unverified",
                         "query_publisher_host": self.source["publisher_host"],
+                        **({"query_context_hint": context_hint[:200]} if context_hint else {}),
                     },
                 )
                 existing = candidates.get(native_id)
