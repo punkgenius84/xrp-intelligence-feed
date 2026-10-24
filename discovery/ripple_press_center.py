@@ -177,24 +177,24 @@ def _parse_page(content: bytes) -> tuple[list[dict[str, Any]], bool]:
     rows: list[dict[str, Any]] = []
     complete = True
     for index, (match, safe) in enumerate(official_matches):
-        previous = official_matches[index - 1][0].start() if index else max(0, match.start() - 800)
         following = (
             official_matches[index + 1][0].start()
             if index + 1 < len(official_matches)
             else min(len(text), match.end() + 1200)
         )
-        window = text[previous:following]
-        published = None
+        # Only accept dates occurring after this release's own link and before
+        # the next official release link. Searching backward across the prior
+        # card can silently assign a neighboring release's date to an undated
+        # article, which is worse than marking the page partial.
         local_after = text[match.end():following]
-        datetime_matches = list(re.finditer(r"\bdatetime=['\"]([^'\"]+)['\"]", local_after, re.IGNORECASE))
+        published = None
+        datetime_matches = list(re.finditer(r"\\bdatetime=['\\"]([^'\\"]+)['\\"]", local_after, re.IGNORECASE))
         if datetime_matches:
             published = _parse_date(datetime_matches[0].group(1))
         if published is None:
-            date_matches = list(_DATE_TEXT.finditer(window))
+            date_matches = list(_DATE_TEXT.finditer(local_after))
             if date_matches:
-                anchor_position = match.start() - previous
-                nearest = min(date_matches, key=lambda item: abs(item.start() - anchor_position))
-                published = _parse_date(nearest.group(0))
+                published = _parse_date(date_matches[0].group(0))
         title = _clean(re.sub(r"<[^>]+>", " ", match.group("title")))
         if not title or published is None:
             complete = False
