@@ -20,9 +20,12 @@ def test_probe_validates_cik_and_summarizes_official_filing_indexes():
     assert result["recent_rows"] == 3
     assert result["valid_rows"] == 3
     assert result["skipped_rows"] == 0
+    assert result["skip_reasons"] == {}
     # Duplicate accessions are reported as returned by SEC; production collection
     # has its own deduplication contract. This probe only diagnoses the response.
     assert result["form_counts"] == {"10-K": 1, "8-K": 2}
+    assert result["tracked_rows"] == 3
+    assert result["tracked_form_counts"] == {"10-K": 1, "8-K": 2}
     assert result["sample"][0]["filing_index_url"] == (
         "https://www.sec.gov/Archives/edgar/data/9999999999/"
         "999999999926000001/9999999999-26-000001-index.htm"
@@ -55,7 +58,9 @@ def test_probe_skips_bad_accession_but_ignores_unused_primary_document_path():
     recent["primaryDocument"][1] = "xslF345X05/inline-form.htm"
     result = summarize_payload(data, "9999999999")
     assert result["skipped_rows"] == 1
+    assert result["skip_reasons"] == {"invalid_accession_or_cik": 1}
     assert result["valid_rows"] == 2
+    assert result["tracked_rows"] == 2
     assert all(row["filing_index_url"].startswith("https://www.sec.gov/Archives/edgar/data/") for row in result["sample"])
 
 
