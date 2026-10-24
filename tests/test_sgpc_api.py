@@ -251,3 +251,24 @@ def test_304_preserves_saved_request_validators():
     assert result.state_updates[f"latest:{date_key}"]["etag"] == '"new-latest"'
     assert result.state_updates[f"term:BLOOM:{date_key}"]["etag"] == '"new-bloom"'
     assert result.state_updates[f"term:BLOOM:{date_key}"]["last_modified"] == "Thu, 24 Oct 2026 02:00:00 GMT"
+
+
+
+def test_pipeline_accepts_official_bloom_release_through_normal_relevance_path(tmp_path):
+    import main
+    from storage.database import JsonState
+    from storage.discovery_state import JsonDiscoveryState
+
+    http = FakeHttp([response(payload()), response(payload())])
+    source = sgpc_source(search_terms=["BLOOM"], max_terms_per_run=1)
+    result = main.run_pipeline(
+        sources=[],
+        state=JsonState(str(tmp_path / "seen.json")),
+        discovery_sources=[source],
+        discovery_state=JsonDiscoveryState(tmp_path / "discovery.json"),
+    )
+    assert result.failures == []
+    bloom = next(item for item in result.fresh if item.candidate_id == f"{SGPC_SOURCE_ID}:{BLOOM_ID}")
+    assert bloom.relevance_score >= 30
+    assert bloom.source_id == SGPC_SOURCE_ID
+    assert bloom.url == "https://www.sgpc.gov.sg/media_releases/mas/press_release/P-20261023-1"
