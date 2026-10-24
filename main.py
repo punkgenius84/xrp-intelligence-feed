@@ -358,8 +358,8 @@ def run_pipeline(
             )
 
     # Correlation is downstream of relevance scoring and never changes scores.
-    # A separate queue-time gate may suppress a tier-2 copy only when a qualifying
-    # tier-1 candidate for the same event is also current and queueable.
+    # Delivery gates run in live and dry-run modes alike so previews reflect the
+    # same stale-item, secondary-commentary, and duplicate rules as production.
     correlate(fresh, history=list(correlation_state_value["cards"].values()))
     buried_signals = detect_buried_signals(
         fresh, publish_score=thresholds["publish_score"]
@@ -373,25 +373,29 @@ def run_pipeline(
         )
         for item in held_commentary[:5]:
             print(f"  held secondary commentary: [{item.relevance_score}] {item.title} — {item.source}")
-    if outbox_state is not None:
-        queueable, too_old = split_stale(publishable, max_age_days)
-        if too_old:
-            print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
-                  "were not queued for delivery")
-        queueable, suppressed_duplicates = suppress_correlated_secondary_duplicates(
-            queueable,
-            publish_score=thresholds["publish_score"],
-            history=list(correlation_state_value["cards"].values()),
+
+    queueable, too_old = split_stale(publishable, max_age_days)
+    if too_old:
+        print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
+              "were not queued for delivery")
+        stale_ids = {id(item) for item in too_old}
+        publishable = [item for item in publishable if id(item) not in stale_ids]
+
+    queueable, suppressed_duplicates = suppress_correlated_secondary_duplicates(
+        queueable,
+        publish_score=thresholds["publish_score"],
+        history=list(correlation_state_value["cards"].values()),
+    )
+    if suppressed_duplicates:
+        suppressed_ids = {id(item) for item in suppressed_duplicates}
+        publishable = [item for item in publishable if id(item) not in suppressed_ids]
+        print(
+            f"Discord: suppressed {len(suppressed_duplicates)} correlated tier-2 "
+            "duplicate(s); primary-source coverage preferred"
         )
-        if suppressed_duplicates:
-            suppressed_ids = {id(item) for item in suppressed_duplicates}
-            publishable = [item for item in publishable if id(item) not in suppressed_ids]
-            print(
-                f"Discord: suppressed {len(suppressed_duplicates)} correlated tier-2 "
-                "duplicate(s); qualifying tier-1 source retained"
-            )
-            for item in suppressed_duplicates[:5]:
-                print(f"  suppressed secondary duplicate: [{item.relevance_score}] {item.title} — {item.source}")
+        for item in suppressed_duplicates[:5]:
+            print(f"  suppressed secondary duplicate: [{item.relevance_score}] {item.title} — {item.source}")
+    if outbox_state is not None:
         outbox_state.enqueue(queueable)
 
     intelligence_events = []
