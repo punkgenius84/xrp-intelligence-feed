@@ -372,6 +372,44 @@ def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, li
     return found
 
 
+def _probe_sgpc_collector() -> None:
+    """Exercise the configured SGPC collector in memory; never save state or publish."""
+    try:
+        sources = load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+        source = next(item for item in sources if item.get("source_id") == "sgpc-media-releases-api")
+    except Exception as exc:
+        print(f"sgpc_collector_registry_error={type(exc).__name__}: {exc}")
+        return
+    try:
+        result = collect_source(source, {})
+    except Exception as exc:
+        print(f"sgpc_collector status=error error={type(exc).__name__}: {exc}")
+        return
+    bloom = [item for item in result.candidates if "BLOOM" in item.title.upper()]
+    print(
+        f"sgpc_collector configured_enabled={source['enabled']} status={result.status} "
+        f"candidates={len(result.candidates)} errors={len(result.errors)} "
+        f"requests_made={result.pagination.get('requests_made', 0)} "
+        f"bloom_candidates={len(bloom)}"
+    )
+    for error in result.errors[:5]:
+        print(f"  sgpc_collector_error={error}")
+    for item in sorted(
+        result.candidates,
+        key=lambda candidate: (candidate.published_at or datetime.min.replace(tzinfo=timezone.utc), candidate.title),
+        reverse=True,
+    )[:8]:
+        detect_entities(item)
+        classify_source_quality(item)
+        score, reasons = score_relevance(item)
+        print(
+            f"  sgpc_candidate date={item.published_at.isoformat() if item.published_at else 'unknown'} "
+            f"score={score} title={item.title[:200]!r} url={item.url}"
+        )
+    if bloom:
+        print(f"  sgpc_bloom_official_url={bloom[0].url}")
+
+
 def _probe_secondary_source_duplicate_gate() -> None:
     """Compare a few real publisher collectors in memory; never save state or publish."""
     selected_ids = {
@@ -582,6 +620,7 @@ def main() -> None:
             if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
+    _probe_sgpc_collector()
     _probe_configured_google_news_collectors()
     _probe_secondary_source_duplicate_gate()
 
