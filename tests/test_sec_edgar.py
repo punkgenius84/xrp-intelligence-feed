@@ -63,6 +63,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
     assert sec["issuer_ciks"] == ["1679788", "1876042", "1633917", "1403161"]
     assert sec["enabled"] is False
     assert sec["detail_enrichment_limit"] == 0
+    assert sec["lookback_days"] == 30
     assert sec["filing_forms"] == ["8-K", "10-K", "10-Q", "S-1", "S-3"]
     assert {source["source_id"] for source in configured} == {
         "sec-edgar-submissions",
@@ -191,6 +192,28 @@ def test_registry_rejects_duplicate_sources_and_invalid_ciks():
         validate_discovery_sources({"schema_version": 1, "sources": [sec_source(), sec_source()]})
     with pytest.raises(ValueError, match="issuer_ciks"):
         validate_sec_source(sec_source(issuer_ciks=["not-a-cik"]))
+
+
+def test_sec_submissions_discards_stale_rows_without_marking_source_partial():
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    recent = payload["filings"]["recent"]
+    recent["filingDate"][0] = "2026-07-01"
+    recent["accessionNumber"].insert(1, "0001193125-26-000005")
+    recent["form"].insert(1, "8-K")
+    recent["filingDate"].insert(1, "2026-09-23")
+    recent["primaryDocument"].insert(1, "recent-agent-filed.htm")
+    recent["primaryDocDescription"].insert(1, "Recent current report")
+    http = FakeHttp([response(payload, headers={"content-type": "application/json", "etag": '"recent-only"'})])
+
+    result = SECEdgarDiscovery(
+        sec_source(lookback_days=30), http=http, now=lambda: STAMP,
+        request_interval=0, environ={},
+    ).collect()
+
+    assert result.status == "success"
+    assert len(result.candidates) == 1
+    assert result.candidates[0].source_native_metadata["accession_number"] == "0001193125-26-000005"
+    assert result.state_updates["9999999999"]["etag"] == '"recent-only"'
 
 
 def test_no_requests_until_issuer_and_form_allowlists_are_configured():
