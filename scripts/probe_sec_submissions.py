@@ -63,6 +63,7 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
     counts: Counter[str] = Counter()
     tracked_counts: Counter[str] = Counter()
     skip_reasons: Counter[str] = Counter()
+    foreign_filer_prefixes: Counter[str] = Counter()
     valid_rows: list[dict[str, str]] = []
     skipped = 0
     for index in range(row_count):
@@ -70,9 +71,14 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         form = str(columns["form"][index] or "").strip()
         filed = str(columns["filingDate"][index] or "").strip()
         match = ACCESSION_RE.fullmatch(accession)
-        if not match or match.group(1) != expected_cik.zfill(10):
+        if not match:
             skipped += 1
-            skip_reasons["invalid_accession_or_cik"] += 1
+            skip_reasons["invalid_accession_format"] += 1
+            continue
+        if match.group(1) != expected_cik.zfill(10):
+            skipped += 1
+            skip_reasons["accession_cik_mismatch"] += 1
+            foreign_filer_prefixes[match.group(1)] += 1
             continue
         try:
             date.fromisoformat(filed)
@@ -112,6 +118,7 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         "valid_rows": len(valid_rows),
         "skipped_rows": skipped,
         "skip_reasons": dict(sorted(skip_reasons.items())),
+        "foreign_filer_prefix_counts": dict(foreign_filer_prefixes.most_common(5)),
         "form_counts": dict(sorted(counts.items())),
         "tracked_rows": sum(tracked_counts.values()),
         "tracked_form_counts": dict(sorted(tracked_counts.items())),
@@ -225,7 +232,8 @@ def main() -> int:
             f"recent_rows={summary['recent_rows']} valid_rows={summary['valid_rows']} "
             f"skipped_rows={summary['skipped_rows']} tracked_rows={summary['tracked_rows']} "
             f"tracked_form_counts={json.dumps(summary['tracked_form_counts'], sort_keys=True)} "
-            f"skip_reasons={json.dumps(summary['skip_reasons'], sort_keys=True)}"
+            f"skip_reasons={json.dumps(summary['skip_reasons'], sort_keys=True)} "
+            f"foreign_filer_prefix_counts={json.dumps(summary['foreign_filer_prefix_counts'], sort_keys=True)}"
         )
         for row in summary["sample"]:
             print(
