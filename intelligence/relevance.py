@@ -123,7 +123,22 @@ def _classify(item, combined: str) -> list[str]:
         "investigation", "investigates", "probes", "probe", "seeks answers",
         "subpoena", "files suit", "filed suit", "sues", "charged", "alleges",
     ))
-    if crypto_ecosystem_entity and action and ecosystem_context:
+    crypto_ecosystem_action_terms = (
+        "seeks answers", "investigates", "investigation", "probes", "probe",
+        "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
+        "charges", "alleges", "allegation", "launches", "launched", "launch",
+        "announces", "announced", "partners", "partnered", "integrates",
+        "integrated", "upgrades", "upgraded", "mints", "minted", "issues",
+        "issued", "expands", "expanded", "connects", "connected", "adds",
+        "added", "opens", "opened", "releases", "released", "rolls out",
+        "rolled out", "goes live", "went live", "implements", "implemented",
+        "activates", "activated", "settles", "settled", "adopts", "adopted",
+        "deploys", "deployed", "introduces", "introduced",
+    )
+    crypto_ecosystem_action = any(
+        _contains(combined, term) for term in crypto_ecosystem_action_terms
+    )
+    if crypto_ecosystem_entity and crypto_ecosystem_action and ecosystem_context:
         categories.append("crypto_ecosystem_action")
 
     broad_tokenization = any(_contains(combined, term) for term in (
