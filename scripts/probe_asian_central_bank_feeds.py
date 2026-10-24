@@ -141,7 +141,7 @@ def _links(html: str, page_url: str, expected_host: str) -> tuple[list[str], lis
 def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: int = 6) -> list[str]:
     """Return a small, same-host list of script assets for read-only diagnostics."""
     found: list[str] = []
-    for tag in re.findall(r"<script\\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
+    for tag in re.findall(r"<script\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
         attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
         src = attrs.get("src", "").strip()
         if not src:
@@ -161,10 +161,10 @@ def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: 
 
 def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
     """Extract likely same-site content/API route strings; never request them here."""
-    normalized = script_text.replace(r"\\/", "/").replace(r"\\u002F", "/")
+    normalized = script_text.replace(r"\/", "/").replace(r"\u002F", "/")
     pattern = re.compile(
         r"""["'\x60]((?:/api(?:/v[0-9]+)?|/graphql|/search|/news(?:/|\\?)|"""
-        r"""/media-releases/|/content/|/umbraco/)[^"'\x60\\s]{0,160})["'\x60]""",
+        r"""/media-releases/|/content/|/umbraco/)[^"'\x60\s]{0,160})["'\x60]""",
         re.IGNORECASE,
     )
     routes: list[str] = []
