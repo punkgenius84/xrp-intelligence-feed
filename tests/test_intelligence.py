@@ -47,13 +47,13 @@ def test_relevance_score_has_explainable_reasons():
     assert "source_quality:primary" in item.score_signals
 
 
-def test_primary_broad_tokenization_does_not_become_direct_xrp_signal():
+def test_primary_regulatory_tokenization_action_can_clear_gate_without_direct_xrp_signal():
     item = NewsItem("SEC adopts tokenized securities pilot", "https://example.com/a", "SEC",
                     authority_tier=1, detected_entities=["SEC", "Tokenization"])
     classify_source_quality(item)
-    score, _ = score_relevance(item)
-    assert score == 0
-    assert "broad_tokenization" in item.relevance_categories
+    score, reasons = score_relevance(item)
+    assert score >= 30, f"official regulatory tokenization action should clear gate: {score}, {reasons}"
+    assert "regulatory_tokenization_action" in item.relevance_categories
     assert "direct_xrp_xrpl" not in item.relevance_categories
 
 
