@@ -409,6 +409,11 @@ def run_pipeline(
             fresh,
             provider,
             intelligence_config,
+            historical_events=(
+                intelligence_state_value.get("events", {})
+                if isinstance(intelligence_state_value, dict)
+                else {}
+            ),
         )
         if intelligence_state_value is not None:
             now = datetime.now().astimezone().isoformat()
