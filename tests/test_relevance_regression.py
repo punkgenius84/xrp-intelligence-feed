@@ -260,6 +260,28 @@ def test_sec_filing_context_requires_a_concrete_digital_asset_action(title, summ
         assert score < 30, f"generic risk-factor filing should stay below gate: {score}, {reasons}"
 
 
+def test_swift_blockchain_shared_ledger_mvp_milestone_clears_relevance_gate():
+    item = NewsItem(
+        title="Swift’s blockchain-based shared ledger progresses to MVP implementation",
+        summary="Swift is progressing its blockchain-based shared ledger to MVP implementation for financial institutions.",
+        url="https://www.swift.com/news-events/news/swifts-blockchain-based-shared-ledger-progresses-mvp-implementation",
+        source="Swift",
+        source_id="swift-google-news-discovery",
+        source_quality="primary",
+        authority_tier=1,
+        category="institutional",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Swift" in item.detected_entities
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert score >= 30, f"concrete blockchain milestone should clear relevance gate: {score}, {reasons}"
+
+
 def test_generic_tokenization_commentary_remains_below_relevance_gate():
     item = NewsItem(
         title="Market Research Highlights Tokenization Trends",
