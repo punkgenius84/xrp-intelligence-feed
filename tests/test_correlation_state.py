@@ -146,7 +146,7 @@ def test_touch_card_updates_last_seen_without_replacing_card(tmp_path):
         last_seen=STAMP,
     )
     later = STAMP + timedelta(hours=2)
-    JsonCorrelationState.touch_card(state, candidate_id="sec:1", last_seen=later)
+    JsonCorrelationState.touch_card(state, candidate_id="sec:1", last_seen=later, source_quality="primary", relevance_score=43)
     assert state["cards"]["sec:1"]["content_hash"] == "hash-1"
     assert state["cards"]["sec:1"]["last_seen"] == later.isoformat()
     assert state["cards"]["sec:1"]["source_quality"] == "primary"
