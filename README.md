@@ -8,6 +8,9 @@ A free, primary-source-first XRP/XRPL intelligence feed. It collects official go
 
 ## Launch checkpoint — 24 October 2026
 
+- **Latest main-branch validation after PRs #405 and #404:** push-triggered Test Suite run [#40063806029](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40063806029) passed **1,107 tests** with one existing feedparser deprecation warning. The Google News publisher-query hardening and optional SEC filing-index context parser are merged. SEC enrichment remains off (`detail_enrichment_limit: 0`) and the issuer CIK allowlist remains empty pending official live-response validation.
+- **Google News live probe:** [run #57](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40063277895) returned 10 MAS, 1 Thai stablecoin hearing, 19 Coinbase, 16 SWIFT, and 21 IMF candidates with zero collector errors. The MAS/Thai/Coinbase/IMF sources are enabled; BOT English and SWIFT remain disabled. Relevant examples included the MAS/BNM/BOT cross-border payment connectivity announcement (score 32), Coinbase–Thunes stablecoin/fiat payouts (score 37), and IMF Project Sunbird cross-border CBDC payments report (score 37). Google News URLs remain explicitly marked click-through/unverified, not canonical article URLs. These were read-only probes, not Discord deliveries.
+
 - **Routine intelligence-event publishing remains disabled.** Keep `INTELLIGENCE_PUBLISH=false`; the normal scheduled feed must not be treated as a launch test.
 - The guarded one-event path requires an exact event ID, `dry_run=true`, `publish_intelligence_test=true`, and the confirmation `POST-ONE-INTELLIGENCE-EVENT`. It is isolated from routine feed publishing and has no hardcoded fallback event ID.
 - The pre-launch queue reset archived the prior active events. Quarantine remains an audit record; do not clear it or requeue an event casually.
