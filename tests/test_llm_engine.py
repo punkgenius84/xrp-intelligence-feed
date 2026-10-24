@@ -467,3 +467,11 @@ def test_prompt_tells_model_to_cite_title_when_summary_omits_key_details():
     cluster_prompt = build_cluster_user_prompt([first])
     assert "Cite the title when a claim describes the headline" in cluster_prompt
     assert "cite the summary only for anchors actually present in the summary" in cluster_prompt
+
+
+def test_prompt_allows_cautious_crypto_wide_significance_without_xrp_mentions():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert "The scope is crypto-wide, not limited to articles that explicitly mention XRP or Ripple." in SYSTEM_PROMPT
+    assert 'In "significance", you may make cautious, clearly labeled inferences' in SYSTEM_PROMPT
+    assert "Do not claim direct XRP, XRPL, or Ripple involvement, usage, adoption, or price impact unless the current evidence supports that specific connection." in SYSTEM_PROMPT
