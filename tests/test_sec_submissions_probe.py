@@ -27,6 +27,7 @@ def test_efts_probe_summarizes_filing_context_and_items():
                         "file_description": "Current report",
                         "items": ["1.01", "8.01", "9.01"],
                     },
+                    "highlight": {"doc_text": ["Stablecoin settlement agreement and issuer liquidity arrangements."]},
                 },
                 {
                     "_id": "malformed-accession:filing.htm",
@@ -44,7 +45,35 @@ def test_efts_probe_summarizes_filing_context_and_items():
         "entity_name": "Example Stablecoin Issuer",
         "file_description": "Current report",
         "items": "1.01, 8.01, 9.01",
+        "hit_keys": "_id,_source,highlight",
+        "source_keys": "entity_name,file_date,file_description,form_type,items",
+        "highlight_keys": "doc_text",
+        "snippet": "Stablecoin settlement agreement and issuer liquidity arrangements.",
     }]
+
+
+def test_efts_probe_supports_alternate_field_names_and_highlights():
+    result = summarize_efts_payload({
+        "hits": {
+            "total": 1,
+            "hits": [{
+                "_id": "0001193125-26-000268:ex99.htm",
+                "_source": {
+                    "file_date": "2026-10-21",
+                    "form": "8-K",
+                    "display_names": ["Example Payments Inc."],
+                    "file_description": "EX-99.1",
+                    "items": ["7.01"],
+                },
+                "highlight": {"content": ["Payment stablecoin partnership announcement."]},
+            }],
+        },
+    })
+    row = result["sample"][0]
+    assert row["form"] == "8-K"
+    assert row["entity_name"] == "Example Payments Inc."
+    assert row["snippet"] == "Payment stablecoin partnership announcement."
+    assert row["highlight_keys"] == "content"
 
 
 def test_efts_probe_rejects_missing_hit_structure():
