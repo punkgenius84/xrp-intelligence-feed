@@ -159,6 +159,22 @@ class BoundedHttpClient:
                 response.close()
                 raise DiscoveryHttpError(f"Unexpected content type: {content_type or 'missing'}",
                                          kind="invalid_content_type", status_code=status)
+            # requests/urllib3 may transparently decode Brotli whenever an optional
+            # Brotli package is installed, even if we did not advertise "br".
+            # Reject it before iter_content() so a vulnerable decoder never sees
+            # attacker-controlled Brotli bytes. gzip/deflate remain supported.
+            encodings = {
+                value.strip().casefold()
+                for value in response_headers.get("content-encoding", "").split(",")
+                if value.strip()
+            }
+            if "br" in encodings:
+                response.close()
+                raise DiscoveryHttpError(
+                    "Brotli response decoding is disabled pending patched decoder availability",
+                    kind="unsupported_content_encoding",
+                    status_code=status,
+                )
             length = response_headers.get("content-length", "")
             if length.isdigit() and int(length) > self.max_bytes:
                 response.close()

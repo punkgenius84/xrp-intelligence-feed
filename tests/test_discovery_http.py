@@ -12,8 +12,10 @@ class Response:
         self.headers = headers or {"Content-Type": "application/json"}
         self.chunks = list(chunks)
         self.closed = False
+        self.iterated = False
 
     def iter_content(self, chunk_size):
+        self.iterated = True
         yield from self.chunks
 
     def close(self):
@@ -109,6 +111,23 @@ def test_oversized_response_is_rejected_from_header_and_stream():
     stream_http, _, _ = client([Response(chunks=(b"123456", b"78901"))], max_bytes=10)
     with pytest.raises(DiscoveryHttpError, match="size limit"):
         stream_http.get("https://example.test/data")
+
+
+@pytest.mark.parametrize("encoding", ["br", "gzip, br", "br, gzip"])
+def test_brotli_encoded_responses_are_rejected_before_body_decoding(encoding):
+    response = Response(headers={
+        "Content-Type": "application/json",
+        "Content-Encoding": encoding,
+    })
+    http, _, _ = client([response])
+
+    with pytest.raises(DiscoveryHttpError) as error:
+        http.get("https://example.test/data")
+
+    assert error.value.kind == "unsupported_content_encoding"
+    assert error.value.status_code == 200
+    assert response.closed
+    assert response.iterated is False
 
 
 def test_invalid_content_type_and_non_https_url_are_rejected():
