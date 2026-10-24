@@ -31,7 +31,8 @@ class _IssueIndexParser(HTMLParser):
         self.heading_text = ""
         self.heading_tag = ""
         self.anchor: dict[str, str] | None = None
-        self.rows: list[tuple[str, str, str]] = []\n        self.visible_text = ""
+        self.rows: list[tuple[str, str, str]] = []
+        self.visible_text = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
