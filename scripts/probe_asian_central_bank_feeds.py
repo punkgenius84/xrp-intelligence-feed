@@ -19,6 +19,7 @@ from intelligence.source_quality import classify_source_quality
 TARGETS = (
     ("MAS news index", "https://www.mas.gov.sg/news?page=1", "www.mas.gov.sg"),
     ("MAS media release", "https://www.mas.gov.sg/news/media-releases/2026/mas-bnm-and-bot-partner-with-industry-to-advance-cross-border-settlement-in-digital-money", "www.mas.gov.sg"),
+    ("MAS BLOOM initiative", "https://www.mas.gov.sg/schemes-and-initiatives/BLOOM", "www.mas.gov.sg"),
     ("MAS robots", "https://www.mas.gov.sg/robots.txt", "www.mas.gov.sg"),
     ("MAS sitemap", "https://www.mas.gov.sg/sitemap.xml", "www.mas.gov.sg"),
     ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
@@ -124,6 +125,58 @@ def _links(html: str, page_url: str, expected_host: str) -> tuple[list[str], lis
     return sorted(set(feeds)), sorted(set(article_links))
 
 
+def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, list[str]]:
+    """Report page-owned metadata from HTML without treating it as verified article data."""
+    found: dict[str, list[str]] = {}
+
+    def add(key: str, value: str) -> None:
+        value = " ".join(unescape(value).split()).strip()
+        if not value:
+            return
+        values = found.setdefault(key, [])
+        if value not in values and len(values) < 4:
+            values.append(value[:300])
+
+    for tag in re.findall(r"<meta\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
+        key = (attrs.get("property") or attrs.get("name") or attrs.get("itemprop") or "").strip().lower()
+        value = attrs.get("content", "")
+        if key in {
+            "og:title", "og:url", "article:published_time", "article:modified_time",
+            "date", "datepublished", "dc.date", "dc.date.issued", "headline",
+            "twitter:title",
+        }:
+            add(key, value)
+
+    for tag in re.findall(r"<link\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
+        if "canonical" in attrs.get("rel", "").lower().split():
+            canonical = urljoin(page_url, attrs.get("href", ""))
+            if _host_ok(canonical, expected_host):
+                add("canonical", canonical)
+
+    for match in re.finditer(r"<title\b[^>]*>(.*?)</title\s*>", html, re.IGNORECASE | re.DOTALL):
+        add("title", re.sub(r"<[^>]+>", " ", match.group(1)))
+
+    for match in re.finditer(r"<time\b([^>]*)>", html, re.IGNORECASE | re.DOTALL):
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(match.group(1))}
+        if attrs.get("datetime"):
+            add("time.datetime", attrs["datetime"])
+
+    for match in re.finditer(r"<script\b[^>]*>(.*?)</script\s*>", html, re.IGNORECASE | re.DOTALL):
+        opening_tag = match.group(0).split(">", 1)[0] + ">"
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(opening_tag)}
+        if attrs.get("type", "").split(";", 1)[0].strip().lower() != "application/ld+json":
+            continue
+        payload = match.group(1)
+        for key in ("datePublished", "dateCreated", "headline", "name", "url", "mainEntityOfPage"):
+            pattern = r'"' + re.escape(key) + r'"\s*:\s*"([^"]{1,500})"'
+            for value in re.findall(pattern, payload):
+                add("jsonld." + key, value)
+
+    return found
+
+
 def main() -> None:
     client = BoundedHttpClient(
         user_agent="XRPIntelligenceFeed/0.4 (+read-only official feed discovery probe)",
@@ -149,6 +202,10 @@ def main() -> None:
                 print(f"  robots_sitemap={sitemap}")
         if "html" in content_type or b"<html" in response.content[:500].lower():
             feeds, articles = _links(text, response.url, host)
+            metadata = _page_metadata(text, response.url, host)
+            for key, values in sorted(metadata.items()):
+                for value in values[:3]:
+                    print(f"  page_metadata {key}={value!r}")
             if host == "www.mas.gov.sg":
                 for keyword in ("BLOOM", "stablecoin", "Ripple", "XRP"):
                     matches = list(re.finditer(keyword, text, re.IGNORECASE))
