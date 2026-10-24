@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
+from discovery.dispatch import collect_source, load_discovery_sources
+from intelligence.entities import detect_entities
+from intelligence.relevance import score_relevance
+from intelligence.source_quality import classify_source_quality
 
 
 TARGETS = (
@@ -29,6 +33,58 @@ TARGETS = (
     ("BOT stablecoin hearing", "https://www.bot.or.th/th/laws-and-rules/public-hearing/public-hearing-20261020-Stablecoin.html", "www.bot.or.th"),
     ("BOT robots", "https://www.bot.or.th/robots.txt", "www.bot.or.th"),
 )
+
+
+def _probe_configured_google_news_collectors() -> None:
+    """Exercise the real collector in memory without enabling or saving any source."""
+    print("\nREAD-ONLY collector validation; enabled flags are overridden in memory only")
+    client = BoundedHttpClient(
+        user_agent="XRPIntelligenceFeed/0.4 (+read-only Google News collector validation)",
+        timeout=(3.0, 6.0),
+        max_bytes=1_000_000,
+        max_redirects=2,
+        max_attempts=1,
+    )
+    try:
+        sources = [
+            source for source in load_discovery_sources(ROOT / "config" / "discovery_sources.json")
+            if source.get("discovery_method") == "google_news_official_rss"
+        ]
+    except Exception as exc:
+        print(f"collector_registry_error={type(exc).__name__}: {exc}")
+        return
+
+    for configured in sources:
+        source = {**configured, "enabled": True}
+        try:
+            result = collect_source(source, http=client)
+        except Exception as exc:
+            print(f"collector source_id={source['source_id']} status=error error={type(exc).__name__}: {exc}")
+            continue
+        print(
+            f"collector source_id={source['source_id']} configured_enabled={configured['enabled']} "
+            f"probe_status={result.status} candidates={len(result.candidates)} "
+            f"errors={len(result.errors)}"
+        )
+        for candidate in result.candidates[:10]:
+            detect_entities(candidate)
+            classify_source_quality(candidate)
+            score, reasons = score_relevance(candidate)
+            metadata = candidate.source_native_metadata
+            print(
+                f"  candidate date={candidate.published_at.isoformat() if candidate.published_at else 'unknown'} "
+                f"score={score} entities={','.join(candidate.detected_entities) or 'none'} "
+                f"categories={','.join(candidate.relevance_categories) or 'none'} "
+                f"url_status={metadata.get('article_url_status', 'unknown')} "
+                f"title={candidate.title[:180]!r}"
+            )
+            print(f"  candidate_link={candidate.url}")
+            if reasons:
+                print(f"  score_reasons={' | '.join(reasons)[:400]}")
+        for error in result.errors[:3]:
+            print(f"  collector_error={error[:300]}")
+
+
 FEED_RE = re.compile(r"""<link\b[^>]*>""", re.IGNORECASE)
 ATTR_RE = re.compile(r"""([\w:-]+)\s*=\s*(['"])(.*?)\2""", re.IGNORECASE | re.DOTALL)
 FEED_TYPES = {"application/rss+xml", "application/atom+xml", "application/xml", "text/xml"}
@@ -141,6 +197,9 @@ def main() -> None:
                 print(f"  latest_2026_sitemap_url lastmod={modified or 'unknown'} url={loc}")
             if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
+
+    _probe_configured_google_news_collectors()
+
 
 if __name__ == "__main__":
     main()

@@ -67,6 +67,22 @@ def test_bloom_cross_border_digital_money_announcement_clears_relevance_gate():
     }
 
 
+def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query_context():
+    item = score_item(
+        "การเปิดรับฟังความคิดเห็นต่อ หลักการกำกับดูแลผู้ประกอบธุรกิจที่เกี่ยวข้องกับ THB Stablecoin - Bank of Thailand",
+        "Google News discovery; publisher attribution: Bank of Thailand. "
+        "Search context (not article text): public hearing on THB stablecoin regulation.",
+        "https://news.google.com/rss/articles/example-thai-stablecoin-hearing",
+    )
+
+    assert "Bank of Thailand" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"stablecoin hearing unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+
+
 def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     item = score_item(
         "MAS Announces Senior Leadership Changes",
@@ -95,3 +111,6 @@ def test_asian_google_news_sources_remain_disabled_until_live_validation():
 
     assert expected <= sources.keys()
     assert all(sources[source_id]["enabled"] is False for source_id in expected)
+    # Google News RSS returns up to 100 entries by default; avoid self-inflicted
+    # truncation/partial health on every run while retaining a hard upper bound.
+    assert all(sources[source_id]["max_items"] == 100 for source_id in expected)
