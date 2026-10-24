@@ -1,4 +1,5 @@
 from scripts.probe_asian_central_bank_feeds import (
+    SCRIPT_ASSET_PROBE_LABELS,
     TARGETS,
     _candidate_api_routes,
     _page_metadata,
@@ -20,6 +21,28 @@ def test_probe_targets_known_official_bloom_and_thai_stablecoin_pages():
         "public-hearing-20261020-Stablecoin.html",
         "www.bot.or.th",
     )
+
+
+
+def test_probe_inspects_official_bot_news_and_hearing_scripts_for_api_routes():
+    targets = {label: (url, host) for label, url, host in TARGETS}
+    assert targets["BOT English news"] == (
+        "https://www.bot.or.th/en/news-and-media/news.html",
+        "www.bot.or.th",
+    )
+    assert targets["BOT English hearings"] == (
+        "https://www.bot.or.th/en/laws-and-rules/public-hearing.html",
+        "www.bot.or.th",
+    )
+    assert targets["BOT Thai hearings"] == (
+        "https://www.bot.or.th/th/laws-and-rules/public-hearing.html",
+        "www.bot.or.th",
+    )
+    assert {
+        "BOT English news",
+        "BOT English hearings",
+        "BOT Thai hearings",
+    }.issubset(SCRIPT_ASSET_PROBE_LABELS)
 
 
 def test_page_metadata_reports_article_owned_dates_and_same_host_canonical():
