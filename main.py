@@ -20,6 +20,7 @@ from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
 from intelligence.correlation import (build_correlation_card, correlate,
+                                      filter_secondary_opinion_commentary,
                                       suppress_correlated_secondary_duplicates)
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
@@ -364,6 +365,14 @@ def run_pipeline(
         fresh, publish_score=thresholds["publish_score"]
     )
     publishable = [item for item in fresh if item.relevance_score >= thresholds["publish_score"]]
+    publishable, held_commentary = filter_secondary_opinion_commentary(publishable)
+    if held_commentary:
+        print(
+            f"Discord: held {len(held_commentary)} secondary-source opinion/price-commentary "
+            "headline(s) from normal-feed eligibility; relevance scores unchanged"
+        )
+        for item in held_commentary[:5]:
+            print(f"  held secondary commentary: [{item.relevance_score}] {item.title} — {item.source}")
     if outbox_state is not None:
         queueable, too_old = split_stale(publishable, max_age_days)
         if too_old:
