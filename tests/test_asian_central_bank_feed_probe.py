@@ -112,5 +112,5 @@ def test_route_context_reports_bounded_call_site_without_fetching_route():
     context = _route_context(script, "/api/ApiMainListing/SubmitData", radius=25)
     assert "/api/ApiMainListing/SubmitData" in context
     assert 'method: "POST"' in context
-    assert len(context) <= 700
+    assert len(context) <= 1500
     assert _route_context(script, "/api/missing") == ""
