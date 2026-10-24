@@ -107,6 +107,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "swift-google-news-discovery",
         "imf-google-news-discovery",
         "coindesk-google-news-discovery",
+        "coindesk-xrpl-technical-google-news-discovery",
         "cointelegraph-google-news-discovery",
         "theblock-google-news-discovery",
         "blockworks-google-news-discovery",

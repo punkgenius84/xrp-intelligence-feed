@@ -99,6 +99,7 @@ def test_secondary_crypto_news_discovery_probes_are_restricted_and_selectively_e
     by_id = {item["source_id"]: item for item in configured}
     expected = {
         "coindesk-google-news-discovery": "coindesk.com",
+        "coindesk-xrpl-technical-google-news-discovery": "coindesk.com",
         "cointelegraph-google-news-discovery": "cointelegraph.com",
         "theblock-google-news-discovery": "theblock.co",
         "blockworks-google-news-discovery": "blockworks.co",
