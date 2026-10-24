@@ -103,6 +103,8 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         })
 
     valid_rows.sort(key=lambda row: (row["date"], row["accession"]), reverse=True)
+    tracked_rows = [row for row in valid_rows if row["form"].upper() in TRACKED_FORMS]
+    latest_8k = next((row for row in tracked_rows if row["form"].upper() == "8-K"), None)
     return {
         "issuer_name": issuer_name.strip(),
         "cik": expected_cik.zfill(10),
@@ -113,7 +115,11 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         "form_counts": dict(sorted(counts.items())),
         "tracked_rows": sum(tracked_counts.values()),
         "tracked_form_counts": dict(sorted(tracked_counts.items())),
-        "sample": [row for row in valid_rows if row["form"].upper() in TRACKED_FORMS][:3],
+        "sample": tracked_rows[:3],
+        # Keep a recent 8-K separate from the short general sample: the latest
+        # three tracked filings may all be quarterly/annual reports, which
+        # would otherwise prevent the live probe from exercising the index parser.
+        "latest_8k": latest_8k,
     }
 
 
@@ -128,15 +134,17 @@ def select_index_targets(
         return []
     targets: list[tuple[str, str, dict[str, str]]] = []
     for label, cik, summary in issuer_summaries:
-        sample = summary.get("sample", [])
-        if not isinstance(sample, list):
-            continue
-        row = next(
-            (item for item in sample
-             if isinstance(item, dict) and str(item.get("form", "")).upper() == "8-K"),
-            None,
-        )
-        if row is not None:
+        row = summary.get("latest_8k")
+        if not isinstance(row, dict):
+            # Backward-compatible fallback for small fixtures/older summaries.
+            sample = summary.get("sample", [])
+            if isinstance(sample, list):
+                row = next(
+                    (item for item in sample
+                     if isinstance(item, dict) and str(item.get("form", "")).upper() == "8-K"),
+                    None,
+                )
+        if isinstance(row, dict):
             targets.append((label, cik, row))
         if len(targets) >= limit:
             break
