@@ -1851,6 +1851,7 @@ def test_bnm_and_bot_official_sources_are_registered_and_allowlisted():
 
     bot = sources["bot-news"]
     assert bot["source_url"] == "https://www.bot.or.th/en/news-and-media/news.html"
+    assert bot["enabled"] is False
     assert _official_article(
         bot, "https://www.bot.or.th/en/news-and-media/news/news-20260910.html"
     ) is not None
