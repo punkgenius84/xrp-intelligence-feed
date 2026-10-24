@@ -307,6 +307,8 @@ Omit `--source-id` to inspect observations from all opted-in sources. Use `--pat
 
 The probe keeps its newest tracked 8-K separate from the three-row summary so the bounded index-parser check is not accidentally skipped when the latest general filings are 10-Q/10-K reports.
 
+**Accession-number rule:** the first ten digits identify the EDGAR submitting account, which may be a third-party filing agent rather than the registrant. The collector must therefore validate the accession format, but build the archive path using the issuer CIK from the issuer-scoped submissions response. See the [SEC Webmaster FAQ](https://www.sec.gov/files/about/webmaster-faq.htm) for the official explanation.
+
 The probe separates malformed accession strings from accession numbers whose embedded filer CIK differs from the requested issuer CIK, and reports only the five most common mismatched prefixes. Those rows remain excluded from sample URLs; this is diagnostic visibility, not permission to attribute another filer's filing to the requested issuer.
 
 ## SEC submissions runner probe
