@@ -90,6 +90,13 @@ def main() -> None:
                 print(f"  robots_sitemap={sitemap}")
         if "html" in content_type or b"<html" in response.content[:500].lower():
             feeds, articles = _links(text, response.url, host)
+            if host == "www.mas.gov.sg":
+                for keyword in ("BLOOM", "stablecoin", "Ripple", "XRP"):
+                    matches = list(re.finditer(keyword, text, re.IGNORECASE))
+                    print(f"  keyword={keyword} occurrences={len(matches)}")
+                    for match in matches[:3]:
+                        snippet = " ".join(text[max(0, match.start()-180):match.end()+220].split())
+                        print(f"  keyword_context={snippet[:420]}")
             for feed in feeds[:10]:
                 print(f"  feed_link={feed}")
             for article in articles[:8]:
@@ -106,6 +113,14 @@ def main() -> None:
                     locations.append((unescape(loc_match.group(1).strip()), mod_match.group(1).strip() if mod_match else ""))
             print(f"  sitemap_url_count={len(locations)}")
             recent = [(loc, modified) for loc, modified in locations if "2026" in loc or "stablecoin" in loc.lower() or "public-hearing" in loc.lower() or (modified and modified[:4] >= "2025")]
+            targeted = [(loc, modified) for loc, modified in locations if any(term in loc.lower() for term in ("stablecoin", "public-hearing", "hearing", "digital-money"))]
+            print(f"  targeted_hearing_or_stablecoin_urls={len(targeted)}")
+            for loc, modified in targeted[:25]:
+                print(f"  targeted_sitemap_url lastmod={modified or 'unknown'} url={loc}")
+            dated_2026 = [(loc, modified) for loc, modified in locations if "2026" in loc]
+            print(f"  url_encoded_2026_count={len(dated_2026)}")
+            for loc, modified in dated_2026[-20:]:
+                print(f"  latest_2026_sitemap_url lastmod={modified or 'unknown'} url={loc}")
             for loc, modified in recent[:40]:
                 print(f"  sitemap_candidate lastmod={modified or 'unknown'} url={loc}")
             if not locations:
