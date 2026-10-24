@@ -75,6 +75,39 @@ def test_regulatory_action_requires_digital_asset_or_payment_context():
                for match in re.findall(r"\(\+(\d+)\)", reason)) == relevant_score
 
 
+
+@pytest.mark.parametrize(
+    "title, entity",
+    [
+        ("OCC authorizes national banks to provide digital asset custody services", "OCC"),
+        ("SEC withdraws proposed crypto custody guidance", "SEC"),
+        ("CFTC grants relief for digital asset derivatives reporting", "CFTC"),
+        ("OCC clarifies rules for stablecoin reserve custody", "OCC"),
+    ],
+)
+def test_regulatory_decision_verbs_surface_digital_asset_actions(title, entity):
+    item = NewsItem(
+        title, "https://example.com/regulatory-action", entity,
+        authority_tier=1, detected_entities=[entity],
+    )
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert score >= 30, f"material regulatory digital-asset action should clear gate: {score}, {reasons}"
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+
+
+def test_regulatory_decision_verb_does_not_make_unrelated_action_relevant():
+    item = NewsItem(
+        "OCC authorizes banks to expand small-business lending",
+        "https://example.com/unrelated", "OCC",
+        authority_tier=1, detected_entities=["OCC"],
+    )
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert score == 0
+    assert "relevant_regulatory_digital_asset_payments" not in item.relevance_categories
+
+
 def test_ripple_payment_network_signal_is_distinguished():
     item = NewsItem("Ripple Payments expands cross-border settlement",
                     "https://example.com/p", "Ripple", detected_entities=["Ripple", "Payments"])

@@ -58,6 +58,10 @@ def _classify(item, combined: str) -> list[str]:
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
+        "authorizes", "authorized", "authorises", "authorised", "authorization", "authorisation",
+        "permits", "permitted", "withdraws", "withdrawn", "withdrawal", "rescinds", "rescinded",
+        "extends", "extended", "clarifies", "clarified", "grants", "granted", "denies", "denied",
+        "vacates", "vacated", "reverses", "reversed", "repeals", "repealed",
         "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
