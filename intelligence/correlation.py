@@ -275,7 +275,7 @@ def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
         len(shared_regions) >= 2
         and len(overlap) >= 4
         and {"cross", "border"}.issubset(overlap)
-        and ( _tokens(left) | _tokens(right) ) & regional_finance_terms
+        and bool((_tokens(left) | _tokens(right)) & regional_finance_terms)
     ):
         return 85
     return score
