@@ -140,6 +140,7 @@ def test_score_feed_respects_explicit_empty_publishable(monkeypatch):
             "title_match_bonus": 1, "institutional_source_bonus": 1,
             "technical_protocol_bonus": 1,
             "xrp_ledger_tokenization_bonus": 1,
+            "crypto_ecosystem_action_bonus": 1,
         }},
     )
     result = main.PipelineResult(

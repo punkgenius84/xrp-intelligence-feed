@@ -58,11 +58,15 @@ def _classify(item, combined: str) -> list[str]:
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
+        "seeks answers", "investigates", "investigation", "investigations", "probes", "probe",
+        "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged", "charges",
+        "alleges", "allegation", "inquiry", "inquiries",
         "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
+        "join", "targets 2030", "network buildout", "buildout target",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
-        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening",
+        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
         "collaborate", "collaboration", "connect", "connects", "connected", "connecting", "integrate", "integration",
         "roll out", "rolls out", "rolled out", "unveil", "unveils", "unveiled", "deploy", "deploys", "deployed",
         "go live", "goes live", "went live",
@@ -102,6 +106,51 @@ def _classify(item, combined: str) -> list[str]:
         # Preserve payment-network relevance without implying a digital-asset
         # link when the source only describes conventional payments.
         categories.append("institutional_payment_action")
+
+    # Broader ecosystem coverage is entity- and action-gated. A crypto company
+    # name alone is not enough: require a concrete action plus digital-asset,
+    # payment, protocol, custody, reserve, sanctions, or investigative context.
+    crypto_ecosystem_entities = {
+        "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
+        "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
+        "Coinbase", "Chainlink",
+    }
+    crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
+    ecosystem_context = any(_contains(combined, term) for term in (
+        "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
+        "payments", "payment", "blockchain", "token", "tokenized", "tokenised",
+        "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
+        "sanctions", "money laundering", "market manipulation", "fraud",
+        "investigation", "investigates", "probes", "probe", "seeks answers",
+        "subpoena", "files suit", "filed suit", "sues", "charged", "alleges",
+    ))
+    crypto_ecosystem_action_terms = (
+        "seeks answers", "investigates", "investigation", "probes", "probe",
+        "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
+        "charges", "alleges", "allegation", "launches", "launched", "launch",
+        "announces", "announced", "partnered", "integrates",
+        "integrated", "upgrades", "upgraded", "mints", "minted", "lists",
+        "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
+        "issued", "expands", "expanded", "connects", "connected", "adds",
+        "added", "opens", "opened", "releases", "released", "rolls out",
+        "rolled out", "goes live", "went live", "implements", "implemented",
+        "activates", "activated", "settles", "settled", "adopts", "adopted",
+        "deploys", "deployed", "introduces", "introduced",
+    )
+    crypto_ecosystem_action = any(
+        _contains(combined, term) for term in crypto_ecosystem_action_terms
+    )
+    # Securities language is only a crypto signal when the headline ties the
+    # security to an on-chain/tokenized representation, not ordinary stock news.
+    security_token_context = any(_contains(combined, term) for term in (
+        "tokenized stock", "tokenised stock", "tokenized equity", "tokenised equity",
+        "tokenized securities", "tokenised securities", "stock on", "stocks on",
+        "equity on", "equities on", "shares on", "securities on",
+        "on-chain stock", "onchain stock",
+    ))
+    if (crypto_ecosystem_entity and crypto_ecosystem_action
+            and (ecosystem_context or security_token_context)):
+        categories.append("crypto_ecosystem_action")
 
     broad_tokenization = any(_contains(combined, term) for term in (
         "tokenization", "tokenisation", "tokenized", "tokenised",
@@ -147,6 +196,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or "government_tokenization_action" in categories
         or "xrp_protocol_development" in categories
         or "xrp_ledger_tokenization_development" in categories
+        or "crypto_ecosystem_action" in categories
     )
 
     score = 0
@@ -183,6 +233,12 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         score += points
         reasons.append(f"XRP Ledger tokenized fund/share development (+{points})")
         signals.append("topic:xrp_ledger_tokenization_development")
+
+    if "crypto_ecosystem_action" in categories:
+        points = weights["crypto_ecosystem_action_bonus"]
+        score += points
+        reasons.append(f"material crypto ecosystem action (+{points})")
+        signals.append("topic:crypto_ecosystem_action")
 
     if topical and item.source_quality == "primary":
         points = weights["primary_source_bonus"]

@@ -9,6 +9,7 @@
     "title_match_bonus": 5,
     "institutional_source_bonus": 5,
     "technical_protocol_bonus": 10,
-    "xrp_ledger_tokenization_bonus": 10
+    "xrp_ledger_tokenization_bonus": 10,
+    "crypto_ecosystem_action_bonus": 20
   }
 }
