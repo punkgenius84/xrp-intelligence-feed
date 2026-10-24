@@ -213,7 +213,7 @@ def format_prior_event_context(records: list[dict[str, Any]]) -> str:
     lines.append(
         "These are prior model-generated event records, not new reporting. Use them only to identify "
         "continuity, change, or possible significance. Do not treat their summaries or significance "
-        "as independently verified current facts. Do not cite them for claims about the supplied "
+        "as independently verified current facts. You must not cite them for claims about the supplied "
         "current articles, and do not imply an old relationship or status remains active without "
         "current-source confirmation. Prefer a clearly described change over repeating an old event."
     )
