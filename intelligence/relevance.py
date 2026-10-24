@@ -54,7 +54,10 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
-    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
+    government = bool(entities & {
+        "White House", "DOJ", "Treasury", "Government of Canada",
+        "China", "Singapore", "Malaysia", "Thailand",
+    })
     institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund"})
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
