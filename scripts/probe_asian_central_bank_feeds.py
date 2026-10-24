@@ -66,7 +66,7 @@ def _probe_configured_google_news_collectors() -> None:
             f"probe_status={result.status} candidates={len(result.candidates)} "
             f"errors={len(result.errors)}"
         )
-        for candidate in result.candidates[:10]:
+        for candidate in result.candidates[:25]:
             detect_entities(candidate)
             classify_source_quality(candidate)
             score, reasons = score_relevance(candidate)
