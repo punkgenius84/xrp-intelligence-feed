@@ -1,381 +1,54 @@
 # XRP Intelligence Feed
 
-A free, primary-source-first crypto and financial-system intelligence feed centered on XRP/XRPL/Ripple, while tracking the wider crypto ecosystem: stablecoins, tokenization, CBDCs, institutional finance, regulation, government policy, payments, partnerships, and geopolitical developments that may matter even when XRP is not named. It scores relevance deterministically and can deliver qualifying items to Discord.
+A free, source-first intelligence feed for XRP, Ripple, the XRP Ledger, and the wider crypto and financial ecosystem.
 
-**Current status:** deterministic intelligence processing is live in GitHub Actions, while **intelligence-event Discord publishing remains OFF**. The system is deliberately observing real shadow output before enabling that final delivery step.
+It looks beyond headlines that literally mention XRP. Regulatory decisions, government policy, banking and payments infrastructure, stablecoins, tokenization, institutional partnerships, and other developments can matter to crypto even when XRP isn't in the headline.
 
+## What makes it different?
 
+- **Broader signal detection:** Tracks developments across crypto, finance, regulators, governments, and payment networks—not just XRP keywords.
+- **Evidence over hype:** Uses source attribution, publication dates, relevance reasons, and supporting links to make it easier to understand why an item matters.
+- **Primary-source-first:** Prefers official releases and documents, with clearly distinguished secondary discovery sources when official sites are unavailable.
+- **Careful relevance filtering:** Applies explicit scoring and eligibility rules instead of treating every mention as important.
+- **Built to avoid noise:** Normalizes headlines, tracks provenance, and deduplicates overlapping reports while preserving distinct developments.
+- **Free to run:** Uses Python and GitHub Actions, with Discord delivery; no paid data API is required.
 
-## Launch checkpoint — 24 October 2026
+## How it works
 
-### Latest verified main state — commit `415aff4df9e2a9e78b64066b1bf8ca933913073b`
+1. Collect news and announcements from configured sources.
+2. Normalize items and retain source and date information.
+3. Detect relevant organizations, assets, and topics.
+4. Score items using transparent, configurable rules.
+5. Apply freshness, duplicate, and evidence checks before delivery.
 
-- **Tests:** [main Test Suite run #40122875281](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40122875281) passed **1,203 tests** after [PR #464](https://github.com/punkgenius84/xrp-intelligence-feed/pull/464). The fresh-start reset still verifies ZIP CRC integrity, manifest metadata, byte lengths, and SHA-256 hashes before clearing operational state; a corrupt archive fails closed. The Brotli response guard from [PR #457](https://github.com/punkgenius84/xrp-intelligence-feed/pull/457) also remains in main. These are defense-in-depth controls, not a claim that every Node.js or Brotli runtime in the environment has been patched.
-- **Latest push-triggered diagnostic feed run:** [run #40122875301](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40122875301) completed successfully after PR #464: 689 candidates collected, 12 new, 1 relevant, 0 buried signals, and 0 intelligence events. Push diagnostics are read-only: state-save steps were skipped, so these metrics are not a production-state update. The live Ripple collector now assigns the CSD BR/XRPL infrastructure release its official listing date of **2026-09-29** rather than the previously observed **2026-10-06** date. The parser change prevents fallback dates from leaking backward across neighboring release cards.
-- **Guarded one-event delivery test:** [manual run #40121731651](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40121731651) passed on 24 October. The selected Coinbase–Thunes event was posted (1 of 1), recorded in delivery history, and absent from the active outbox afterward. The Python suite passed 1,202 tests in that run. Normal news delivery remained dry-run for the test; routine intelligence-event publishing remains OFF outside this explicit guarded path. The run saved the updated persistent state and delivery history. No fresh-start reset was run.
-- **New official source:** [PR #455](https://github.com/punkgenius84/xrp-intelligence-feed/pull/455) added the Singapore Government Press Centre API. Its live runner check returned 9 candidates with no errors; the BLOOM/digital-money settlement announcement entered the existing relevance pipeline but did not meet its publish threshold. The source is enabled through the normal pipeline, not given a special scoring bypass.
-- **Bank of Thailand:** [PR #456](https://github.com/punkgenius84/xrp-intelligence-feed/pull/456) added bounded, read-only JavaScript asset diagnostics. Official pages returned HTTP 200, but the relevant JS bundles could not be fetched by the Actions runner and no trustworthy first-party API route was confirmed. Keep the English BOT collector disabled; the separate Thai stablecoin-hearing discovery remains a distinct source.
-- **Known source limitations:** Coinbase's official blog collector remains `partial` because one article's date cannot be assigned unambiguously from the index and detail requests return HTTP 403. Do not substitute observation time for publication time; its separate Google News discovery fallback remains available. The first-party SWIFT and IMF endpoints remain blocked/unusable from Actions; publisher-restricted Google News discovery paths are secondary click-through leads, not canonical official article URLs. SEC submissions metadata remains insufficient to enable collection without trustworthy filing/exhibit context. The broad Bank of Thailand English collector remains disabled because no reliable runner-accessible official route has been confirmed; the targeted Thai stablecoin-hearing fallback remains enabled.
-- **Fresh-start posture:** no state reset was run as part of these changes. Do not clear production dedup/delivery state or the quarantine audit until the separately reviewed launch procedure is intentionally executed. Do not change cron cadence or enable routine intelligence-event publishing as part of source work.
+The goal is useful situational awareness—not price predictions, promotional hype, or a claim that every signal will affect XRP.
 
-*The detailed notes below preserve historical investigations and run snapshots; their counts and run IDs should not be mistaken for the latest run.*
+## Coverage
 
+Coverage includes XRP/Ripple/XRPL, crypto markets and infrastructure, stablecoins, tokenization and real-world assets, CBDCs, regulation, government policy, banks, cross-border payments, institutional finance, and relevant partnerships.
 
-- **Test status:** the latest separately verified main-branch Test Suite run after PR #452 is [run #40109398313](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40109398313), which passed **1,160 tests**. Historical PR-branch counts above are separate snapshots, not one combined suite. The read-only SEC submissions probe verified runner access and issuer identity for Coinbase, Circle, PayPal, and Visa; the CIK allowlist is configured but the SEC collector remains explicitly disabled and filing-index enrichment remains off (`detail_enrichment_limit: 0`). The bounded filing-index probe in PR #416 found that both sampled official SEC 8-K index pages returned HTTP 403 from GitHub Actions. Live Items/exhibit context is therefore not runner-accessible through those pages. PR #433 confirmed the JSON backend behind SEC full-text search is reachable and returned one Circle 8-K document hit with date, Items 5.02/7.01, and EX-99.1 description, but the response contained no highlighted text snippet. That is useful diagnostic metadata, not enough to summarize an actionable event. Submissions/EFTS metadata alone is not enough to enable the collector. Do not infer publication dates or switch to primary-document downloads as a workaround.
-- **Google News live probe:** [run #57](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40063277895) returned 10 MAS, 1 Thai stablecoin hearing, 19 Coinbase, 16 SWIFT, and 21 IMF candidates with zero collector errors. The MAS/Thai/Coinbase/IMF sources are enabled; BOT English remains disabled. Its focused 30-day query probe returned only two unrelated candidates (both score 0), so it stays parked. After a targeted SWIFT query update, the read-only runner probe [run #40069846825](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40069846825) returned 17 candidates and two qualifying SWIFT developments at score 37: its blockchain-based shared ledger reaching MVP implementation, and its AI-powered fraud defence for cross-border payments. PR #427 enables this publisher-restricted SWIFT Google News fallback; the first-party SWIFT collector remains parked after HTTP 403. Google News URLs remain explicitly marked click-through/unverified, not canonical article URLs. These were read-only probes, not Discord deliveries.
-- **Main-branch feed preview after CoinDesk enablement and delivery-gate fix:** push-triggered run [#40109398356](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40109398356) collected 681 candidates, identified 108 as new to that diagnostic's restored/default state, and produced 4 delivery-eligible items with no buried signals. The dry-run preview retained The Block's RLUSD custody report and three distinct CoinDesk developments: Ripple/Stripe-owned wallets and AI payments, the XRPL bug-fix/validator-support timeline, and Franklin Templeton's $150 million fund-share addition to XRPL. It explicitly suppressed The Block's duplicate BLOOM report against recent MAS primary-source correlation history. The run previewed 4 of 4 eligible items; state-save steps were skipped and it did **not** publish to Discord or save production state.
+Sources are added selectively and validated where practical. A source can remain disabled or marked partial when reliable data cannot be collected. Secondary discovery links are not presented as verified official article URLs.
 
+## Run locally
 
-- **Secondary crypto-media discovery probes:** PR #435 added publisher-restricted, 30-day Google News queries for CoinDesk, Cointelegraph, The Block, Blockworks, and DL News. CoinDesk's broad publisher-restricted query and The Block are enabled after live runner validation; both remain authority tier 2 and pass through duplicate/commentary eligibility gates. CoinDesk's overlapping XRPL-technical query remains disabled. Cointelegraph, Blockworks, and DL News remain disabled because the current probe showed duplicate, noisy, or low-yield results. Google News click-through links are not treated as verified canonical publisher URLs.
-- **Secondary-source delivery gate:** main-branch read-only probe [run #40109027715](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40109027715) validated CoinDesk and The Block against live candidates. It found 9 score-30+ candidates in the recent window, kept 8, and suppressed the duplicate BLOOM report; the simulated cross-run case suppressed the same The Block report against four qualifying primary-history cards while preserving separate coverage. The commentary gate held zero of nine candidates. After PR #452, main dry-run #40109398356 confirmed the normal pipeline now applies the same duplicate gate without an outbox: the duplicate was removed from the preview and the eligible count fell to four. CoinDesk's two validated stories remained eligible. CoinDesk and The Block are the only enabled tier-2 media sources; the overlapping CoinDesk technical query, Cointelegraph, Blockworks, and DL News remain disabled.
-- **First full live feed run after the Google News discovery changes:** [manual run #489](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40064364797) completed successfully on 24 October. It observed 601 candidates, 97 new, 9 relevant, 1 buried signal, and 4 generated intelligence events; five normal news posts reached Discord while intelligence-event publishing remained off. The sixth relevant item was correctly left beyond the five-post cap, but the run reported `queue_remaining=6` instead of the expected 1. Root cause was a canonical-key reconstruction bug for legacy outbox records with partially populated identity fields. [PR #406](https://github.com/punkgenius84/xrp-intelligence-feed/pull/406) fixes key preservation and adds regressions; its branch test suite passed 1,110 tests. A follow-up stateful run on merged code is still needed to confirm that successful posts are removed and the remaining count is correct. The same run's IMF event was rejected because the model cited the summary for title-only details; PR #406 also improves evidence-label instructions while retaining strict evidence validation.
+Requires Python 3.12 (the version used in GitHub Actions).
 
-- **Routine intelligence-event publishing remains disabled.** Keep `INTELLIGENCE_PUBLISH=false`; the normal scheduled feed must not be treated as a launch test.
-- The pre-launch queue reset archived the prior active events. Quarantine remains an audit record; do not clear it or requeue an event casually.
-- **Guarded test, run [#457](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/39893965996):** the feed logged that the selected OCC GENIUS Act final-rule event (`evt-530ca07d42181e83c859d0c8`) was delivered. The subsequent scheduled run restored 4 intelligence delivery-history entries and an empty active intelligence outbox, up from 3 history entries before the test. Run #457's final postcondition verifier initially failed because direct script execution could not import the repository's `storage` package. That CLI import issue was fixed in [PR #375](https://github.com/punkgenius84/xrp-intelligence-feed/pull/375) and regression-tested.
-- **Verifier fix merged:** [PR #375](https://github.com/punkgenius84/xrp-intelligence-feed/pull/375) adds the repository root to the verifier CLI import path and a regression test. The PR passed **1,054 tests**; the post-merge main run [#460](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/39959886846) also passed **1,054 tests**. Run #460 was a push diagnostic, so its guarded-test steps were correctly skipped; it does not retroactively verify run #457's postconditions. Do not repost the already-used OCC event merely to test the verifier.
-- **Relevance audit added and validated:** the diagnostic now scores every observed candidate before seen/dedup filtering and reports score bands plus the top candidates. This is diagnostic only; it does not make old, duplicate, or stale items eligible for delivery.
-- **Latest read-only audit [#40050042490](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40050042490), 24 October:** 496 candidates observed, 45 new after saved-state deduplication, and 3 relevant. The before-dedup audit showed 53 candidates at or above the unchanged score threshold of 30; those include previously seen items and are not a delivery count. The feed's normal news preview would post **two** qualifying items: (1) Bank Negara Malaysia's 20 October launch of digital/tokenised bond and sukuk issuance (score 32), and (2) Canada's 24 October *Stablecoin Regulations* proposal under the Stablecoin Act (score 32). One additional relevant item was older than the normal 14-day news-post window and was correctly skipped. This was a push-triggered read-only run: **no Discord posts were sent and no production state was saved.** The exact MAS/BLOOM expansion was not captured by this historical audit run; PR #400 subsequently added and runner-validated the Google News discovery route. The MAS source is now enabled, with the next scheduled stateful run still needed to confirm normal persisted discovery. See [issue #393](https://github.com/punkgenius84/xrp-intelligence-feed/issues/393).
-- **Relevance false-negative fixed in [PR #386](https://github.com/punkgenius84/xrp-intelligence-feed/pull/386):** ECB and Bank of Canada are now included in the regulatory-action classifier, matching the entities already configured for those official sources. Regression tests cover stablecoin/digital-asset payment announcements. The score threshold was not lowered.
-- **Headline normalization fixed in [PR #385](https://github.com/punkgenius84/xrp-intelligence-feed/pull/385):** HTML entities such as &#x27; are decoded in discovery titles, improving readability and making headline comparisons more consistent.
-- **Additional relevance false negatives fixed in [PR #389](https://github.com/punkgenius84/xrp-intelligence-feed/pull/389):** plural forms such as digital assets, stablecoins, and cryptocurrencies are recognized; tracked regulators, government bodies, and institutions can qualify when they take a concrete tokenization/RWA action. Generic tokenization commentary remains below the gate, and the threshold was not lowered.
-- **Action verb false negative fixed in [PR #396](https://github.com/punkgenius84/xrp-intelligence-feed/pull/396):** common forms such as `launches`, `launching`, `joins`, and `introduces` now count as concrete actions. This let the official BNM tokenised-bond launch clear the existing threshold; the threshold itself was not lowered. The main-branch test suite passed **1,077 tests** after this change.
-- **Secondary crypto-media coverage (24 October):** The Block's publisher-restricted Google News fallback remains enabled after runner validation. PR #441 fixed an authority-tier bug where the Google News collector incorrectly labeled every publisher tier 1; candidates now preserve the configured tier, so The Block is scored as `high_signal` rather than primary. The corrected read-only probe returned 43 The Block candidates, with two at or above the unchanged score threshold of 30: the BLOOM report (35), which the queue-time gate suppressed as a duplicate of the primary MAS item, and Standard Chartered's RLUSD custody report (32), which remained a distinct qualifying item. Test Suite run [#40105938512](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40105938512) passed 1,148 tests; read-only probe [#40105938484](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40105938484) succeeded. CoinDesk, Cointelegraph, Blockworks, and DL News remain disabled because their probes showed commentary/noise mixed with useful items or too little qualifying yield. Google News URLs remain click-through/unverified, not canonical publisher URLs.
-
-- **Additional official coverage:** Bank Negara Malaysia and Bank of Thailand official releases, plus the Canada Gazette Part I official RSS/edition index are now configured as primary sources. The Gazette collector expands new issue indexes into individually dated official notices/regulations and carries local section headings into candidate context, so a title like “Stablecoin Regulations” retains its Stablecoin Act context. Both are covered by source-contract and fixture tests; no publication setting was enabled.
-- **Bank of Thailand's official HTML index remains disabled:** the English news index is not usable by the current HTML parser from GitHub Actions. The separate Google News Thai stablecoin query now captures the dated public-hearing item with a relevant score; [issue #394](https://github.com/punkgenius84/xrp-intelligence-feed/issues/394) remains open to track the first-party index/feed gap and any future canonical-URL improvement.
-- **Asian central-bank Google News discovery validated and selectively enabled (PR #400):** `discovery/google_news_official_rss.py` validates publisher-restricted queries, bounds lookback/items, preserves click-through URLs and publication timestamps, and records publisher attribution separately from the article URL. A read-only GitHub Actions probe ran the actual collector: the 23 October MAS/BNM/BOT BLOOM announcement scored **32**, and the Thai-language BOT THB Stablecoin public-hearing notice scored **32**; both collectors returned `success` with no errors. The MAS, Thai stablecoin, Coinbase, and IMF queries are enabled after live validation; the BOT English and SWIFT queries remain disabled because their recent candidates were unrelated and scored 0. The Coinbase query returned 19 recent candidates with 0 errors; “Coinbase and Thunes connect stablecoin infrastructure with global fiat payouts” scored 37. The IMF query returned 21 candidates with 0 errors; “Common Monetary Area: Technical Assistance Report—Project Sunbird and Cross-Border Payments with CBDC” scored 37. Unrelated candidates stayed below the gate. All configured Google News queries use a 100-item cap to match the observed response bound. The Thai source's query context is explicitly labeled as context, not article text. Google News click-through URLs remain marked `google_news_clickthrough_unverified`, not canonical article URLs. No relevance thresholds were lowered and the intelligence-event publishing guard remains OFF.
-- **SEC EDGAR submissions remains unconfigured:** its source is marked enabled but has an empty issuer_ciks list, so it reports not_configured and contributes no candidates. [Issue #388](https://github.com/punkgenius84/xrp-intelligence-feed/issues/388) tracks a verified issuer list and useful filing-level context rather than enabling a noisy generic filing stream.
-- The active intelligence outbox remains **0**, quarantine **20**, and delivery history **4**. Intelligence-event publishing remains disabled.
-- **Schedule-cadence warning remains open.** The configured schedule is `8,23,38,53 * * * *` and was not changed. Scheduled run [#471](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40047734685) started at 01:00:10Z on 24 October after prior run [#465](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40033271660) started at 22:23:16Z on 23 October—a 2h 36m 54s gap. Both runs completed in about two minutes; the evidence points to missing scheduled starts, not an hours-long job. Keep monitoring actual timestamps rather than changing cron/concurrency without evidence. See [issue #356](https://github.com/punkgenius84/xrp-intelligence-feed/issues/356).
-- **Coinbase's Google News fallback is now enabled after live validation.** The runner probe returned 19 recent candidates with 0 errors, including the 19 October Coinbase/Thunes stablecoin-payout connection (score 37). The existing `coinbase-blog` collector still reports `partial` when article-detail metadata is blocked and the date cannot be safely assigned; the fallback does not hide that health warning or borrow a neighboring card's date. Google News links remain explicitly marked as unverified canonical URLs. Official SWIFT and IMF routes remain blocked from Actions. The IMF Google News discovery query is now enabled after the live probe returned a dated CBDC cross-border payment report with score 37; the SWIFT Google News query remains staged and disabled because its recent candidates were generic and scored 0. Neither query is represented as a first-party feed.
-- **Read-only delivery verification is now available** in the manual **XRP Intelligence Feed** workflow. Set `dry_run=true`, leave `publish_intelligence_test=false`, set `verify_intelligence_test_result=true`, enter the exact prior event ID in `intelligence_test_event_id`, and enter `VERIFY-INTELLIGENCE-DELIVERY` in `intelligence_test_verification_confirmation`. This mode restores saved state and runs the verifier only: it skips Ollama, skips `main.py`, sends no Discord post, and saves no state. It serializes with scheduled runs to avoid cache races. **Verification completed:** manual read-only run [#467](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40034196633) succeeded on 23 October 2026. Logs confirm `evt-530ca07d42181e83c859d0c8` is present in saved intelligence delivery history and absent from the active outbox. The verification-only run validated its inputs, skipped Ollama and `main.py`, skipped every state-save step, and made no Discord post. Do not repost this event.
-
-## What it does
-
-1. Collects bounded feeds and official discovery sources.
-2. Normalizes and deduplicates candidates.
-3. Detects XRP/XRPL/Ripple and related entities.
-4. Assigns an auditable relevance score.
-5. Posts qualifying news to Discord through a durable outbox.
-6. Optionally enriches qualifying items with local Ollama inference.
-7. Validates intelligence claims against explicit source evidence before an intelligence event can be delivered.
-
-The relevance score measures **topical relevance only**. It is not a price prediction, trading signal, or claim that XRP is actually involved in every institutional, regulatory, tokenization, or stablecoin story.
-
-## What a Discord news post looks like
-
-A normal post identifies the source, publication date, headline, deterministic `Why this fired` reasons, matched entities, relevance score, and source link.
-
-Institutional or government coverage is **not automatically XRP news**. The feed intentionally distinguishes:
-- **XRP** — the asset.
-- **XRPL** — the ledger/network.
-- **Ripple** — the company.
-- **RLUSD** — Ripple's stablecoin.
-- **Stablecoin/tokenization/payment activity** — broader institutional activity that may be relevant without proving XRP or XRPL usage.
-
-## Intelligence layer
-
-### Permanent historical context
-
-The intelligence model has access to a separate, curated historical context pack at config/historical_context.json. This is **institutional memory**, not a replacement for the bounded news lookback.
-
-The distinction matters:
-
-- The normal news/discovery lookback answers **what happened recently**.
-- Historical context records source-linked relationships and developments that may be years old but are still useful for recognizing the significance of a new event.
-- Historical records do **not** expire on a 180-day rolling window.
-- At most four relevant historical records are selected for an article based on explicit entity aliases.
-- Historical records are background only; current claims must still be grounded in the current article/source evidence.
-
-The context pack deliberately tracks relationships such as historical XRP/ODL deployments, Ripple network relationships, bank/payment relationships, government exploration, RLUSD, custody, tokenization, the SEC case's procedural resolution, Ripple Prime/Hidden Road, GTreasury, Ripple Treasury's digital-asset launch, and recent regulatory milestones. Each record carries a date, entities, classification, status caveat, and HTTPS source URL.
-
-The model is explicitly instructed not to turn historical relationships into claims of current activity. In particular, it must distinguish:
-
-- **Ripple** — the company.
-- **XRP** — the digital asset.
-- **XRPL/XRP Ledger** — the ledger/network.
-- **RLUSD** — Ripple's stablecoin.
-- **RippleNet/payment-network relationships** — not automatically evidence of XRP use.
-- **Historical pilots, announced partnerships, or MoUs** — not automatically proof of current production activity.
-
-See docs/historical-context.md for maintenance rules and the current coverage philosophy. Expansion should be research-driven and source-linked rather than becoming an unverified list of every historical Ripple mention.
-
-
-The intelligence layer runs downstream of deterministic relevance. The LLM cannot promote an item into relevance, invent facts or sources, or bypass evidence validation.
-
-GitHub Actions currently runs `qwen2.5:3b` through Ollama in shadow mode. Intelligence events require grounded claims with controlled evidence references. **`INTELLIGENCE_PUBLISH=false` remains intentional until real scheduled output has been reviewed for semantic accuracy as well as evidence quality.**
-
-## Quick start
-
-    python -m pip install -r requirements.txt
-    python -m pytest -q
-    python main.py
-
-For local intelligence previews, set `INTELLIGENCE_ENABLED=true`. Intelligence publication requires the separate `INTELLIGENCE_PUBLISH=true` flag and a configured Discord webhook.
-
-## Fixed headline evaluation
-
-The repository includes ten source-linked headline cases covering ended relationships, historical XRP/ODL use, RLUSD, custody, tokenization, acquisitions, the SEC case, treasury capabilities, and institutional prime brokerage. This set checks event classification and common overclaiming/conflation errors against validated model output.
-
-With Ollama running locally and the configured model installed, run from the repository root:
-
-```powershell
-python scripts/evaluate_intelligence.py
+```bash
+python -m pip install -r requirements.txt
+python -m pytest -q
+python main.py
 ```
 
-Use `--case <id>` to run a specific case or `--model <ollama-model>` to select a model. A passing result is a quality screen, not proof of correctness or permission to enable intelligence-event publishing. Review output against the linked source and keep `INTELLIGENCE_PUBLISH=false` until scheduled shadow output has been accepted.
+The local run prints scored new items and stores deduplication state under `state/`. GitHub Actions handles automated collection. Discord delivery and intelligence-event publishing have separate safety controls; routine intelligence-event publishing is not enabled by default.
 
-## Current production posture
+## Project principles
 
-The project has two separate delivery paths. Normal deterministic news posts can be delivered when configured; intelligence-event delivery is deliberately kept separate and remains disabled while shadow output is being validated.
+- Prefer verifiable evidence and honest source-health reporting.
+- Never invent publication dates when a source omits them.
+- Keep relevance thresholds and delivery safeguards explicit.
+- Treat inference as a way to connect evidence—not as permission to invent facts.
+- Keep launch resets and production-state changes deliberate and reviewable.
 
-- Normal relevant-news Discord delivery: **enabled when the webhook is configured**.
-- Intelligence processing: **enabled in GitHub Actions shadow mode**.
-- Intelligence-event Discord delivery: **disabled pending shadow-output validation**.
-- Historical institutional context: **enabled as background context for intelligence analysis**.
-- Evidence validation: **fail closed**.
-- Persistent state: restored/saved through GitHub Actions cache; intelligence, correlation, discovery, and delivery state are kept separate.
-- No paid APIs are required.
+## Status and development
 
-
-## Pipeline
-
-Enabled registry sources are collected as RSS or bounded official-source discovery, normalized into NewsItem, deduplicated against JSON state, entity-matched using configured aliases, classified by source authority tier, and deterministically scored for relevance. For diagnostics, the currently observed candidate set is also scored before seen/dedup filtering; these audit counts can include previously seen items and duplicates and are **not** delivery counts. Actual relevance and Discord delivery still require a fresh item to meet the configured threshold and freshness checks. The relevance score describes topical relevance only; it does not predict XRP price or market direction.
-
-
-## Source health
-
-Discovery sources persist lightweight health telemetry in `state/discovery.json`: last attempt/status, candidate count, last error, consecutive hard failures, and consecutive empty/partial runs. A `partial` result is not counted as a hard failure streak; this avoids treating bounded multi-request sources as completely unavailable when only one request had trouble. Health is returned as part of the pipeline result and printed in normal runs.
-
-### Undated official route observations
-
-A source may opt into `track_undated_observations: true` when its official index exposes an article title and URL but no defensible publication date. For an opted-in source, `state/discovery.json` retains the route, title, first-seen time, last-seen time, and a title/URL fingerprint (capped at 500 routes per source). The feed logs a route when it is first observed or its title/URL changes; unchanged observations stay quiet.
-
-**Observation time is not publication time.** An undated observation is not a `DiscoveryCandidate`, is not eligible for relevance scoring or Discord publishing, and does not let the collector borrow a neighboring card's date. The option is currently enabled only for Coinbase's official blog index, where the date remains unresolved. Other sources' observation records are cleared unless they explicitly opt in.
-
-## Pipeline result model
-
-The pipeline returns a `PipelineResult` containing collected items, fresh items, source failures, collector reports, discovery results, discovery health, publishable items, and separately flagged buried signals. This keeps run-level state explicit instead of attaching reports to the pipeline function itself.
-
-## Intelligence state retention
-
-Persistent intelligence state is bounded at 500 current event records, with at most 10 revisions retained per event. Oldest records are evicted deterministically so a 15-minute schedule cannot grow `state/intelligence.json` without limit.
-
-## Buried-signal detection
-
-Fresh candidates that remain below the normal publish threshold can be flagged as buried signals when they have strong cross-source correlation, primary-source quality, and a configured high-value entity. The detector is intentionally separate from relevance scoring: it does not raise relevance scores, bypass the normal publish threshold, deduplicate items, or treat corroboration as proof. Buried signals are currently reported in the run output for later intelligence/publishing policy work; they are deliberately not automatically posted to Discord until live scheduled-run behavior has been observed.
-
-## Cross-source correlation
-
-Fresh candidates are conservatively compared across different sources for likely same-event relationships. Correlation requires a shared high-value entity, publication dates within one day, and meaningful headline overlap. It enriches each item with related source/candidate IDs and a correlation score, but it does not deduplicate items, increase relevance scores, or treat independent reporting as proof of the underlying claim.
-
-Recent correlation memory is stored separately in state/correlation.json; it is not the processed-item state/seen.json. Each bounded card stores candidate/source identity, publication time, high-value entities, stopworded title tokens, content hash, last-seen time, source-quality class, and the deterministic relevance score needed for safe cross-run delivery gating. Cards are retained for 72 hours and capped at 500 entries, with deterministic oldest-first eviction. Cross-run pairing still uses the same ±1 UTC-day window, different-source requirement, and existing Jaccard/sequence floors. A changed content hash for the same candidate updates its existing card rather than creating a second event. Legacy cards remain readable and are upgraded when seen again; cards without quality/score metadata cannot suppress a secondary report. Correlation-state writes occur after enrichment and before state/seen.json is saved; a correlation-state write failure therefore leaves candidates eligible for the next run.
-
-At delivery eligibility, a tier-2 secondary report can be suppressed when a qualifying primary report for the same event is present in the current batch or in recent correlation memory. This closes the cross-run gap where a primary article was already marked seen before a differently worded secondary report arrived. Separately, a narrow secondary-only commentary gate holds headlines explicitly framed as price predictions, price forecasts, price targets, or technical/chart analysis. These gates do not alter relevance scores or thresholds, do not filter primary-source items, and do not suppress merely because XRP or Ripple is mentioned; strong event-level headline overlap is still required for duplicate suppression.
-
-## Institutional coverage
-
-The discovery registry includes official institutional sources for Citi, Circle, Mastercard, Coinbase, Swift, Visa, DBS, J.P. Morgan/Kinexys, and BNY. Institutional candidates use the same normalization, entity detection, source-quality, relevance, deduplication, and Discord publishing path as government and XRPL sources. The feed favors primary-source evidence and does not treat an institution's involvement as proof that XRP is being used.
-
-## Workflow supply-chain security
-
-External GitHub Actions are pinned to full commit SHAs, with weekly Dependabot checks configured to propose deliberate updates. The production workflow installs a fixed Ollama release archive and verifies its published SHA-256 before extraction. The expected archive version and digest must be updated together from the official release when intentionally upgrading Ollama. CI tests enforce SHA pinning and the Ollama checksum gate.
-
-## GitHub Actions workflow guide
-
-| Workflow | Purpose | Operational notes |
-| --- | --- | --- |
-| **XRP Intelligence Feed** | Scheduled collection, deterministic scoring, intelligence shadow processing, and manual preview. | Scheduled every 15 minutes at minutes 8, 23, 38, and 53. Normal intelligence-event publishing stays disabled. Launch begins with the separately guarded full fresh-start state reset. |
-| **Test Suite** | Full pytest suite on pushes and pull requests to `main`. | Required regression gate; keep it. |
-| **Intelligence Headline Evaluation** | Manual Ollama/model quality evaluation against the fixed source-linked cases. | A quality screen only; it does not authorize publishing. |
-| **Clean Intelligence Launch Queue** | Manual, cache-aware queue reset with audit archive. | Preview-only by default; apply requires explicit confirmation. Do not rerun apply casually. |
-| **Quarantine Stale Intelligence Queue Items** | Manual quarantine of events whose latest trustworthy evidence is older than 30 days. | Preview-only by default; apply is confirmation-gated and never publishes. |
-| **Quarantine One Malformed Intelligence Event** | Manual quarantine of one exact event with generic/invalid evidence. | Requires an exact event ID; saves quarantine audit before updated active state. Never publishes. |
-| **XRP Intelligence Weekly Digest** | Posts a weekly digest of delivery history to Discord. | Separate from intelligence-event publishing; keep only if the weekly summary is wanted. It is a real posting workflow, not a test. |
-| **ECB / Bank of Canada / Bank of England RSS probes** | Read-only checks used when validating enabled official feeds. | Run deliberately when needed; do not block launch work on repeated probes. |
-| **Coinbase / SWIFT / IMF probes** | Read-only scripts for unresolved access/date limitations. | Parked for later; not run automatically on code pushes. Results do not bypass access controls or enable parked sources. |
-
-The obsolete marker-commit workflow for generic-event quarantine has been removed. The supported manual quarantine workflow remains. Avoid adding workflows that mutate the same production cache without the feed's concurrency lock and an explicit preview/confirmation gate.
-
-## CI
-
-Every push and pull request to `main` runs the full pytest suite on Python 3.12 before changes are merged. Production scheduled runs also execute the test suite before collection and publishing.
-
-## License
-
-This repository is released under the MIT License. See `LICENSE`.
-
-## Discord posting
-
-Relevant new items (score at or above `publish_score`) are posted to a Discord channel through a webhook. Configuration is by environment variable only; the webhook URL is never stored in the repository.
-
-| Variable | Meaning |
-| --- | --- |
-| `DISCORD_WEBHOOK_URL` | The channel webhook. If unset, nothing is posted and the run is otherwise unchanged. Must be a `discord.com` or `discordapp.com` webhook URL. |
-| `DISCORD_MAX_POSTS` | Most posts per run, 1 to 25 (default 5). If more items qualify, the highest-scoring are selected, oldest first. The rest remain in the persistent delivery outbox and can be posted on a later run. |
-| `DISCORD_DRY_RUN` | `true` prints what would be posted, posts nothing, and saves no state, so a live run afterwards still sees the same items as new. |
-
-Each post leads with the source and publication date, followed by the headline and a plain-English `Why this fired` line from the deterministic scoring reasons. Matched entities follow, with the numeric relevance score at the bottom. The source link is always included. Posts cannot ping `@everyone` or roles. Live Discord delivery uses a bounded `state/outbox.json` queue. Relevant items are queued before `seen.json` is saved; successful posts are removed, while failed or over-cap items remain queued for later scheduled runs. This is deliberately at-least-once delivery: if an outbox cleanup write fails after Discord accepted a post, a duplicate is possible on a later run. The outbox is bounded at 250 items and cached with the other persistent state. Successfully posted items are also retained in bounded `state/delivery_history.json` for 35 days, capped at 2,000 records. A Discord rate limit is retried once if Discord asks for a short wait. Error messages never include the webhook URL.
-
-The optional local Ollama intelligence layer is disabled by default. GitHub Actions currently enables intelligence processing in shadow mode with `INTELLIGENCE_ENABLED=true` and keeps `INTELLIGENCE_PUBLISH=false`. A second independent `INTELLIGENCE_PUBLISH=true` flag is required before intelligence events can post to the existing Discord channel. Publication fails closed if an event has no evidence URL.
-
-On GitHub Actions, add the webhook as the repository secret `DISCORD_INTELLIGENCE_DISCORD_WEBHOOK`; the workflow passes it to the program as `DISCORD_WEBHOOK_URL`. Manual runs have a `dry_run` checkbox that defaults to on; untick it to post for real. Dry runs do not save the state cache.
-
-## Weekly digest
-
-A deterministic weekly digest runs on Sunday and posts to the same Discord channel. It summarizes items that were actually delivered during the previous seven days, including source, publication date, title, and the existing `Why this fired` reason. It does not include merely discovered, queued, or buried items.
-
-## Discovery foundation
-
-The discovery package provides a bounded HTTPS client, a small strategy interface, candidate normalization, dispatch, and a separate fail-closed JSON state file. `DiscoveryCandidate` extends the existing `NewsItem`, so discovery results use the same entity detection, source-quality classification, relevance scoring, and deduplication path rather than creating a second intelligence pipeline.
-
-The discovery layer now combines bounded primary-source adapters for SEC filings and press releases, Federal Register, OFAC, CFTC, FinCEN, Treasury, FDIC, OCC, Federal Reserve, BIS, White House Presidential Actions, DOJ targeted press releases, Ripple's Press Center, and the XRP Ledger Community Blog. It uses the SEC documented submissions JSON endpoint for explicitly allowlisted issuer CIKs and filing forms. It does not crawl EDGAR or follow arbitrary filing links. Filing URLs are constructed from validated SEC CIK, accession number, and primary-document fields. SEC requests use the identifiable `XRPIntelligenceFeed/0.3` User-Agent; configure `SEC_CONTACT_EMAIL` in the environment to include an actual contact address. No identity is fabricated.
-
-`config/discovery_sources.json` contains the complete enabled discovery registry. Every adapter is bounded, official-source validated, and routed through the same normalization, entity detection, source-quality, relevance, deduplication, and Discord delivery path. The shipped issuer CIK allowlist is empty, so the SEC adapter reports `not_configured` and makes no SEC requests until real issuer CIKs are deliberately added. Filing forms are also explicitly configured and can be narrowed. At most five issuer requests are made per run, spaced at least one second apart. The HTTP client enforces HTTPS, request timeouts, response-size and redirect bounds, conditional ETag/Last-Modified requests, and bounded retries for timeouts, 429, and selected 5xx responses.
-
-The same registry includes a bounded Federal Register API source. It uses only the official HTTPS `www.federalregister.gov/api/v1/documents.json` endpoint and requires no key. The default query terms are `digital assets` and `stablecoin`, with a seven-day publication window and at most ten results per page. Each term refreshes pages 1–2 and can request at most two additional deep pages per run, for a maximum of four requests per term. The document number is the authoritative deep-pagination boundary; the stored page is only a search hint. A shifted boundary is searched in bounded increments, and the boundary advances only after it is found and the relevant pages are complete. Partial/failed requests do not advance pagination. If the API confirms the boundary has aged out of the result window, deep collection for that term pauses without rebasing while shallow refresh continues. Pagination is stored in the existing `state/discovery.json`; no additional state file is used. Terms, agency slugs, document types, lookback, and page size are validated configuration. Empty terms or a disabled source cause `not_configured` and zero requests. Results use Federal Register document numbers as stable candidate IDs. Returned document links are retained only on approved Federal Register or govinfo hosts; links are metadata and are never fetched. Results go through the existing normalization and intelligence stages and are not sent to Discord.
-
-The registry also includes a bounded OFAC Recent Actions HTML adapter at the fixed official `https://ofac.treasury.gov/recent-actions` endpoint. It uses the configured rolling date window and zero-based `page` parameter. Page 0 is refreshed every run; at most two additional sequential recovery/frontier page-fetch operations are made, for a hard maximum of three logical page fetches per adapter run. The existing HTTP client may perform its bounded retries and same-host redirect handling underneath a page fetch. The parser accepts only rows in OFAC's Recent Actions listing and validates each title, date, category, and official action URL. Discovered action pages are provenance only and are never fetched. The validated native action route ID is the candidate identity. The stored boundary ID/date are authoritative; `deep_page_hint` is only a search hint. A boundary is advanced only after its identity is rediscovered and all intervening pages are fully processed. Malformed/failed responses can return valid candidates already parsed but do not advance pagination. Displayed totals and page counts are not used to expire the frontier; a boundary older than the configured rolling window pauses deep progression without rebasing. OFAC progress uses the existing `state/discovery.json` and persists even on runs with no new candidates. OFAC is recognized as a regulator, but authority alone does not make a story relevant: regulatory scoring still requires an action signal and digital-asset/payment signal. OFAC candidates use the existing intelligence path and are not sent to Discord.
-
-The CFTC discovery adapter reads the official General Press Releases and Enforcement Press Releases RSS feeds linked from the [CFTC RSS index](https://www.cftc.gov/RSS/index.htm). Each feed is requested over HTTPS through the bounded HTTP client, with validators tracked independently in the existing `state/discovery.json`. The adapter processes at most 50 entries per feed by default and keeps a configurable 1–180 day lookback. CFTC release numbers from validated official article routes are the stable candidate identities. Entries appearing in both feeds are combined into one candidate while both feed URLs and categories remain in provenance metadata. Article pages are never fetched during discovery. CFTC source authority alone does not make a release relevant; relevance still depends on the existing configured digital-asset, entity, and action signals. The existing CFTC general RSS source remains enabled and is handled by the normal pipeline deduplication.
-
-The FinCEN adapter reads the official [Press Releases listing](https://www.fincen.gov/news/press-releases), paging through the fixed HTTPS host with a maximum of three logical page fetches per run. It processes at most 50 listing rows total per run with a 60-day publication lookback. Validated native release slugs provide stable candidate IDs; article-page URLs are retained as provenance and are never fetched. The saved document boundary is authoritative while `deep_page_hint` is only a search hint. Pagination and per-page ETag/Last-Modified validators use the existing `state/discovery.json`; malformed pages do not advance the frontier or persist that page's validators. FinCEN is recognized as a regulator, but authority alone does not create relevance. Regulatory relevance still requires an action and digital-asset/payment signal.
-
-The Treasury adapter reads the official [Treasury Press Releases listing](https://home.treasury.gov/news/press-releases) with a 60-day lookback, a 50-item run limit, and at most three logical page fetches per run. The live listing uses client-side pagination backed by official annual search JSON shards; the adapter fetches the listing plus at most the two annual shards that can intersect its bounded lookback, then slices those results into the requested page windows. It excludes listing rows explicitly labeled “Statements & Remarks”, uses validated native Treasury release routes for stable candidate IDs, and does not fetch article pages. Its authoritative boundary and page hint are stored in the existing `state/discovery.json`; Treasury publisher attribution remains distinct from OFAC and FinCEN identities. Treasury authority alone does not create relevance.
-The FDIC adapter reads the official [FDIC Press Releases listing](https://www.fdic.gov/news/press-releases) using the listing's numbered `?page=N` pagination. Because the listing does not expose a reliable per-item publication date, it deliberately does not invent one or apply a calendar lookback. It accepts only canonical `www.fdic.gov/news/press-releases/YYYY/slug` routes, uses `YYYY/slug` as the stable native identity, and never fetches article pages or the separate GovDelivery feed. Page 0 is refreshed every run; at most two recovery pages are probed, with a shared outbound HTTP-attempt cap. The saved boundary is authoritative and `deep_page_hint` is only a search hint. A boundary is advanced only after it is positively located; an empty deep page does not expire the boundary, and an unlocated boundary does not cause page-0 rows to be falsely reported as new. FDIC publisher authority alone does not create relevance.
-
-The BIS adapter reads the official [BIS media releases RSS feed](https://www.bis.org/doclist/all_pressrels.rss), which is an RSS 1.0 (RDF) document with only the most recent releases. It accepts only `www.bis.org/media-releases/YYYYMMDD-slug` routes, uses that slug as the native identity, and takes the publication time from the feed's `dc:date` exactly as given (date-only, midnight UTC; no time of day is invented). It uses a 120-day lookback because BIS publishes infrequently, relies on the feed's ETag for conditional requests, and never fetches article pages. Entity detection recognizes BIS only by its full name, because the bare acronym also names the U.S. Bureau of Industry and Security.
-
-Discovery state is stored locally in `state/discovery.json`, separately from the existing `state/seen.json`; correlation memory is separately stored in `state/correlation.json`. It records per-request validators, successful fetch time, watermarks, candidate first/last-seen metadata, Federal Register per-term pagination progress, and the OFAC, FinCEN, Treasury, and FDIC boundaries/page hints, with deterministic age/count retention and atomic writes. Corrupt state fails closed and is preserved. Both discovery state files are git-ignored. GitHub Actions restores and saves both files using a branch-scoped immutable cache lineage; successful workflow runs persist the state for later scheduled or manual runs.
-
-SEC submissions allowlist preparation (24 October 2026): the bounded issuer list is Coinbase Global (CIK 1679788), Circle Internet Group (1876042), PayPal Holdings (1633917), and Visa (1403161), each cross-checked against official EDGAR filing pages. The collector is explicitly **disabled** until runner-side access and relevance validation are complete; filing-index enrichment remains off (`detail_enrichment_limit: 0`). If activated later, collection is bounded to the most recent 30 days (`lookback_days: 30`) rather than creating candidates from the entire 1,000-row submissions history. Do not enable it until dated official URLs, useful filing context, and positive/negative relevance fixtures have been verified.
-
-SEC submissions metadata identifies that a filing exists; it does not include the filing text. An optional, capped filing-index enrichment parser can add the official Items field and up to three exhibit-row descriptions for recent 8-Ks. It is disabled by default with `detail_enrichment_limit: 0`; when enabled, the collector requests no more than two filing-index pages per run and never fetches primary-document bodies. It must be validated against official runner responses and the positive/negative filing fixtures before the issuer allowlist or enrichment limit is activated. The current discovery registry covers SEC filing metadata, SEC press releases, Federal Register API results, OFAC Recent Actions, CFTC press-release RSS feeds, FinCEN, Treasury, FDIC, Federal Reserve Board feeds, OCC issuances, BIS media releases, White House Presidential Actions, targeted DOJ press releases, Ripple Press Center, and the XRPL Community Blog. It deliberately does not use generic web crawling, GDELT, or paid APIs. Congressional API access is deferred because the official Congress API requires an API key.
-
-## Source registry
-
-`config/discovery_sources.json` uses schema version 1 and a sources list. Every entry has source_id, name, authority_tier, category, url, entity_coverage, enabled, and collection_type. Authority tiers are 1 (primary), 2 (high-signal), and 3 (discovery). Collection currently supports rss.
-
-The enabled registry is intentionally made up of primary or official organizational sources. Each source has a dedicated validator and bounded collection strategy; registry validation rejects malformed entries, duplicate IDs, unsupported methods, and untrusted endpoints.
-
-## Entity detection and relevance
-
-config/entities.json supplies canonical entities and aliases. Matching is case-insensitive and uses word boundaries to avoid matching short aliases inside unrelated words. Matches are stored on each item.
-
-Source quality maps tiers to primary, high_signal, or discovery. config/keywords.json and config/thresholds.json drive fixed additive relevance rules. Direct asset/company signals, concrete digital-asset actions, and payment-network actions are distinguished; a conventional payment development can qualify without being mislabeled as a digital-asset event. Broad tokenization commentary remains context-only, and primary authority/entity counts alone do not qualify generic stories. Each scored item retains a numeric score, human-readable reasons, machine-readable signals, and relevance categories. Scores are capped at 100. The minimum relevance publish score and the intelligence enrichment minimum are both 30 (lowered from 35 to admit more relevant institutional/payment/regulatory stories without bypassing evidence and freshness rules); scoring weights are unchanged. No cross-source corroboration is treated as independent event confirmation.
-
-Distinctive exact or near-identical headlines are deduplicated within the same UTC publication day (collection day when publication time is unavailable). Additional source IDs and URLs are retained on the first item as provenance, without increasing the score. Similar headlines on different days are separate events. Existing URL-plus-title fingerprints remain supported, and the same JSON state file continues to be used.
-
-RSS requests use bounded connect/read timeouts. Each source reports success, empty, partial malformed, malformed, HTTP failure, timeout, or request failure; useful entries from partially malformed feeds are retained. Unsupported collection types fail clearly.
-
-The JSON state is saved only after entity detection, source-quality classification, and relevance scoring complete. State is written atomically and retains the most recent 25,000 fingerprints in deterministic order. On GitHub Actions, the workflow restores and saves this file using GitHub's free Actions cache with a unique per-run key and a branch-scoped restore prefix. This avoids committing state or triggering workflow loops. Local runs continue to use state/seen.json, which is ignored by git.
-
-## Running locally
-
-    python -m pip install -r requirements.txt
-    python -m pytest -q
-    python main.py
-
-The application reports source collection failures and prints scored new items. State is saved in state/seen.json. GitHub Actions runs on Python 3.12. The scheduled workflow runs four times per hour at minutes 8, 23, 38, and 53. It runs the full test suite, restores persistent state, runs the intelligence layer in shadow mode, and then executes the feed. Manual dispatch retains a dry-run checkbox that defaults to safe/no-post behavior.
-
-## Intelligence queue review
-
-The intelligence publisher holds stories with missing/invalid dates and quarantines stories whose latest evidence is older than the 30-day publication window. Quarantined records retain their summary, original evidence URLs, dates, queue time, and reason; quarantine does not publish them.
-
-Preview the quarantined records locally without changing state or posting to Discord:
-
-    python scripts/preview_intelligence_quarantine.py --limit 20
-
-Use `--path` to inspect a copied quarantine JSON file. The preview command is read-only and limits output to five evidence records per event.
-
-### Stale-only queue quarantine (manual, production-cache aware)
-
-Use the **Quarantine Stale Intelligence Queue Items** workflow to archive only queued events whose latest trustworthy evidence is older than 30 days. The workflow is read-only by default.
-
-- Run the workflow with `apply_quarantine=false` first and inspect the preview. It reports the stale count without changing either state store.
-- Only when the stale items are intentionally being held out of the active launch queue, set `apply_quarantine=true` and enter the exact confirmation `QUARANTINE-STALE-INTELLIGENCE`.
-- It requires a restored production state cache and shares the production feed concurrency lock. It archives the stale records to the existing quarantine store before removing only those stale keys from the active outbox.
-- Fresh, undated, and future-dated events remain active. If the quarantine write, collision check, or active queue update fails, the workflow fails closed; delivery history, source pagination, `seen.json`, and deduplication state are not reset.
-- This workflow never publishes to Discord. It is separate from the full pre-launch reset below, which archives and clears every queued item.
-
-Do not apply stale-only quarantine automatically or treat the preview recommendation as editorial approval.
-
-### Pre-launch queue reset (manual, production-cache aware)
-
-The active intelligence outbox is persisted in GitHub Actions caches, so running the Python cleanup script only in a local clone does **not** reset the production queue. Use the manual **Clean Intelligence Launch Queue** workflow from the Actions tab when the launch reset is intentionally approved.
-
-- First run it with `apply_reset=false` (the default) and review the read-only queue preview.
-- Only at the agreed launch-preparation point, set `apply_reset=true` and enter the exact confirmation `CLEAN-INTELLIGENCE-QUEUE`.
-- The workflow refuses to apply if it cannot restore a production state cache. It archives every active queued event to the separate quarantine cache before saving the empty outbox, and shares the production feed's concurrency lock to avoid racing a scheduled run.
-- The workflow does not post to Discord and does not reset delivery history, `seen.json`, source pagination, or deduplication state. It is only an intelligence-queue cleanup, **not** the full fresh-start reset requested for launch.
-
-Before the eventual launch, use a separate explicit fresh-start procedure to archive the old state for audit and initialize clean normal-feed state (`seen`, discovery/correlation progress, normal outbox and normal delivery history) so the bot begins as a new feed. This must be preview-first, confirmation-gated, serialized with the scheduled workflow, and tested against each store's valid empty schema. Do not run that reset during current debugging. Keep intelligence-event publishing OFF unless separately authorized.
-
-Do not run the apply mode until the first-live-post plan is approved; routine intelligence publishing remains disabled.
-
-## Undated official-source observations
-
-Some official index pages expose a reliable headline and URL but no publication date. The Coinbase adapter records these routes only for change detection; they are never published as news candidates without a trustworthy publication date. The state records when the feed first and most recently observed a route, which is acquisition timing—not the article's publication date. When a headline changes, the previous and current titles are logged and the latest previous title is retained in state for review.
-
-Inspect saved observations locally without changing state or posting to Discord:
-
-    python scripts/preview_discovery_observations.py --source-id coinbase-blog --limit 50
-
-Omit `--source-id` to inspect observations from all opted-in sources. Use `--path` to inspect a copied `state/discovery.json` file. The preview is read-only.
-
-The read-only probe also tests the JSON backend behind the SEC's official full-text filing search for recent 8-K matches across the four issuers. This backend is not treated as a production API or enabled source unless the runner response, accession identity, filing items, and official document links are validated. It makes one bounded request and never downloads filing bodies.
-
-The probe keeps its newest tracked 8-K separate from the three-row summary so the bounded index-parser check is not accidentally skipped when the latest general filings are 10-Q/10-K reports.
-
-**Accession-number rule:** the first ten digits identify the EDGAR submitting account, which may be a third-party filing agent rather than the registrant. The collector must therefore validate the accession format, but build the archive path using the issuer CIK from the issuer-scoped submissions response. See the [SEC Webmaster FAQ](https://www.sec.gov/files/about/webmaster-faq.htm) for the official explanation.
-
-The probe separates malformed accession strings from foreign filer prefixes for diagnostics and reports only the five most common mismatched prefixes. Production collection does **not** reject an otherwise valid issuer-scoped submission just because the accession prefix belongs to a filing agent: it retains the issuer CIK from the submissions response for the archive directory and uses the full accession number for the filing path. This matches the [SEC Webmaster FAQ](https://www.sec.gov/files/about/webmaster-faq.htm), which explains that an accession prefix can identify a third-party filer agent.
-
-## SEC submissions runner probe
-
-The manual/pull-request **SEC Submissions Runner Probe** checks whether GitHub Actions can read the official SEC submissions JSON for a small, verified issuer sample. It validates returned CIK identity, required filing arrays, dated rows, and official SEC filing-index URL construction; it prints only a small sample and does not fetch filing bodies.
-
-The probe is diagnostic only: it does not write discovery state, create production candidates, enable the SEC submissions collector, enrich filings, or publish to Discord. Its network step is allowed to fail without blocking CI because SEC/network availability can vary; inspect the probe logs before using the result as activation evidence. A successful endpoint response is necessary but not sufficient to enable the collector: relevance fixtures must also show that targeted digital-asset/payment filings can be distinguished from generic issuer filings.
-
-## Source availability notes
-
-- **Singapore Government Press Centre first-party API is enabled after runner validation.** The read-only probe [run #40112590467](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40112590467) confirmed the official `/api/ApiMainListing/SubmitData` endpoint returns dated JSON items with stable `MediaReleaseId` values and same-host `/media_releases/` URLs. The 30-day latest-list request returned nine records. Targeted `KeySearch` requests for `BLOOM` and `digital money` returned the 23 October 2026 MAS/BNM/BOT BLOOM announcement with its publication timestamp and official article path; `stablecoin`, `Ripple`, and `XRP` returned valid empty results in that probe window, not source errors. The collector converts naive API timestamps from Singapore local time to UTC, validates official URLs, fetches the latest listing plus four rotating targeted searches per run, and routes all candidates through existing relevance scoring. No threshold or publishing setting was changed.
-
-- **Bank of England news RSS is enabled after a successful runner probe.** Its official [RSS feeds page](https://www.bankofengland.co.uk/rss) links to `https://www.bankofengland.co.uk/rss/news`. The 22 October 2026 GitHub Actions probe returned HTTP 200, parsed 50 entries with no parser errors, and all 12 sampled entries had publication dates and official HTTPS links. The adapter is bounded to 50 items and a 180-day lookback, accepts only official HTTPS article links, uses conditional request validators, and sends results through existing relevance scoring. The probe itself writes no state and does not publish.
-- **European Central Bank RSS is enabled after a successful runner probe.** The source uses the ECB's documented official press feed at [`https://www.ecb.europa.eu/rss/press.html`](https://www.ecb.europa.eu/rss/press.html). The 21 October 2026 GitHub Actions probe parsed 15 dated official communications with zero errors. The feed includes press releases, speeches, interviews and press-conference communications; only dated, allowlisted HTTPS `/press/` links are accepted. The adapter is bounded to 50 items and a 90-day lookback, uses conditional request validators, and sends results through existing relevance scoring. The probe itself writes no state and does not publish.
-- **Bank of Canada press releases are enabled after a successful runner probe.** The official [press-release RSS feed](https://www.bankofcanada.ca/content_type/press-releases/feed/) returned 10 dated official items with zero errors from GitHub Actions on October 21, 2026. The source is bounded to 50 items and a 180-day lookback, validates official `/YYYY/MM/slug/` routes, requires publication dates, and uses existing relevance scoring. The probe itself writes no state and does not publish.
-- **First-party Swift press releases remain parked, but the separate Google News fallback is enabled after a targeted live probe.** GitHub Actions returned HTTP 403 from the official press-release indexes, paginated Insights listing (`/insights?page=1..3&type=evo_news`), news listing and all three sitemap variants. The publisher-restricted `site:swift.com` Google News query now returns 17 candidates, including the blockchain shared-ledger MVP milestone and AI fraud defence for cross-border payments; both scored 37 under the existing relevance gate. Google News click-through URLs remain marked unverified, not canonical SWIFT URLs. No score threshold was lowered.
-- **Coinbase's official blog collector remains partially healthy, with a working Google News fallback.** The full live feed run [#40064364797](https://github.com/punkgenius84/xrp-intelligence-feed/actions/runs/40064364797) reported `coinbase-blog` as `partial` because one route linked from the official index still lacks a defensible publication date: the runner cannot fetch its article metadata, and the parser correctly refuses to borrow a neighboring card's date. The separate Coinbase Google News discovery source returned 19 candidates with zero errors and delivered the dated Coinbase–Thunes stablecoin-payout item. Google News click-through URLs remain labeled unverified, not canonical article URLs. Keep the official-source health warning visible until a valid date source is proven; do not hide the warning or invent a date.
-- **Citi press releases are enabled and the production collector is healthy.** The latest read-only sitemap collector returned three allowlisted candidates with no errors; the scheduled collector can correctly report zero new candidates when the saved sitemap digest is unchanged. This is a no-change result, not a parked source. The separate probe is read-only and does not update production state.
-- **IMF web endpoints remain parked.** GitHub Actions returned HTTP 403 from public News, Blogs, GFSR, RSS, sitemap and the official IMF Data news listing; the official Media Center listing returned HTTP 202 with an empty body. No access-control workaround is used. Re-enable only after an official RSS/API endpoint returns usable dated items from the runner; parser fixtures remain covered.
-- **Push-triggered feed runs are source-diagnostic dry runs.** They skip Ollama setup, live inference smoke testing, and full per-headline enrichment to shorten feedback cycles. Scheduled and manual runs still perform the real model inference smoke test and full intelligence layer in shadow mode.
-
-## Full fresh-start launch reset
-
-The launch plan is to start the normal feed from clean operational state after the live-run defects are fixed—not to use the isolated one-event intelligence delivery test. Use the manual **Fresh Start Launch Reset** workflow only at the agreed launch point.
-
-1. Open **Actions → Fresh Start Launch Reset → Run workflow** on `main`.
-2. Leave **Apply the full operational-state reset** disabled for the first run. Review the read-only counts; this does not change state or post to Discord.
-3. At launch, run it again with apply enabled and enter the exact confirmation `FRESH-START-XRP-INTELLIGENCE`.
-4. Apply mode requires a restored production state cache. It archives the pre-reset operational state to a workflow artifact before the new state is saved.
-5. It clears normal seen/dedup state, discovery and correlation memory, the normal outbox and delivery history, intelligence state/outbox, and intelligence delivery history. Quarantine remains an audit-only store.
-6. It verifies the operational stores are empty, then saves a new cache lineage. It sends no Discord messages and does not enable intelligence-event publishing.
-
-The workflow shares the stateful feed concurrency lock and leaves the configured schedule unchanged. If archive upload or verification fails, cache-save steps do not run, so the reset is not treated as complete. The archive artifact is retained for 90 days; download it if a longer-term audit copy is needed.
-
-This resets the bot's saved working memory, not old messages in Discord. Since the launch starts fresh, previously published stories may be rediscovered and reposted; that is intentional for this launch plan.
-
-## Safe merged-branch cleanup
-
-The manual **Safe Merged Branch Cleanup** workflow can prune stale branches without reviewing the branch list by hand.
-
-- The default mode is **preview**. It lists eligible branches and deletes nothing.
-- A branch is eligible only if its current tip exactly matches the head SHA of a pull request merged into the default branch at least seven days ago.
-- Protected branches, the default branch, branches with an open pull request, branches whose tip moved after the merged PR, and branches from forks are excluded.
-- Apply mode requires explicitly selecting **delete** and entering the exact confirmation `DELETE-MERGED-BRANCHES`.
-- The job timeout is 15 minutes to accommodate repository-wide branch/PR pagination and per-branch safety rechecks.
-- Before each deletion, the workflow rechecks the branch SHA. Branches changed after inventory are skipped.
-- GitHub branch rules or permissions may still reject an individual deletion; failures are logged and do not bypass protections.
-
-Run the dry-run mode first and review its output. This utility does not change source code, workflow settings, Actions caches, or Discord publishing. It only deletes branches that satisfy the conservative merged-PR checks above.
+The project is actively developed. See [Issues](https://github.com/punkgenius84/xrp-intelligence-feed/issues) for specific source gaps and engineering work, and [Actions](https://github.com/punkgenius84/xrp-intelligence-feed/actions) for automated test and workflow runs.
