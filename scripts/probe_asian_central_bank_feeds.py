@@ -140,6 +140,8 @@ def _links(html: str, page_url: str, expected_host: str) -> tuple[list[str], lis
 
 def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: int = 6) -> list[str]:
     """Return a small, same-host list of script assets for read-only diagnostics."""
+    if limit <= 0:
+        return []
     found: list[str] = []
     for tag in re.findall(r"<script\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
         attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
