@@ -73,6 +73,20 @@ def run(http, config=None):
     return collect_source(config or SOURCE, http=http, now=lambda: STAMP)
 
 
+@pytest.mark.parametrize("query", [
+    "site:mas.gov.sg.evil.example stablecoin",
+    "site:mas.gov.sg OR site:evil.example",
+    "site:mas.gov.sg stablecoin OR XRP",
+    "site:mas.gov.sg -site:evil.example",
+])
+def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
+    from urllib.parse import quote
+
+    invalid = {**SOURCE, "source_url": f"https://news.google.com/rss/search?q={quote(query)}"}
+    with pytest.raises((ValueError, DiscoveryRegistryError)):
+        validate_google_news_source(invalid)
+
+
 def test_google_news_source_requires_domain_restricted_query():
     assert validate_google_news_source(SOURCE) == SOURCE
     invalid = {**SOURCE, "source_url": "https://news.google.com/rss/search?q=xrp"}
