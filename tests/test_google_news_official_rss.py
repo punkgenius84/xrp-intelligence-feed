@@ -89,6 +89,8 @@ def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
 
 def test_google_news_source_requires_domain_restricted_query():
     assert validate_google_news_source(SOURCE) == SOURCE
+    # The hostname label "or" must not be mistaken for an OR search operator.
+    assert validate_google_news_source(BOT_THAI_SOURCE) == BOT_THAI_SOURCE
     invalid = {**SOURCE, "source_url": "https://news.google.com/rss/search?q=xrp"}
     with pytest.raises(DiscoveryRegistryError):
         validate_discovery_sources({"schema_version": 1, "sources": [invalid]})
