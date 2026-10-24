@@ -229,11 +229,13 @@ class SGPCMediaReleasesDiscovery:
         final = urlsplit(response.url)
         if final.scheme != "https" or final.hostname not in SGPC_HOSTS or final.port not in (None, 443):
             raise ValueError("SGPC API response redirected outside the approved HTTPS host")
-        updates = {
-            key: response.headers.get(key, validators.get(key, ""))
-            for key in ("etag", "last_modified")
-            if response.headers.get(key, validators.get(key, ""))
-        }
+        updates = {}
+        etag = response.headers.get("etag", validators.get("etag", ""))
+        last_modified = response.headers.get("last-modified", validators.get("last_modified", ""))
+        if etag:
+            updates["etag"] = etag
+        if last_modified:
+            updates["last_modified"] = last_modified
         if response.status_code == 304:
             return [], updates, [], "not_modified"
         if response.status_code != 200:
