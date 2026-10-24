@@ -119,8 +119,13 @@ def test_filing_index_context_extracts_items_and_bounded_exhibit_rows():
     assert len(context["exhibit_descriptions"]) == 2
     assert "stablecoin settlement" in context["exhibit_descriptions"][0]
     assert _filing_index_url("1876042", "0001876042-26-000267").endswith("-index.htm")
-    with pytest.raises(ValueError, match="does not match"):
-        _filing_index_url("1876042", "0000000001-26-000267")
+    # Accession prefix is the submitting account CIK; it may be a filing agent.
+    assert _filing_index_url("1876042", "0001193125-26-000267") == (
+        SEC_ARCHIVES_ROOT + "1876042/000119312526000267/0001193125-26-000267-index.htm"
+    )
+    assert _filing_url("1876042", "0001193125-26-000267", "report.htm") == (
+        SEC_ARCHIVES_ROOT + "1876042/000119312526000267/report.htm"
+    )
     with pytest.raises(ValueError, match="no recognizable Items or exhibit context"):
         _extract_filing_context(b"<html><body>JavaScript shell</body></html>")
 
@@ -234,55 +239,52 @@ def test_filtering_issuer_forms_filing_identity_and_candidate_id():
         _filing_url("9999999999", "9999999999-26-000001", "../other.htm")
 
 
-def test_accession_for_another_cik_is_rejected_without_losing_valid_rows():
+def test_filing_agent_accession_is_kept_under_registrant_archive_path():
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
     recent = payload["filings"]["recent"]
-    recent["accessionNumber"].insert(0, "0000000001-26-000009")
+    recent["accessionNumber"].insert(0, "0001193125-26-000009")
     recent["form"].insert(0, "8-K")
     recent["filingDate"].insert(0, "2026-09-23")
-    recent["primaryDocument"].insert(0, "wrong-issuer.htm")
-    recent["primaryDocDescription"].insert(0, "Wrong issuer filing")
+    recent["primaryDocument"].insert(0, "agent-submitted.htm")
+    recent["primaryDocDescription"].insert(0, "Current report submitted by filing agent")
 
     result = SECEdgarDiscovery(sec_source(), http=FakeHttp([response(payload)]),
                                now=lambda: STAMP, request_interval=0).collect()
 
-    assert result.status == "partial"
-    assert len(result.candidates) == 1
-    candidate = result.candidates[0]
-    assert candidate.source_native_metadata["accession_number"] == "9999999999-26-000001"
-    assert "wrong-issuer" not in candidate.url
-    assert "0000000001-26-000009" not in candidate.candidate_id
-    with pytest.raises(ValueError, match="does not match"):
-        _filing_url("9999999999", "0000000001-26-000009", "wrong-issuer.htm")
+    assert result.status == "success"
+    assert len(result.candidates) == 2
+    agent_candidate = next(
+        item for item in result.candidates
+        if item.source_native_metadata["accession_number"] == "0001193125-26-000009"
+    )
+    assert agent_candidate.url == (
+        SEC_ARCHIVES_ROOT + "9999999999/000119312526000009/agent-submitted.htm"
+    )
+    assert agent_candidate.candidate_id.endswith("0001193125-26-000009")
+    assert agent_candidate.source_native_metadata["cik"] == "9999999999"
+    assert _filing_index_url("9999999999", "0001193125-26-000009") == (
+        SEC_ARCHIVES_ROOT + "9999999999/000119312526000009/0001193125-26-000009-index.htm"
+    )
 
 
-def test_partial_response_does_not_persist_validators_and_clean_response_can_retry():
-    partial_payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    recent = partial_payload["filings"]["recent"]
-    recent["accessionNumber"].insert(0, "0000000001-26-000009")
+def test_filing_agent_accession_does_not_mark_response_partial_or_drop_validators():
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    recent = payload["filings"]["recent"]
+    recent["accessionNumber"].insert(0, "0001193125-26-000009")
     recent["form"].insert(0, "8-K")
     recent["filingDate"].insert(0, "2026-09-23")
-    recent["primaryDocument"].insert(0, "wrong-issuer.htm")
-    recent["primaryDocDescription"].insert(0, "Wrong issuer filing")
-    etag_headers = {"content-type": "application/json", "etag": '"partial"',
-                    "last-modified": "Wed, 23 Sep 2026 12:00:00 GMT"}
-    partial = SECEdgarDiscovery(
-        sec_source(), http=FakeHttp([response(partial_payload, headers=etag_headers)]),
+    recent["primaryDocument"].insert(0, "agent-submitted.htm")
+    recent["primaryDocDescription"].insert(0, "Current report")
+    headers = {"content-type": "application/json", "etag": '"agent-submitted"',
+               "last-modified": "Wed, 23 Sep 2026 12:00:00 GMT"}
+    result = SECEdgarDiscovery(
+        sec_source(), http=FakeHttp([response(payload, headers=headers)]),
         now=lambda: STAMP, request_interval=0,
     ).collect()
-    assert partial.status == "partial"
-    assert len(partial.candidates) == 1
-    assert partial.state_updates == {}
-
-    clean_headers = {"content-type": "application/json", "etag": '"clean"'}
-    clean = SECEdgarDiscovery(
-        sec_source(), http=FakeHttp([response(json.loads(FIXTURE.read_text(encoding="utf-8")),
-                                              headers=clean_headers)]),
-        now=lambda: STAMP, request_interval=0,
-    ).collect()
-    assert clean.status == "success"
-    assert len(clean.candidates) == 1
-    assert clean.state_updates["9999999999"]["etag"] == '"clean"'
+    assert result.status == "success"
+    assert len(result.candidates) == 2
+    assert result.state_updates["9999999999"]["etag"] == '"agent-submitted"'
+    assert result.state_updates["9999999999"]["last_modified"] == "Wed, 23 Sep 2026 12:00:00 GMT"
 
 
 @pytest.mark.parametrize("payload, message", [
