@@ -99,6 +99,58 @@ def _plain_text(value: str) -> str:
     return " ".join(html.unescape(" ".join(parser.parts)).split())
 
 
+def _score_observed_relevance(items, publish_score: int) -> None:
+    """Score all observed candidates for diagnostics before seen/dedup filtering."""
+    for item in items:
+        detect_entities(item)
+        classify_source_quality(item)
+        score_relevance(item)
+
+    bands = {
+        "0-14": 0,
+        "15-29": 0,
+        "30-49": 0,
+        "50-69": 0,
+        "70-100": 0,
+    }
+    for item in items:
+        score = item.relevance_score
+        if score < 15:
+            bands["0-14"] += 1
+        elif score < 30:
+            bands["15-29"] += 1
+        elif score < 50:
+            bands["30-49"] += 1
+        elif score < 70:
+            bands["50-69"] += 1
+        else:
+            bands["70-100"] += 1
+
+    qualifying = sum(item.relevance_score >= publish_score for item in items)
+    print(
+        "Relevance audit (before seen/dedup; not a delivery count): "
+        f"observed={len(items)} | score bands={bands} | "
+        f"score>={publish_score}={qualifying}"
+    )
+
+    top_items = sorted(
+        items,
+        key=lambda item: (-item.relevance_score, item.title.casefold()),
+    )[:5]
+    if top_items:
+        print(
+            "Relevance audit top observed candidates "
+            f"(up to {len(top_items)}; may include previously seen/duplicate items):"
+        )
+        for item in top_items:
+            reasons = "; ".join(item.score_reasons[:2]) or "no configured relevance signals"
+            entities = ", ".join(item.detected_entities) or "none"
+            print(
+                f"  [{item.relevance_score}] {item.title} — {item.source} "
+                f"| entities={entities} | {reasons}"
+            )
+
+
 def normalize_item(item):
     item.title = unicodedata.normalize("NFKC", " ".join(item.title.split()))
     if item.source:
@@ -240,11 +292,13 @@ def run_pipeline(
             f"Discovery: ignored {len(future_dated)} candidate(s) with publication dates "
             "more than 24 hours in the future before deduplication"
         )
+
+    # Score every currently observed candidate before seen-state filtering so a
+    # run with New: 0 can still tell us whether discovery is finding relevant news.
+    # This is diagnostic only: previously seen, duplicate, or stale candidates are
+    # not made fresh or publishable by this audit.
+    _score_observed_relevance(normalized, thresholds["publish_score"])
     fresh, seen = deduplicate(normalized, seen)
-    for item in fresh:
-        detect_entities(item)
-        classify_source_quality(item)
-        score_relevance(item)
 
     # Refresh cards already in memory even when deduplication says an item is not fresh.
     # A stable candidate ID with a new content hash is an update to the same event, not

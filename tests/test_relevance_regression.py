@@ -111,3 +111,35 @@ def test_generic_enforcement_or_incidental_context_does_not_clear_relevance_gate
     score, reasons = score_relevance(item)
 
     assert score < 30, f"generic/incidentally matched item unexpectedly cleared gate: {score}, {reasons}"
+
+
+def test_observed_relevance_audit_scores_candidates_before_seen_filtering(capsys):
+    import main
+
+    direct = NewsItem(
+        title="Ripple announces institutional payments integration",
+        summary="Ripple announced a new payments integration for institutional customers.",
+        url="https://example.test/ripple-payments",
+        source="Official Ripple",
+        source_id="ripple-press-center",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+    generic = NewsItem(
+        title="Regional bank updates office hours",
+        summary="The bank announced changes to branch opening hours and customer service.",
+        url="https://example.test/branch-hours",
+        source="Regional bank",
+        source_id="generic-bank",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    main._score_observed_relevance([direct, generic], publish_score=30)
+
+    output = capsys.readouterr().out
+    assert "observed=2" in output
+    assert "score>=30=1" in output
+    assert "Ripple announces institutional payments integration" in output
+    assert direct.relevance_score >= 30
+    assert generic.relevance_score < 30
