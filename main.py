@@ -344,12 +344,16 @@ def run_pipeline(
                 last_seen=datetime.fromisoformat(
                     card["last_seen"].replace("Z", "+00:00")
                 ),
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
         else:
             JsonCorrelationState.touch_card(
                 correlation_state_value,
                 candidate_id=candidate_id,
                 last_seen=item.collected_at,
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
 
     # Correlation is downstream of relevance scoring and never changes scores.
@@ -366,7 +370,9 @@ def run_pipeline(
             print(f"Discord: {len(too_old)} relevant item(s) older than {max_age_days} days "
                   "were not queued for delivery")
         queueable, suppressed_duplicates = suppress_correlated_secondary_duplicates(
-            queueable, publish_score=thresholds["publish_score"]
+            queueable,
+            publish_score=thresholds["publish_score"],
+            history=list(correlation_state_value["cards"].values()),
         )
         if suppressed_duplicates:
             suppressed_ids = {id(item) for item in suppressed_duplicates}
@@ -429,6 +435,8 @@ def run_pipeline(
                 last_seen=datetime.fromisoformat(
                     card["last_seen"].replace("Z", "+00:00")
                 ),
+                source_quality=item.source_quality,
+                relevance_score=item.relevance_score,
             )
     correlation_store.save(correlation_state_value)
 
