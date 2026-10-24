@@ -267,11 +267,16 @@ def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
         "switzerland", "uae", "saudi", "europe",
     }
     shared_regions = overlap & regional_tokens
-    regional_event_terms = {
-        "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
-        "payment", "payments", "digital", "initiative",
+    regional_finance_terms = {
+        "settlement", "stablecoin", "tokenized", "tokenised", "payment",
+        "payments", "digital", "money", "blockchain", "ledger",
     }
-    if len(shared_regions) >= 2 and len(overlap) >= 4 and overlap & regional_event_terms:
+    if (
+        len(shared_regions) >= 2
+        and len(overlap) >= 4
+        and {"cross", "border"}.issubset(overlap)
+        and ( _tokens(left) | _tokens(right) ) & regional_finance_terms
+    ):
         return 85
     return score
 
