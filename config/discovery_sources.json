@@ -519,7 +519,7 @@
       "authority_tier": 1,
       "category": "regulatory",
       "discovery_method": "google_news_official_rss",
-      "source_url": "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen",
+      "source_url": "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews+%28stablecoin+OR+stablecoins+OR+%22digital+assets%22+OR+CBDC+OR+crypto+OR+cryptocurrency+OR+tokenization+OR+tokenisation+OR+blockchain+OR+%22cross-border+payments%22%29&hl=en&gl=US&ceid=US%3Aen",
       "enabled": false,
       "lookback_days": 30,
       "max_items": 100,
