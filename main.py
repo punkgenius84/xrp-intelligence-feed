@@ -19,7 +19,8 @@ from discord.publisher import (DEFAULT_MAX_AGE_DAYS, publish, settings_from_env,
 from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
 from intelligence.deduplication import deduplicate
-from intelligence.correlation import (build_correlation_card, correlate,\n                                      suppress_correlated_secondary_duplicates)
+from intelligence.correlation import (build_correlation_card, correlate,
+                                      suppress_correlated_secondary_duplicates)
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
 from intelligence.pipeline import enrich_clusters, select_items
