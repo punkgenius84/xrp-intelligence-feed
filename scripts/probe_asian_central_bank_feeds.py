@@ -19,10 +19,12 @@ TARGETS = (
     ("MAS sitemap", "https://www.mas.gov.sg/sitemap.xml", "www.mas.gov.sg"),
     ("BOT English news", "https://www.bot.or.th/en/news-and-media/news.html", "www.bot.or.th"),
     ("BOT English hearings", "https://www.bot.or.th/en/laws-and-rules/public-hearing.html", "www.bot.or.th"),
+    ("BOT generic sitemap", "https://www.bot.or.th/sitemap.xml", "www.bot.or.th"),
+    ("BOT English sitemap from robots", "https://www.bot.or.th/en.sitemap.xml", "www.bot.or.th"),
+    ("BOT Thai sitemap from robots", "https://www.bot.or.th/th.sitemap.xml", "www.bot.or.th"),
     ("BOT Thai hearings", "https://www.bot.or.th/th/laws-and-rules/public-hearing.html", "www.bot.or.th"),
     ("BOT stablecoin hearing", "https://www.bot.or.th/th/laws-and-rules/public-hearing/public-hearing-20261020-Stablecoin.html", "www.bot.or.th"),
     ("BOT robots", "https://www.bot.or.th/robots.txt", "www.bot.or.th"),
-    ("BOT sitemap", "https://www.bot.or.th/sitemap.xml", "www.bot.or.th"),
 )
 FEED_RE = re.compile(r"""<link\b[^>]*>""", re.IGNORECASE)
 ATTR_RE = re.compile(r"""([\w:-]+)\s*=\s*(['"])(.*?)\2""", re.IGNORECASE | re.DOTALL)
@@ -95,8 +97,11 @@ def main() -> None:
             if not feeds and not articles:
                 print("  no feed links or date-bearing official article links in returned HTML")
         elif content_type in FEED_TYPES or "xml" in content_type:
-            print(f"  xml_preview={re.sub(r'\\s+', ' ', text[:220]).strip()}")
-
+            locs = re.findall("<loc>(.*?)</loc>", text, re.IGNORECASE | re.DOTALL)
+            for value in locs[:10]:
+                print(f"  sitemap_loc={unescape(value.strip())}")
+            if not locs:
+                print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
 if __name__ == "__main__":
     main()
