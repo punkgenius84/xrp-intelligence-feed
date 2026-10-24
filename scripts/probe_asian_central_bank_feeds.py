@@ -31,6 +31,8 @@ TARGETS = (
     ("MAS BLOOM initiative", "https://www.mas.gov.sg/schemes-and-initiatives/BLOOM", "www.mas.gov.sg"),
     ("MAS robots", "https://www.mas.gov.sg/robots.txt", "www.mas.gov.sg"),
     ("MAS sitemap", "https://www.mas.gov.sg/sitemap.xml", "www.mas.gov.sg"),
+    ("SG Press Centre root", "https://www.sgpc.gov.sg/", "www.sgpc.gov.sg"),
+    ("SG Press Centre releases page", "https://www.sgpc.gov.sg/home?Page=1", "www.sgpc.gov.sg"),
     ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
     ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
     ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
@@ -134,6 +136,73 @@ def _links(html: str, page_url: str, expected_host: str) -> tuple[list[str], lis
         if re.search(r"/(?:news|media-releases|press-release|public-hearing)/[^?#]*(?:20\d{2}|\d{8})", path, re.IGNORECASE):
             article_links.append(absolute)
     return sorted(set(feeds)), sorted(set(article_links))
+
+
+def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: int = 6) -> list[str]:
+    """Return a small, same-host list of script assets for read-only diagnostics."""
+    found: list[str] = []
+    for tag in re.findall(r"<script\\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
+        attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
+        src = attrs.get("src", "").strip()
+        if not src:
+            continue
+        absolute = urljoin(page_url, src)
+        if not _host_ok(absolute, expected_host):
+            continue
+        path = urlsplit(absolute).path.lower()
+        if not path.endswith((".js", ".mjs")):
+            continue
+        if absolute not in found:
+            found.append(absolute)
+        if len(found) >= max(0, limit):
+            break
+    return found
+
+
+def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
+    """Extract likely same-site content/API route strings; never request them here."""
+    normalized = script_text.replace(r"\\/", "/").replace(r"\\u002F", "/")
+    pattern = re.compile(
+        r"""["'\x60]((?:/api(?:/v[0-9]+)?|/graphql|/search|/news(?:/|\\?)|"""
+        r"""/media-releases/|/content/|/umbraco/)[^"'\x60\\s]{0,160})["'\x60]""",
+        re.IGNORECASE,
+    )
+    routes: list[str] = []
+    for match in pattern.finditer(normalized):
+        route = match.group(1).rstrip(".,;)")
+        if route.startswith("//") or route in routes:
+            continue
+        routes.append(route)
+        if len(routes) >= max(0, limit):
+            break
+    return routes
+
+
+def _probe_same_host_script_assets(
+    client: BoundedHttpClient, label: str, html: str, page_url: str, expected_host: str
+) -> None:
+    """Inspect a few same-host JS bundles for API routes without calling those routes."""
+    scripts = _same_host_script_urls(html, page_url, expected_host)
+    print(f"  same_host_script_assets={len(scripts)} host={expected_host}")
+    for script_url in scripts:
+        try:
+            response = client.get(script_url, max_bytes=1_000_000)
+        except (DiscoveryHttpError, TypeError) as exc:
+            print(f"  script_asset_unavailable url={script_url} reason={type(exc).__name__}")
+            continue
+        final_host = urlsplit(response.url).hostname
+        if final_host != expected_host:
+            print(f"  script_asset_skipped_cross_host requested={script_url} final_host={final_host or 'missing'}")
+            continue
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if "javascript" not in content_type and not urlsplit(response.url).path.lower().endswith((".js", ".mjs")):
+            print(f"  script_asset_skipped_unexpected_type url={script_url} type={content_type or 'missing'}")
+            continue
+        body = response.content.decode("utf-8", errors="replace")
+        routes = _candidate_api_routes(body)
+        print(f"  script_asset url={script_url} http={response.status_code} bytes={len(response.content)} candidate_routes={len(routes)}")
+        for route in routes:
+            print(f"    candidate_same_site_route={route}")
 
 
 def _page_metadata(html: str, page_url: str, expected_host: str) -> dict[str, list[str]]:
@@ -339,6 +408,9 @@ def main() -> None:
                 print(f"  robots_sitemap={sitemap}")
         if "html" in content_type or b"<html" in response.content[:500].lower():
             feeds, articles = _links(text, response.url, host)
+            if label in {"MAS news index", "SG Press Centre root", "SG Press Centre releases page"}:
+                final_host = urlsplit(response.url).hostname or ""
+                _probe_same_host_script_assets(client, label, text, response.url, final_host)
             metadata = _page_metadata(text, response.url, host)
             for key, values in sorted(metadata.items()):
                 for value in values[:3]:
