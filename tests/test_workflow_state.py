@@ -279,3 +279,18 @@ def test_fresh_start_reset_workflow_is_preview_first_archived_and_stateful():
     assert "JsonIntelligenceQuarantineState" in script
     assert "quarantine audit records changed during reset" in script
     assert "def fresh_start_reset" in script
+
+
+def test_all_state_mutating_workflows_share_the_stateful_feed_lock():
+    from pathlib import Path
+
+    paths = (
+        ".github/workflows/clean_intelligence_launch_queue.yml",
+        ".github/workflows/quarantine_stale_intelligence_queue.yml",
+        ".github/workflows/quarantine_intelligence_event.yml",
+        ".github/workflows/fresh_start_launch_reset.yml",
+    )
+    for path in paths:
+        workflow = Path(path).read_text(encoding="utf-8")
+        assert "group: xrp-intelligence-feed-stateful" in workflow, path
+        assert "cancel-in-progress: false" in workflow, path
