@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.probe_sec_submissions import select_index_targets, summarize_payload
+from scripts.probe_sec_submissions import select_index_targets, summarize_efts_payload, summarize_payload
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sec_submissions.json"
@@ -11,6 +11,45 @@ FIXTURE = Path(__file__).parent / "fixtures" / "sec_submissions.json"
 
 def payload():
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+
+def test_efts_probe_summarizes_filing_context_and_items():
+    result = summarize_efts_payload({
+        "hits": {
+            "total": {"value": 2, "relation": "eq"},
+            "hits": [
+                {
+                    "_id": "0001193125-26-000267:filing.htm",
+                    "_source": {
+                        "file_date": "2026-10-20",
+                        "form_type": "8-K",
+                        "entity_name": "Example Stablecoin Issuer",
+                        "file_description": "Current report",
+                        "items": ["1.01", "8.01", "9.01"],
+                    },
+                },
+                {
+                    "_id": "malformed-accession:filing.htm",
+                    "_source": {"file_date": "2026-10-19", "form_type": "8-K"},
+                },
+            ],
+        },
+    })
+    assert result["total_hits"] == 2
+    assert result["returned_hits"] == 2
+    assert result["sample"] == [{
+        "accession": "0001193125-26-000267",
+        "file_date": "2026-10-20",
+        "form": "8-K",
+        "entity_name": "Example Stablecoin Issuer",
+        "file_description": "Current report",
+        "items": "1.01, 8.01, 9.01",
+    }]
+
+
+def test_efts_probe_rejects_missing_hit_structure():
+    with pytest.raises(ValueError, match="missing hits.hits"):
+        summarize_efts_payload({"hits": []})
 
 
 def test_probe_validates_cik_and_summarizes_official_filing_indexes():
