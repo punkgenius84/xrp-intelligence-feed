@@ -120,6 +120,12 @@ def main() -> None:
                             try:
                                 resolved = client.get(entry.get("link", ""))
                                 print(f"  rss_relevant_link_resolution final_url={resolved.url} type={resolved.headers.get('content-type', 'unknown')} bytes={len(resolved.content)}")
+                                body = resolved.content.decode("utf-8", errors="replace")
+                                official_urls = sorted(set(re.findall(r"https?://(?:www\\.)?(?:mas\\.gov\\.sg|bot\\.or\\.th)[^\\s\"<>]+", body, re.IGNORECASE)))
+                                for official_url in official_urls[:8]:
+                                    print(f"  resolved_official_url={unescape(official_url)[:300]}")
+                                if not official_urls:
+                                    print("  no canonical official article URL found in resolved RSS article HTML")
                             except DiscoveryHttpError as exc:
                                 print(f"  rss_relevant_link_resolution_error={exc.kind} status={exc.status_code or 'unknown'}")
                 except Exception as exc:
