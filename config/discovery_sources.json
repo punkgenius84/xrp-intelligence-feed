@@ -416,22 +416,39 @@
       "article_path_regex": "/news/[^/?#]+/s/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     },
     {
-      "source_id": "sg-press-centre",
-      "name": "Singapore Government Press Centre",
+      "source_id": "bnm-press-releases",
+      "name": "Bank Negara Malaysia",
       "authority_tier": 1,
-      "category": "government",
+      "category": "regulatory",
       "discovery_method": "institutional_press_html",
-      "source_url": "https://www.sgpc.gov.sg/home?Page=1",
+      "source_url": "https://www.bnm.gov.my/press-release-2026",
       "enabled": true,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
-        "www.sgpc.gov.sg",
-        "sgpc.gov.sg"
+        "www.bnm.gov.my",
+        "bnm.gov.my"
       ],
-      "article_path_regex": "/detail",
-      "native_id_query_param": "url",
-      "detail_fallback_limit": 3
+      "numeric_date_order": "dmy",
+      "article_path_regex": "/-/[^/?#]+",
+      "detail_fallback_limit": 2
+    },
+    {
+      "source_id": "bot-news",
+      "name": "Bank of Thailand",
+      "authority_tier": 1,
+      "category": "regulatory",
+      "discovery_method": "institutional_press_html",
+      "source_url": "https://www.bot.or.th/en/news-and-media/news.html",
+      "enabled": true,
+      "lookback_days": 180,
+      "max_items": 50,
+      "allowed_hosts": [
+        "www.bot.or.th",
+        "bot.or.th"
+      ],
+      "article_path_regex": "/en/news-and-media/news/news-\\\\d{8}\\\\.html",
+      "detail_fallback_limit": 2
     },
     {
       "source_id": "ecb-press-releases",
