@@ -230,6 +230,98 @@ def correlate(
     return items
 
 
+
+def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
+    """Conservative delivery-duplicate match, separate from relevance scoring."""
+    score = _candidate_score(left, right)
+    if score >= 75:
+        return score
+
+    shared_entities = (
+        set(left.detected_entities)
+        & set(right.detected_entities)
+        & _CORRELATION_ENTITIES
+    )
+    if abs((_day(left) - _day(right)).days) > 1:
+        return score
+
+    overlap = _tokens(left) & _tokens(right)
+    event_terms = {
+        "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
+        "payment", "payments", "custody", "wallet", "ledger", "initiative",
+        "partnership", "digital", "blockchain",
+    }
+    # A few shared high-value institutions plus concrete event vocabulary can
+    # identify the same announcement even when publishers frame their headlines
+    # differently. Shared entity names alone never qualify.
+    if len(shared_entities) >= 3 and len(overlap) >= 4 and overlap & event_terms:
+        return 85
+
+    # Some reports name the countries in a regional initiative rather than the
+    # same institutions. Require two shared geography tokens, multiple shared
+    # headline tokens, a cross-border/digital-finance term, and a one-day window.
+    regional_tokens = {
+        "singapore", "malaysia", "thailand", "indonesia", "philippines",
+        "vietnam", "cambodia", "laos", "myanmar", "brunei", "brazil",
+        "canada", "mexico", "india", "china", "japan", "korea", "australia",
+        "switzerland", "uae", "saudi", "europe",
+    }
+    shared_regions = overlap & regional_tokens
+    regional_finance_terms = {
+        "settlement", "stablecoin", "tokenized", "tokenised", "payment",
+        "payments", "digital", "money", "blockchain", "ledger",
+    }
+    if (
+        len(shared_regions) >= 2
+        and len(overlap) >= 4
+        and {"cross", "border"}.issubset(overlap)
+        and bool((_tokens(left) | _tokens(right)) & regional_finance_terms)
+    ):
+        return 85
+    return score
+
+
+def suppress_correlated_secondary_duplicates(
+    items: list[NewsItem], *, publish_score: int
+) -> tuple[list[NewsItem], list[NewsItem]]:
+    """Prefer a qualifying tier-1 item over a correlated tier-2 copy at delivery time.
+
+    This does not alter relevance scores or the observed-candidate audit. The
+    caller should pass only currently queueable items so a stale primary story
+    cannot suppress a fresh secondary report.
+    """
+    primary_items = [
+        item for item in items
+        if item.source_quality == "primary" and item.relevance_score >= publish_score
+    ]
+    kept: list[NewsItem] = []
+    suppressed: list[NewsItem] = []
+    for item in items:
+        if item.source_quality != "high_signal" or item.relevance_score < publish_score:
+            kept.append(item)
+            continue
+        matches = [
+            primary for primary in primary_items
+            if primary is not item and _same_event_duplicate_score(item, primary) >= 75
+        ]
+        if not matches:
+            kept.append(item)
+            continue
+        preferred = max(
+            matches,
+            key=lambda candidate: (
+                _same_event_duplicate_score(item, candidate),
+                candidate.relevance_score,
+                candidate.source_id,
+            ),
+        )
+        if item.source_id and item.source_id not in preferred.duplicate_sources:
+            preferred.duplicate_sources.append(item.source_id)
+        if item.url and item.url not in preferred.duplicate_urls:
+            preferred.duplicate_urls.append(item.url)
+        suppressed.append(item)
+    return kept, suppressed
+
 def build_correlation_card(item: NewsItem) -> dict:
     """Return the bounded memory representation for one enriched candidate."""
     return _card_from_item(item)

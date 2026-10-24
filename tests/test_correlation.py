@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from intelligence.correlation import correlate
+from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
 from models import NewsItem
 
 
@@ -163,3 +163,121 @@ def test_history_match_preserves_existing_relevance_score():
     }]
     correlate([current], history=history)
     assert current.relevance_score == 17
+
+
+
+def test_suppresses_secondary_bloom_report_when_qualifying_primary_exists():
+    primary = item(
+        "MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
+        "mas-google-news-discovery",
+        "mas:bloom",
+        ["Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand"],
+        day="2026-10-23",
+    )
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:bloom",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 32
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [primary, secondary], publish_score=30
+    )
+
+    assert kept == [primary]
+    assert suppressed == [secondary]
+    assert secondary.source_id in primary.duplicate_sources
+    assert secondary.url in primary.duplicate_urls
+    assert primary.relevance_score == 32
+    assert secondary.relevance_score == 55
+
+
+def test_does_not_suppress_secondary_when_primary_is_below_publish_threshold():
+    primary = item(
+        "Ripple and Mastercard expand cross-border stablecoin payment initiative",
+        "mas-google-news-discovery",
+        "mas:old",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-23",
+    )
+    secondary = item(
+        "Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard",
+        "theblock-google-news-discovery",
+        "theblock:new",
+        ["Ripple", "Visa", "Mastercard"],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 20
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 55
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [primary, secondary], publish_score=30
+    )
+
+    assert kept == [primary, secondary]
+    assert suppressed == []
+
+
+def test_does_not_suppress_unrelated_secondary_story_sharing_ripple():
+    primary = item(
+        "Ripple and DBS announce tokenized deposit payment collaboration",
+        "dbs-newsroom",
+        "dbs:payment",
+        ["Ripple", "DBS"],
+        day="2026-10-23",
+    )
+    secondary = item(
+        "XRP Ledger bug fix moved to November after validator support dipped for two hours",
+        "coindesk-google-news-discovery",
+        "coindesk:bug",
+        ["Ripple", "XRP"],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 40
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 40
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [primary, secondary], publish_score=30
+    )
+
+    assert kept == [primary, secondary]
+    assert suppressed == []
+
+
+
+def test_does_not_suppress_regional_cross_border_headlines_without_financial_context():
+    primary = item(
+        "Singapore, Malaysia and Thailand expand cross-border rail freight corridor",
+        "primary-news",
+        "primary:rail",
+        [],
+        day="2026-10-23",
+    )
+    secondary = item(
+        "Singapore, Malaysia and Thailand announce cross-border rail schedule changes",
+        "secondary-news",
+        "secondary:rail",
+        [],
+        day="2026-10-23",
+    )
+    primary.source_quality = "primary"
+    primary.relevance_score = 40
+    secondary.source_quality = "high_signal"
+    secondary.relevance_score = 40
+
+    kept, suppressed = suppress_correlated_secondary_duplicates(
+        [primary, secondary], publish_score=30
+    )
+
+    assert kept == [primary, secondary]
+    assert suppressed == []
