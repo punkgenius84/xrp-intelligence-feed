@@ -155,13 +155,36 @@ def summarize_efts_payload(payload: object, limit: int = 10) -> dict[str, object
             items_text = ", ".join(str(item) for item in items[:12])
         else:
             items_text = str(items or "")
+        display_names = source.get("display_names", [])
+        if isinstance(display_names, list):
+            entity_name = str(source.get("entity_name") or ", ".join(str(name) for name in display_names[:3]))
+        else:
+            entity_name = str(source.get("entity_name") or display_names or source.get("name", ""))
+        highlight = hit.get("highlight", {})
+        snippets: list[str] = []
+        if isinstance(highlight, dict):
+            for value in highlight.values():
+                if isinstance(value, list):
+                    snippets.extend(str(part) for part in value[:2])
+                elif isinstance(value, str):
+                    snippets.append(value)
+        if not snippets:
+            for key in ("snippet", "doc_text", "text"):
+                value = source.get(key)
+                if isinstance(value, str) and value:
+                    snippets.append(value)
+                    break
         rows.append({
             "accession": accession,
             "file_date": str(source.get("file_date", "")),
-            "form": str(source.get("form_type", "")),
-            "entity_name": str(source.get("entity_name", "")),
+            "form": str(source.get("form_type") or source.get("form") or source.get("file_type") or ""),
+            "entity_name": entity_name[:180],
             "file_description": str(source.get("file_description", ""))[:180],
             "items": items_text[:180],
+            "hit_keys": ",".join(sorted(str(key) for key in hit.keys())),
+            "source_keys": ",".join(sorted(str(key) for key in source.keys())),
+            "highlight_keys": ",".join(sorted(str(key) for key in highlight.keys())) if isinstance(highlight, dict) else "",
+            "snippet": " ".join(snippets).strip()[:420],
         })
     return {
         "total_hits": total,
@@ -205,7 +228,9 @@ def _probe_efts(client: BoundedHttpClient, email: str) -> bool:
         print(
             f"  efts_hit date={row['file_date'] or 'unknown'} form={row['form'] or 'unknown'} "
             f"entity={row['entity_name'][:100]!r} accession={row['accession']} "
-            f"items={row['items']!r} description={row['file_description']!r}"
+            f"items={row['items']!r} description={row['file_description']!r} "
+            f"hit_keys={row['hit_keys']!r} source_keys={row['source_keys']!r} "
+            f"highlight_keys={row['highlight_keys']!r} snippet={row['snippet']!r}"
         )
     return True
 
