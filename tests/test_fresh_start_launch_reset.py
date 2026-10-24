@@ -9,6 +9,7 @@ from intelligence.events import IntelligenceEvent
 from intelligence.evidence import Evidence
 from intelligence.llm.schemas import Claim
 from scripts.fresh_start_launch_reset import CONFIRMATION, fresh_start_reset, inspect_state
+from scripts import fresh_start_launch_reset as reset_module
 from models import NewsItem
 from storage.correlation_state import JsonCorrelationState, empty_correlation_state
 from storage.database import JsonState
@@ -124,6 +125,33 @@ def test_apply_requires_exact_confirmation_and_changes_nothing(tmp_path):
     assert {p.name: p.read_bytes() for p in state_dir.iterdir()} == before
 
 
+def test_corrupt_archive_refuses_to_reset_state(tmp_path, monkeypatch):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    seed_state(state_dir)
+    before = {p.name: p.read_bytes() for p in state_dir.iterdir()}
+    archive = tmp_path / "archive.zip"
+
+    def write_corrupt_archive(state_root, archive_path, *, now):
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        archive_path.write_bytes(b"not a zip archive")
+        return {}
+
+    monkeypatch.setattr(reset_module, "_archive_state", write_corrupt_archive)
+
+    with pytest.raises(RuntimeError, match="pre-reset archive verification failed"):
+        fresh_start_reset(
+            state_dir=state_dir,
+            archive_path=archive,
+            apply=True,
+            confirmation=CONFIRMATION,
+            now=datetime(2026, 10, 24, 6, tzinfo=timezone.utc),
+        )
+
+    assert archive.exists()
+    assert {p.name: p.read_bytes() for p in state_dir.iterdir()} == before
+
+
 def test_apply_archives_then_clears_operational_state_and_preserves_quarantine(tmp_path):
     state_dir = tmp_path / "state"
     state_dir.mkdir()
@@ -140,6 +168,7 @@ def test_apply_archives_then_clears_operational_state_and_preserves_quarantine(t
 
     assert result["applied"] is True
     assert archive.exists()
+    reset_module._verify_archive(archive)
     with ZipFile(archive) as saved:
         assert "manifest.json" in saved.namelist()
         assert "state/seen.json" in saved.namelist()
