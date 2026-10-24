@@ -58,13 +58,16 @@ def _classify(item, combined: str) -> list[str]:
     payment_topic = any(_contains(combined, term) for term in (
         "payment", "payments", "cross-border settlement", "settlement",
     ))
-    digital_or_payment = digital_asset_topic or payment_topic
-    if regulatory and action and digital_or_payment:
+    if regulatory and action and digital_asset_topic:
         categories.append("relevant_regulatory_digital_asset_payments")
+    elif regulatory and action and payment_topic:
+        categories.append("relevant_regulatory_payment_action")
     if government:
         categories.append("government")
-    if government and action and digital_or_payment:
+    if government and action and digital_asset_topic:
         categories.append("government_digital_asset_action")
+    elif government and action and payment_topic:
+        categories.append("government_payment_action")
     if institutional and action and digital_asset_topic:
         categories.append("institutional_digital_asset_payment")
     elif institutional and action and payment_topic:
@@ -98,8 +101,12 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     combined = f"{item.title} {item.summary}"
     categories = _classify(item, combined)
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
-    regulatory_relevance = "relevant_regulatory_digital_asset_payments" in categories
-    government_relevance = "government_digital_asset_action" in categories
+    regulatory_relevance = bool(set(categories) & {
+        "relevant_regulatory_digital_asset_payments", "relevant_regulatory_payment_action",
+    })
+    government_relevance = bool(set(categories) & {
+        "government_digital_asset_action", "government_payment_action",
+    })
     institutional_relevance = (
         "institutional_digital_asset_payment" in categories
         or "institutional_payment_action" in categories
