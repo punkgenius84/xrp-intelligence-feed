@@ -272,8 +272,8 @@ def test_sec_filing_context_requires_a_concrete_digital_asset_action(title, summ
             "relevant_regulatory_payment_action",
         ),
         (
-            "U.S. Treasury launches an updated government payment platform",
-            "The Treasury launched an updated government payment platform.",
+            "U.S. Treasury launches a new cross-border payments platform",
+            "The Treasury launched a new cross-border payments platform.",
             "U.S. Department of the Treasury",
             "treasury-press-releases",
             "Treasury",
