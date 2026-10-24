@@ -531,7 +531,8 @@
       "lookback_days": 30,
       "max_items": 100,
       "publisher_host": "bot.or.th",
-      "publisher_name": "Bank of Thailand"
+      "publisher_name": "Bank of Thailand",
+      "context_hint": "public hearing on THB stablecoin regulation"
     }
   ]
 }
