@@ -95,7 +95,7 @@ def test_issue_index_extracts_individual_proposed_regulation_with_context():
     ])
     result = run(http)
 
-    assert result.status == "success"
+    assert result.status == "success", result.errors
     stablecoin = next(item for item in result.candidates if item.title == "Stablecoin Regulations")
     assert stablecoin.url == ARTICLE
     assert stablecoin.published_at == datetime(2026, 10, 24, tzinfo=timezone.utc)
