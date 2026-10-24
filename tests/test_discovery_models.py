@@ -14,6 +14,7 @@ def test_discovery_candidate_is_compatible_with_existing_news_item_pipeline():
     )
     normalized = normalize_candidate(candidate)
     assert isinstance(normalized, NewsItem)
+    assert normalized.title == "SEC filing & XRP"
     assert normalized.canonical_url == "https://example.test/path"
     assert normalized.publisher == "SEC"
     assert normalized.summary_excerpt == "Example text."
