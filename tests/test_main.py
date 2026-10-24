@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 import main
+from models import NewsItem
 
 
 def test_main_catches_pipeline_value_error_like_registry_errors(monkeypatch):
@@ -640,7 +641,7 @@ def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monk
     from storage.database import JsonState
 
     stamp = datetime(2026, 10, 23, 12, tzinfo=timezone.utc)
-    primary = main.NewsItem(
+    primary = NewsItem(
         title="MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
         url="https://www.mas.gov.sg/news/media-releases/2026/bloom",
         source="Monetary Authority of Singapore",
@@ -672,7 +673,7 @@ def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monk
     )
     correlation_store.save(correlation_state, now=stamp)
 
-    secondary = main.NewsItem(
+    secondary = NewsItem(
         title="Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard - The Block",
         url="https://news.google.com/rss/articles/example",
         source="The Block",
