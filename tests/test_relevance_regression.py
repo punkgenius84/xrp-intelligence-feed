@@ -143,3 +143,38 @@ def test_observed_relevance_audit_scores_candidates_before_seen_filtering(capsys
     assert "Ripple announces institutional payments integration" in output
     assert direct.relevance_score >= 30
     assert generic.relevance_score < 30
+
+
+@pytest.mark.parametrize(
+    ("title", "summary", "expected_entity"),
+    [
+        (
+            "ECB Announces Stablecoin Settlement Framework",
+            "The European Central Bank announced a new framework for stablecoin settlement and digital asset payments.",
+            "ECB",
+        ),
+        (
+            "Bank of Canada Proposes Digital Asset Payment Guidance",
+            "The Bank of Canada proposed guidance for stablecoin issuers and digital asset payment services.",
+            "Bank of Canada",
+        ),
+    ],
+)
+def test_central_bank_digital_asset_actions_clear_relevance_gate(title, summary, expected_entity):
+    item = NewsItem(
+        title=title,
+        summary=summary,
+        url="https://example.test/central-bank-digital-assets",
+        source="Official central bank announcement",
+        source_id="central-bank-relevance-regression",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert expected_entity in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"expected central-bank digital-asset action to clear gate; score={score}, reasons={reasons}"
