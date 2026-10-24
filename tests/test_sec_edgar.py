@@ -119,27 +119,37 @@ def test_filing_index_context_extracts_items_and_bounded_exhibit_rows():
         _filing_index_url("1876042", "0000000001-26-000267")
 
 
-def test_sec_index_enrichment_is_opt_in_and_bounded_to_recent_8k():
+def test_sec_index_enrichment_is_opt_in_and_bounded_to_two_pages_per_run():
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    recent = payload["filings"]["recent"]
+    recent["accessionNumber"].extend(["9999999999-26-000003", "9999999999-26-000004"])
+    recent["form"].extend(["8-K", "8-K"])
+    recent["filingDate"].extend(["2026-09-20", "2026-09-19"])
+    recent["primaryDocument"].extend(["second8k.htm", "third8k.htm"])
+    recent["primaryDocDescription"].extend(["Second current report", "Third current report"])
     index_html = b"""<html><div class="infoHead">Items</div><div class="info">1.01 Material Agreement</div>
     <table><tr><td>EX-99.1</td><td class="desc">Stablecoin settlement partnership announcement</td></tr></table></html>"""
     index_url = _filing_index_url("9999999999", "9999999999-26-000001")
+    second_index_url = _filing_index_url("9999999999", "9999999999-26-000003")
     http = FakeHttp([
         response(payload),
         HttpResponse(200, {"content-type": "text/html"}, index_html, index_url),
+        HttpResponse(200, {"content-type": "text/html"}, index_html, second_index_url),
     ])
     result = SECEdgarDiscovery(
-        sec_source(detail_enrichment_limit=1), http=http, now=lambda: STAMP,
+        sec_source(detail_enrichment_limit=2), http=http, now=lambda: STAMP,
         request_interval=0, environ={},
     ).collect()
     assert result.status == "success"
-    assert len(result.candidates) == 1
-    candidate = result.candidates[0]
-    assert candidate.source_native_metadata["filing_index_url"] == index_url
-    assert candidate.source_native_metadata["filing_items"] == "1.01 Material Agreement"
-    assert "Stablecoin settlement partnership announcement" in candidate.summary
-    assert index_url in candidate.provenance
-    assert len(http.calls) == 2
+    assert len(result.candidates) == 3
+    enriched = [item for item in result.candidates if "filing_index_url" in item.source_native_metadata]
+    assert len(enriched) == 2
+    assert {item.source_native_metadata["filing_index_url"] for item in enriched} == {
+        index_url, second_index_url
+    }
+    assert all(item.source_native_metadata["filing_items"] == "1.01 Material Agreement" for item in enriched)
+    assert all("Stablecoin settlement partnership announcement" in item.summary for item in enriched)
+    assert len(http.calls) == 3
 
 
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():
