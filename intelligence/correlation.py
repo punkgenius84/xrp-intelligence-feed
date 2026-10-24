@@ -346,12 +346,16 @@ _SECONDARY_COMMENTARY_MARKERS = (
     "analysts expect",
     "expert predicts",
     "experts predict",
-    "could reach",
-    "could hit",
-    "may reach",
-    "might reach",
-    "how high can",
-    "how high will",
+    "price could reach",
+    "price could hit",
+    "price may reach",
+    "price might reach",
+    "could reach $",
+    "could hit $",
+    "may reach $",
+    "might reach $",
+    "how high can xrp",
+    "how high will xrp",
 )
 
 
