@@ -138,6 +138,7 @@ def test_score_feed_respects_explicit_empty_publishable(monkeypatch):
             "high_keyword": 1, "medium_keyword": 1, "context_keyword": 1,
             "primary_source_bonus": 1, "multiple_entity_bonus": 1,
             "title_match_bonus": 1, "institutional_source_bonus": 1,
+            "technical_protocol_bonus": 1,
         }},
     )
     result = main.PipelineResult(
