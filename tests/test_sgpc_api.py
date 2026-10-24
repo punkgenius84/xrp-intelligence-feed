@@ -67,12 +67,12 @@ def response(value, url=SGPC_API_URL, headers=None, status=200):
     return HttpResponse(status, headers or {"content-type": "application/json"}, body, url)
 
 
-def test_registered_source_is_bounded_official_and_initially_disabled():
+def test_registered_source_is_bounded_official_and_enabled_after_runner_validation():
     configured = next(
         item for item in load_discovery_sources()
         if item["source_id"] == SGPC_SOURCE_ID
     )
-    assert configured["enabled"] is False
+    assert configured["enabled"] is True
     assert configured["source_url"] == SGPC_API_URL
     assert configured["max_terms_per_run"] == 4
     assert configured["lookback_days"] == 30
@@ -87,7 +87,7 @@ def test_registered_source_is_bounded_official_and_initially_disabled():
     {"lookback_days": 91},
     {"search_terms": []},
     {"search_terms": ["BLOOM", "bloom"]},
-    {"search_terms": ["x"] * 13},
+    {"search_terms": [f"term-{index}" for index in range(17)]},
     {"max_terms_per_run": 6},
     {"max_terms_per_run": 0},
     {"max_items": 101},
