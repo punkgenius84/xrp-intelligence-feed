@@ -179,3 +179,61 @@ def test_central_bank_digital_asset_actions_clear_relevance_gate(title, summary,
     assert expected_entity in item.detected_entities
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
     assert score >= 30, f"expected central-bank digital-asset action to clear gate; score={score}, reasons={reasons}"
+
+
+@pytest.mark.parametrize(
+    ("title", "summary", "expected_entity", "expected_category"),
+    [
+        (
+            "Visa Announces Tokenization Platform for Financial Institutions",
+            "Visa announced a tokenization platform to support financial-market infrastructure.",
+            "Visa",
+            "institutional_tokenization_action",
+        ),
+        (
+            "ECB Announces Stablecoins Framework for Digital Assets",
+            "The European Central Bank announced guidance for stablecoins and digital assets.",
+            "ECB",
+            "relevant_regulatory_digital_asset_payments",
+        ),
+    ],
+)
+def test_official_tokenization_and_plural_asset_actions_clear_gate(
+    title, summary, expected_entity, expected_category
+):
+    item = NewsItem(
+        title=title,
+        summary=summary,
+        url="https://example.test/official-digital-asset-action",
+        source="Official announcement",
+        source_id="official-digital-asset-regression",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert expected_entity in item.detected_entities
+    assert expected_category in item.relevance_categories
+    assert score >= 30, f"expected official digital-asset action to clear gate; score={score}, reasons={reasons}"
+
+
+def test_generic_tokenization_commentary_remains_below_relevance_gate():
+    item = NewsItem(
+        title="Market Research Highlights Tokenization Trends",
+        summary="Industry forecasts discuss tokenization trends across financial markets.",
+        url="https://example.test/tokenization-commentary",
+        source="Market research",
+        source_id="generic-tokenization-commentary",
+        authority_tier=3,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "broad_tokenization" in item.relevance_categories
+    assert score < 30, f"generic tokenization commentary unexpectedly cleared gate: {score}, {reasons}"

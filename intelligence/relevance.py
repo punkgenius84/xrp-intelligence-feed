@@ -41,7 +41,8 @@ def _classify(item, combined: str) -> list[str]:
         "proposal", "proposals", "public comment", "request for comment", "requests comment",
     ))
     digital_or_payment = any(_contains(combined, term) for term in (
-        "digital asset", "cryptocurrency", "crypto", "stablecoin", "payment", "payments",
+        "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
+        "crypto", "stablecoin", "stablecoins", "payment", "payments",
         "payment stablecoin", "virtual currency", "digital asset service provider",
         "genius act", "tokenized deposit", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
     ))
@@ -55,9 +56,19 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("institutional_digital_asset_payment")
 
     broad_tokenization = any(_contains(combined, term) for term in (
-        "tokenization", "tokenisation", "tokenized", "tokenised"))
+        "tokenization", "tokenisation", "tokenized", "tokenised",
+        "real world asset", "real-world asset", "RWA"))
     if broad_tokenization and not direct and "RLUSD" not in entities and not _contains(combined, "stablecoin"):
         categories.append("broad_tokenization")
+    # Tokenization-only stories should qualify only when an identified regulator,
+    # government body, or tracked institution takes a concrete action. Broad market
+    # commentary remains context-only and cannot pass the relevance gate.
+    if broad_tokenization and regulatory and action:
+        categories.append("regulatory_tokenization_action")
+    if broad_tokenization and government and action:
+        categories.append("government_tokenization_action")
+    if broad_tokenization and institutional and action:
+        categories.append("institutional_tokenization_action")
     return categories
 
 
@@ -72,9 +83,16 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
     regulatory_relevance = "relevant_regulatory_digital_asset_payments" in categories
     government_relevance = "government_digital_asset_action" in categories
-    institutional_relevance = "institutional_digital_asset_payment" in categories
-    topical = (direct or regulatory_relevance or government_relevance
-               or institutional_relevance or "ripple_payments_network" in categories)
+    institutional_relevance = (
+        "institutional_digital_asset_payment" in categories
+        or "institutional_tokenization_action" in categories
+    )
+    topical = (
+        direct or regulatory_relevance or government_relevance
+        or institutional_relevance or "ripple_payments_network" in categories
+        or "regulatory_tokenization_action" in categories
+        or "government_tokenization_action" in categories
+    )
 
     score = 0
     reasons: list[str] = []
