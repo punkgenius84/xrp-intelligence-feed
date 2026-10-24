@@ -75,18 +75,29 @@ def test_probe_accepts_missing_optional_document_arrays():
 
 
 
+
+def test_probe_summary_preserves_latest_8k_even_when_general_sample_has_only_other_forms():
+    data = payload()
+    recent = data["filings"]["recent"]
+    recent["form"] = ["10-Q", "10-K", "8-K"]
+    result = summarize_payload(data, "9999999999")
+    assert [row["form"] for row in result["sample"]] == ["8-K", "10-K", "10-Q"] or len(result["sample"]) == 3
+    assert result["latest_8k"]["form"] == "8-K"
+
+
 def test_filing_index_probe_selects_at_most_two_8k_pages():
     summaries = [
         ("Coinbase", "1679788", {"sample": [
             {"form": "10-Q", "filing_index_url": "https://www.sec.gov/q"},
-            {"form": "8-K", "accession": "a", "filing_index_url": "https://www.sec.gov/a"},
-        ]}),
+            {"form": "10-K", "filing_index_url": "https://www.sec.gov/k"},
+            {"form": "10-Q", "filing_index_url": "https://www.sec.gov/q2"},
+        ], "latest_8k": {"form": "8-K", "accession": "a", "filing_index_url": "https://www.sec.gov/a"}}),
         ("Circle", "1876042", {"sample": [
-            {"form": "8-K", "accession": "b", "filing_index_url": "https://www.sec.gov/b"},
-        ]}),
+            {"form": "10-Q", "filing_index_url": "https://www.sec.gov/q"},
+        ], "latest_8k": {"form": "8-K", "accession": "b", "filing_index_url": "https://www.sec.gov/b"}}),
         ("Visa", "1403161", {"sample": [
-            {"form": "8-K", "accession": "c", "filing_index_url": "https://www.sec.gov/c"},
-        ]}),
+            {"form": "10-Q", "filing_index_url": "https://www.sec.gov/q"},
+        ], "latest_8k": {"form": "8-K", "accession": "c", "filing_index_url": "https://www.sec.gov/c"}}),
     ]
     targets = select_index_targets(summaries)
     assert [(label, row["accession"]) for label, _, row in targets] == [
