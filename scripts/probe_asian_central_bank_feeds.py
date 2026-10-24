@@ -121,6 +121,13 @@ def main() -> None:
                                 resolved = client.get(entry.get("link", ""))
                                 print(f"  rss_relevant_link_resolution final_url={resolved.url} type={resolved.headers.get('content-type', 'unknown')} bytes={len(resolved.content)}")
                                 body = resolved.content.decode("utf-8", errors="replace")
+                                body = body.replace("\\/", "/").replace("\\u003d", "=").replace("\\u0026", "&")
+                                for host_token in ("mas.gov.sg", "bot.or.th"):
+                                    host_matches = list(re.finditer(re.escape(host_token), body, re.IGNORECASE))
+                                    print(f"  landing_host_token={host_token} occurrences={len(host_matches)}")
+                                    if host_matches:
+                                        match = host_matches[0]
+                                        print(f"  landing_host_context={body[max(0, match.start()-160):match.end()+240].replace(chr(10), chr(32))[:420]}")
                                 official_urls = sorted(set(re.findall(r"https?://(?:www\\.)?(?:mas\\.gov\\.sg|bot\\.or\\.th)[^\\s\"<>]+", body, re.IGNORECASE)))
                                 for official_url in official_urls[:8]:
                                     print(f"  resolved_official_url={unescape(official_url)[:300]}")
