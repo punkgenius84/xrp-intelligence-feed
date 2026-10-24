@@ -245,6 +245,9 @@ def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
     if len(shared_entities) < 3 or abs((_day(left) - _day(right)).days) > 1:
         return score
 
+    day_gap = abs((_day(left) - _day(right)).days)
+    if day_gap > 1:
+        return score
     overlap = _tokens(left) & _tokens(right)
     event_terms = {
         "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
@@ -253,9 +256,25 @@ def _same_event_duplicate_score(left: NewsItem, right: NewsItem) -> int:
     }
     # A few shared high-value institutions plus concrete event vocabulary can
     # identify the same announcement even when publishers frame their headlines
-    # differently (e.g. the BLOOM central-bank announcement). Shared entity names
-    # alone never qualify.
-    if len(overlap) >= 4 and overlap & event_terms:
+    # differently. Shared entity names alone never qualify.
+    if len(shared_entities) >= 3 and len(overlap) >= 4 and overlap & event_terms:
+        return 85
+
+    # Some reports name the countries in a regional initiative rather than the
+    # same institutions. Require two shared geography tokens, multiple shared
+    # headline tokens, a cross-border/digital-finance term, and a one-day window.
+    regional_tokens = {
+        "singapore", "malaysia", "thailand", "indonesia", "philippines",
+        "vietnam", "cambodia", "laos", "myanmar", "brunei", "brazil",
+        "canada", "mexico", "india", "china", "japan", "korea", "australia",
+        "switzerland", "uae", "saudi", "europe",
+    }
+    shared_regions = overlap & regional_tokens
+    regional_event_terms = {
+        "cross", "border", "settlement", "stablecoin", "tokenized", "tokenised",
+        "payment", "payments", "digital", "initiative",
+    }
+    if len(shared_regions) >= 2 and len(overlap) >= 4 and overlap & regional_event_terms:
         return 85
     return score
 
