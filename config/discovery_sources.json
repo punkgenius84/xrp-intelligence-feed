@@ -508,7 +508,7 @@
       "category": "government",
       "discovery_method": "sgpc_media_releases_api",
       "source_url": "https://www.sgpc.gov.sg/api/ApiMainListing/SubmitData",
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 30,
       "search_terms": [
         "BLOOM",
@@ -522,7 +522,11 @@
         "blockchain",
         "CBDC",
         "cross-border payments",
-        "payments"
+        "payments",
+        "settlement",
+        "cross-border",
+        "central bank digital currency",
+        "digital currency"
       ],
       "max_terms_per_run": 4,
       "max_items": 100
