@@ -95,3 +95,6 @@ def test_asian_google_news_sources_remain_disabled_until_live_validation():
 
     assert expected <= sources.keys()
     assert all(sources[source_id]["enabled"] is False for source_id in expected)
+    # Google News RSS returns up to 100 entries by default; avoid self-inflicted
+    # truncation/partial health on every run while retaining a hard upper bound.
+    assert all(sources[source_id]["max_items"] == 100 for source_id in expected)
