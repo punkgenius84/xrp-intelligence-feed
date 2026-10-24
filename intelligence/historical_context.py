@@ -154,7 +154,7 @@ def select_prior_event_context(
             entity.casefold()
             for entity in entities
             if isinstance(entity, str) and entity.strip()
-            and re.search(r"(?<!\\w)" + re.escape(entity.strip()) + r"(?!\\w)",
+            and re.search(r"(?<!\w)" + re.escape(entity.strip()) + r"(?!\w)",
                           current_text, flags=re.IGNORECASE)
         }
         historical_text = " ".join(
