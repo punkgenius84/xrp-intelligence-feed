@@ -352,8 +352,9 @@ def run_pipeline(
                 last_seen=item.collected_at,
             )
 
-    # Correlation is deliberately downstream of relevance scoring: it enriches context
-    # without changing whether an item qualifies for publication.
+    # Correlation is downstream of relevance scoring and never changes scores.
+    # A separate queue-time gate may suppress a tier-2 copy only when a qualifying
+    # tier-1 candidate for the same event is also current and queueable.
     correlate(fresh, history=list(correlation_state_value["cards"].values()))
     buried_signals = detect_buried_signals(
         fresh, publish_score=thresholds["publish_score"]
