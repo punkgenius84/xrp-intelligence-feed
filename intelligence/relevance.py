@@ -66,7 +66,7 @@ def _classify(item, combined: str) -> list[str]:
         "alleges", "allegation", "inquiry", "inquiries",
         "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
-        "join Singapore", "targets 2030", "network buildout", "buildout target",
+        "join", "targets 2030", "network buildout", "buildout target",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
         "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
