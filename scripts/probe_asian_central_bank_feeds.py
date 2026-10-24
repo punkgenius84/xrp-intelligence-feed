@@ -13,7 +13,12 @@ sys.path.insert(0, str(ROOT))
 from discovery.http import BoundedHttpClient, DiscoveryHttpError
 from discovery.dispatch import collect_source, load_discovery_sources
 from discovery.normalization import normalize_candidate
-from intelligence.correlation import correlate, suppress_correlated_secondary_duplicates
+from intelligence.correlation import (
+    build_correlation_card,
+    correlate,
+    filter_secondary_opinion_commentary,
+    suppress_correlated_secondary_duplicates,
+)
 from intelligence.entities import detect_entities
 from intelligence.relevance import score_relevance
 from intelligence.source_quality import classify_source_quality
@@ -267,6 +272,44 @@ def _probe_secondary_source_duplicate_gate() -> None:
         )
     if not suppressed:
         print("  duplicate_gate_suppressed=none")
+
+    # Model the realistic later-run case: the primary has already been seen, so
+    # only the secondary candidates are new. The cards are built in memory from
+    # this probe's current official candidates; nothing is read from or written to
+    # production correlation state.
+    primary_history = [
+        build_correlation_card(item)
+        for item in items
+        if item.source_quality == "primary" and item.relevance_score >= 30
+    ]
+    secondary_only = [
+        item for item in items
+        if item.source_quality == "high_signal" and item.relevance_score >= 30
+    ]
+    cross_run_kept, cross_run_suppressed = suppress_correlated_secondary_duplicates(
+        secondary_only, publish_score=30, history=primary_history
+    )
+    print(
+        f"cross_run_duplicate_gate_summary secondary_candidates={len(secondary_only)} "
+        f"qualifying_primary_history_cards={len(primary_history)} "
+        f"kept_for_delivery={len(cross_run_kept)} suppressed={len(cross_run_suppressed)}"
+    )
+    for item in cross_run_suppressed:
+        print(
+            f"  cross_run_duplicate_gate_suppressed score={item.relevance_score} "
+            f"source={item.source_id} title={item.title[:180]!r} url={item.url}"
+        )
+
+    commentary_kept, commentary_held = filter_secondary_opinion_commentary(items)
+    print(
+        f"secondary_commentary_gate_summary qualifying_candidates={len(items)} "
+        f"eligible={len(commentary_kept)} held={len(commentary_held)}"
+    )
+    for item in commentary_held[:10]:
+        print(
+            f"  secondary_commentary_gate_held score={item.relevance_score} "
+            f"source={item.source_id} title={item.title[:180]!r} url={item.url}"
+        )
 
 
 def main() -> None:
