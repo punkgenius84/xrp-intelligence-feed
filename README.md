@@ -307,6 +307,8 @@ Omit `--source-id` to inspect observations from all opted-in sources. Use `--pat
 
 The probe keeps its newest tracked 8-K separate from the three-row summary so the bounded index-parser check is not accidentally skipped when the latest general filings are 10-Q/10-K reports.
 
+The probe separates malformed accession strings from accession numbers whose embedded filer CIK differs from the requested issuer CIK, and reports only the five most common mismatched prefixes. Those rows remain excluded from sample URLs; this is diagnostic visibility, not permission to attribute another filer's filing to the requested issuer.
+
 ## SEC submissions runner probe
 
 The manual/pull-request **SEC Submissions Runner Probe** checks whether GitHub Actions can read the official SEC submissions JSON for a small, verified issuer sample. It validates returned CIK identity, required filing arrays, dated rows, and official SEC filing-index URL construction; it prints only a small sample and does not fetch filing bodies.
