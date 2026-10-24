@@ -2,6 +2,7 @@ from scripts.probe_asian_central_bank_feeds import (
     TARGETS,
     _candidate_api_routes,
     _page_metadata,
+    _route_context,
     _same_host_script_urls,
 )
 
@@ -103,3 +104,13 @@ def test_candidate_api_routes_extracts_routes_without_requesting_them():
     assert "/graphql" in routes
     assert all(not route.startswith("https://") for route in routes)
     assert "/assets/app.js" not in routes
+
+
+
+def test_route_context_reports_bounded_call_site_without_fetching_route():
+    script = 'fetch("/api/ApiMainListing/SubmitData", { method: "POST", body: payload })'
+    context = _route_context(script, "/api/ApiMainListing/SubmitData", radius=25)
+    assert "/api/ApiMainListing/SubmitData" in context
+    assert 'method: "POST"' in context
+    assert len(context) <= 700
+    assert _route_context(script, "/api/missing") == ""
