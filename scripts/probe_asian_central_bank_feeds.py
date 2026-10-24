@@ -67,10 +67,12 @@ def _probe_configured_google_news_collectors() -> None:
             f"probe_status={result.status} candidates={len(result.candidates)} "
             f"errors={len(result.errors)}"
         )
-        for candidate in result.candidates[:10]:
+        for index, candidate in enumerate(result.candidates):
             detect_entities(candidate)
             classify_source_quality(candidate)
             score, reasons = score_relevance(candidate)
+            if score < 30 and index >= 3:
+                continue
             metadata = candidate.source_native_metadata
             print(
                 f"  candidate date={candidate.published_at.isoformat() if candidate.published_at else 'unknown'} "
@@ -206,10 +208,12 @@ def _probe_bot_thai_hearing_sitemap() -> None:
         f"collector source_id=bot-thai-public-hearings configured_enabled={configured['enabled']} "
         f"probe_status={result.status} candidates={len(result.candidates)} errors={len(result.errors)}"
     )
-    for candidate in result.candidates[:10]:
+    for index, candidate in enumerate(result.candidates):
         detect_entities(candidate)
         classify_source_quality(candidate)
         score, reasons = score_relevance(candidate)
+        if score < 30 and index >= 3:
+            continue
         print(
             f"  candidate date={candidate.published_at.isoformat() if candidate.published_at else 'unknown'} "
             f"score={score} title={candidate.title[:180]!r}"
