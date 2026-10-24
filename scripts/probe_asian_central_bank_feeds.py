@@ -97,10 +97,18 @@ def main() -> None:
             if not feeds and not articles:
                 print("  no feed links or date-bearing official article links in returned HTML")
         elif content_type in FEED_TYPES or "xml" in content_type:
-            locs = re.findall("<loc>(.*?)</loc>", text, re.IGNORECASE | re.DOTALL)
-            for value in locs[:10]:
-                print(f"  sitemap_loc={unescape(value.strip())}")
-            if not locs:
+            blocks = re.findall(r"<url>(.*?)</url>", text, re.IGNORECASE | re.DOTALL)
+            locations = []
+            for block in blocks:
+                loc_match = re.search(r"<loc>(.*?)</loc>", block, re.IGNORECASE | re.DOTALL)
+                mod_match = re.search(r"<lastmod>(.*?)</lastmod>", block, re.IGNORECASE | re.DOTALL)
+                if loc_match:
+                    locations.append((unescape(loc_match.group(1).strip()), mod_match.group(1).strip() if mod_match else ""))
+            print(f"  sitemap_url_count={len(locations)}")
+            recent = [(loc, modified) for loc, modified in locations if "2026" in loc or "stablecoin" in loc.lower() or "public-hearing" in loc.lower() or (modified and modified[:4] >= "2025")]
+            for loc, modified in recent[:40]:
+                print(f"  sitemap_candidate lastmod={modified or "unknown"} url={loc}")
+            if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
 if __name__ == "__main__":
