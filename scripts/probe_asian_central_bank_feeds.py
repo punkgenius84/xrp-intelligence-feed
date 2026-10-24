@@ -142,7 +142,9 @@ def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: 
     """Return a small, same-host list of script assets for read-only diagnostics."""
     if limit <= 0:
         return []
-    found: list[str] = []
+    preferred: list[str] = []
+    fallback: list[str] = []
+    vendor_markers = ("/vendors/", "jquery", "bootstrap", "swiper", "moment", "fontawesome", "iframe-lightbox")
     for tag in re.findall(r"<script\b[^>]*>", html, re.IGNORECASE | re.DOTALL):
         attrs = {m.group(1).lower(): unescape(m.group(3)) for m in ATTR_RE.finditer(tag)}
         src = attrs.get("src", "").strip()
@@ -154,11 +156,10 @@ def _same_host_script_urls(html: str, page_url: str, expected_host: str, limit: 
         path = urlsplit(absolute).path.lower()
         if not path.endswith((".js", ".mjs")):
             continue
-        if absolute not in found:
-            found.append(absolute)
-        if len(found) >= max(0, limit):
-            break
-    return found
+        target = fallback if any(marker in path for marker in vendor_markers) else preferred
+        if absolute not in preferred and absolute not in fallback:
+            target.append(absolute)
+    return (preferred + fallback)[:limit]
 
 
 def _candidate_api_routes(script_text: str, limit: int = 20) -> list[str]:
