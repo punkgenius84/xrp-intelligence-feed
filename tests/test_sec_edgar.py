@@ -91,7 +91,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "ecb-press-releases",
         "bank-of-canada-press-releases",
         "canada-gazette-part-i",
-        "mas-media-releases",
+        "sg-press-centre",
         "bank-of-england-news",
     }
 
