@@ -159,3 +159,25 @@ def test_touch_missing_card_is_noop(tmp_path):
         state, candidate_id="missing", last_seen=STAMP,
     )
     assert state["cards"] == {}
+
+
+
+def test_legacy_card_shape_loads_and_touch_upgrades_scoring_metadata(tmp_path):
+    store = JsonCorrelationState(tmp_path / "correlation.json")
+    legacy = _card("legacy")
+    legacy.pop("source_quality")
+    legacy.pop("relevance_score")
+    state = {"schema_version": 1, "cards": {"legacy": legacy}}
+
+    assert store._validate(state) == state
+    JsonCorrelationState.touch_card(
+        state,
+        candidate_id="legacy",
+        last_seen=STAMP + timedelta(minutes=1),
+        source_quality="primary",
+        relevance_score=37,
+    )
+
+    assert state["cards"]["legacy"]["source_quality"] == "primary"
+    assert state["cards"]["legacy"]["relevance_score"] == 37
+    assert store._validate(state) == state
