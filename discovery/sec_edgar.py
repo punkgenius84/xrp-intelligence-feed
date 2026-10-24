@@ -276,6 +276,34 @@ class SECEdgarDiscovery:
                 last_seen_at=fetched_at,
             ))
         candidates.sort(key=lambda item: (item.published_at or fetched_at, item.source_native_id), reverse=True)
+        detail_limit = self.source.get("detail_enrichment_limit", 0)
+        enriched = 0
+        for candidate in candidates:
+            if enriched >= detail_limit:
+                break
+            if candidate.document_type.casefold() != "8-k":
+                continue
+            accession = candidate.source_native_metadata.get("accession_number", "")
+            index_url = _filing_index_url(cik, accession)
+            try:
+                self._pace()
+                detail = self.http.get(index_url, expected_content_types=("text/html", "application/xhtml+xml"))
+                context = _extract_filing_context(detail.content)
+                candidate.source_native_metadata["filing_index_url"] = index_url
+                candidate.source_native_metadata.update(context)
+                context_parts = []
+                if context["filing_items"]:
+                    context_parts.append("Filing items: " + context["filing_items"])
+                if context["exhibit_descriptions"]:
+                    context_parts.append("Exhibits: " + "; ".join(context["exhibit_descriptions"]))
+                if context_parts:
+                    candidate.summary = (candidate.summary + " " + " ".join(context_parts))[:2000]
+                    candidate.provenance = list(dict.fromkeys([*candidate.provenance, index_url]))
+                enriched += 1
+            except (DiscoveryHttpError, ValueError, TypeError) as exc:
+                errors.append(f"CIK {cik}: filing-index enrichment failed for {accession}: {exc}")
+                candidate.source_status = "partial"
+                candidate.source_error = "filing-index enrichment failed"
         status = "partial" if errors else "success"
         return candidates, validators, status if not errors else "; ".join(errors)
 
