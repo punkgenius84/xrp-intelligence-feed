@@ -115,6 +115,7 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "theblock-google-news-discovery",
         "blockworks-google-news-discovery",
         "dlnews-google-news-discovery",
+        "sgpc-media-releases-api",
     }
 
 
