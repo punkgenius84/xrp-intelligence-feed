@@ -58,7 +58,11 @@ def response(payload=None, *, status=200, headers=None):
 def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
     configured = load_discovery_sources()
     sec = next(source for source in configured if source["source_id"] == "sec-edgar-submissions")
-    assert sec["issuer_ciks"] == []
+    # CIKs are cross-checked against official SEC EDGAR filing pages.
+    # Keep the collector disabled until runner responses and relevance are validated.
+    assert sec["issuer_ciks"] == ["1679788", "1876042", "1633917", "1403161"]
+    assert sec["enabled"] is False
+    assert sec["detail_enrichment_limit"] == 0
     assert sec["filing_forms"] == ["8-K", "10-K", "10-Q", "S-1", "S-3"]
     assert {source["source_id"] for source in configured} == {
         "sec-edgar-submissions",
