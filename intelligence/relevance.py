@@ -35,7 +35,7 @@ def _classify(item, combined: str) -> list[str]:
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
-        "launch", "launched", "expands", "expanded", "partner", "partners", "partnered",
+        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening",
         "collaborate", "collaboration", "integrate", "integration",
         "designation", "designations", "designates", "removal", "removals", "delisting",
         "proposal", "proposals", "public comment", "request for comment", "requests comment",
