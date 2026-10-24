@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time as day_time, timezone
+from html import unescape
 from hashlib import sha256
 import json
 import os
@@ -28,8 +29,9 @@ def validate_sec_source(source: object) -> dict[str, Any]:
         "source_url", "enabled", "issuer_ciks", "filing_forms", "contact_email_env",
         "application_name", "max_issuers_per_run",
     }
-    if not isinstance(source, dict) or set(source) != required:
-        raise ValueError(f"SEC source must have exactly {sorted(required)}")
+    optional = {"detail_enrichment_limit"}
+    if not isinstance(source, dict) or not required.issubset(source) or set(source) - required - optional:
+        raise ValueError(f"SEC source must contain {sorted(required)} and only supported optional fields")
     for key in ("source_id", "name", "category", "discovery_method", "source_url",
                 "contact_email_env", "application_name"):
         if not isinstance(source[key], str) or not source[key].strip():
@@ -63,6 +65,9 @@ def validate_sec_source(source: object) -> dict[str, Any]:
     maximum = source["max_issuers_per_run"]
     if type(maximum) is not int or not 1 <= maximum <= 10:
         raise ValueError("max_issuers_per_run must be from 1 to 10")
+    enrichment_limit = source.get("detail_enrichment_limit", 0)
+    if type(enrichment_limit) is not int or not 0 <= enrichment_limit <= 5:
+        raise ValueError("detail_enrichment_limit must be from 0 to 5")
     return source
 
 
@@ -82,6 +87,43 @@ def _filing_url(cik: str, accession: str, primary_document: str) -> str:
     accession_path = accession.replace("-", "")
     tail = quote(document, safe="-_.") if document else ""
     return f"{SEC_ARCHIVES_ROOT}{int(cik)}/{accession_path}/" + tail
+
+
+def _filing_index_url(cik: str, accession: str) -> str:
+    if not _CIK_RE.fullmatch(cik) or not _ACCESSION_RE.fullmatch(accession):
+        raise ValueError("invalid SEC filing identity")
+    if accession[:10] != cik.zfill(10):
+        raise ValueError("SEC accession CIK does not match requested CIK")
+    return f"{SEC_ARCHIVES_ROOT}{int(cik)}/{accession.replace('-', '')}/{accession}-index.htm"
+
+
+def _extract_filing_context(content: bytes) -> dict[str, Any]:
+    """Extract bounded Item and exhibit context from a SEC filing index page."""
+    try:
+        html = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("SEC filing index is not valid UTF-8") from exc
+
+    def plain(fragment: str) -> str:
+        return " ".join(unescape(re.sub(r"<[^>]*>", " ", fragment)).split())
+
+    items = ""
+    match = re.search(
+        r"<div\b[^>]*class=[\"'][^\"']*\binfoHead\b[^\"']*[\"'][^>]*>\s*Items\s*</div>\s*"
+        r"<div\b[^>]*class=[\"'][^\"']*\binfo\b[^\"']*[\"'][^>]*>(.*?)</div>",
+        html, re.IGNORECASE | re.DOTALL,
+    )
+    if match:
+        items = plain(match.group(1))[:500]
+
+    exhibits: list[str] = []
+    for row in re.findall(r"<tr\b[^>]*>.*?</tr\s*>", html, re.IGNORECASE | re.DOTALL):
+        row_text = plain(row)
+        if re.search(r"\bEX-?\d", row_text, re.IGNORECASE):
+            exhibits.append(row_text[:250])
+            if len(exhibits) >= 3:
+                break
+    return {"filing_items": items, "exhibit_descriptions": exhibits}
 
 
 def _parallel_rows(recent: dict[str, Any]) -> list[dict[str, str]]:
