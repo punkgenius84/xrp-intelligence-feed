@@ -83,6 +83,21 @@ def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
 
 
+def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
+    item = score_item(
+        "Coinbase and Thunes connect stablecoin infrastructure with global fiat payouts",
+        "Coinbase and Thunes connected stablecoin infrastructure to global fiat payouts.",
+        "https://news.google.com/rss/articles/example-coinbase-thunes",
+    )
+
+    assert "Coinbase" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"Coinbase/Thunes stablecoin connection unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+
+
 def test_unrelated_mas_leadership_release_does_not_clear_relevance_gate():
     item = score_item(
         "MAS Announces Senior Leadership Changes",
