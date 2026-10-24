@@ -154,6 +154,26 @@ def test_sec_index_enrichment_is_opt_in_and_bounded_to_two_pages_per_run():
     assert len(http.calls) == 3
 
 
+
+def test_unrecognized_filing_index_keeps_candidate_but_marks_source_partial():
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    index_url = _filing_index_url("9999999999", "9999999999-26-000001")
+    http = FakeHttp([
+        response(payload),
+        HttpResponse(200, {"content-type": "text/html"},
+                     b"<html><body>JavaScript shell</body></html>", index_url),
+    ])
+    result = SECEdgarDiscovery(
+        sec_source(detail_enrichment_limit=1), http=http, now=lambda: STAMP,
+        request_interval=0, environ={},
+    ).collect()
+    assert len(result.candidates) == 1
+    assert result.status == "partial"
+    assert result.candidates[0].source_status == "partial"
+    assert result.candidates[0].source_error == "filing-index enrichment failed"
+    assert result.state_updates == {}
+
+
 def test_registry_rejects_duplicate_sources_and_invalid_ciks():
     with pytest.raises(ValueError, match="detail_enrichment_limit"):
         validate_sec_source(sec_source(detail_enrichment_limit=6))
