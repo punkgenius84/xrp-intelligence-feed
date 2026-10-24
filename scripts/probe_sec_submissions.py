@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import sys
 import time
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -128,6 +128,86 @@ def summarize_payload(payload: object, expected_cik: str) -> dict[str, object]:
         # would otherwise prevent the live probe from exercising the index parser.
         "latest_8k": latest_8k,
     }
+
+
+def summarize_efts_payload(payload: object, limit: int = 10) -> dict[str, object]:
+    """Validate and summarize a bounded sample from the SEC full-text search JSON backend."""
+    if not isinstance(payload, dict):
+        raise ValueError("EFTS payload must be a JSON object")
+    hits_block = payload.get("hits")
+    if not isinstance(hits_block, dict) or not isinstance(hits_block.get("hits"), list):
+        raise ValueError("EFTS payload is missing hits.hits")
+    total_block = hits_block.get("total", {})
+    total = total_block.get("value") if isinstance(total_block, dict) else total_block
+    if not isinstance(total, int) or total < 0:
+        raise ValueError("EFTS payload has invalid hits.total")
+    rows: list[dict[str, str]] = []
+    for hit in hits_block["hits"][:limit]:
+        if not isinstance(hit, dict) or not isinstance(hit.get("_source"), dict):
+            continue
+        source = hit["_source"]
+        hit_id = str(hit.get("_id", ""))
+        accession = hit_id.split(":", 1)[0]
+        if not ACCESSION_RE.fullmatch(accession):
+            continue
+        items = source.get("items", [])
+        if isinstance(items, list):
+            items_text = ", ".join(str(item) for item in items[:12])
+        else:
+            items_text = str(items or "")
+        rows.append({
+            "accession": accession,
+            "file_date": str(source.get("file_date", "")),
+            "form": str(source.get("form_type", "")),
+            "entity_name": str(source.get("entity_name", "")),
+            "file_description": str(source.get("file_description", ""))[:180],
+            "items": items_text[:180],
+        })
+    return {
+        "total_hits": total,
+        "returned_hits": len(hits_block["hits"]),
+        "sample": rows,
+    }
+
+
+def _probe_efts(client: BoundedHttpClient, email: str) -> bool:
+    """Read-only diagnostic for the JSON backend behind SEC full-text search."""
+    today = date.today()
+    start = today - __import__("datetime").timedelta(days=30)
+    params = {
+        "q": 'stablecoin OR "digital asset" OR tokenization OR tokenisation OR blockchain OR CBDC OR "tokenized deposits"',
+        "forms": "8-K",
+        "ciks": ",".join(cik.zfill(10) for _, cik in ISSUERS),
+        "dateRange": "custom",
+        "startdt": start.isoformat(),
+        "enddt": today.isoformat(),
+        "from": "0",
+    }
+    url = "https://efts.sec.gov/LATEST/search-index?" + urlencode(params)
+    print(
+        f"EFTS full-text probe: read_only=true contact_email_configured={bool(email)} "
+        f"date_range={start.isoformat()}..{today.isoformat()} forms=8-K issuers={len(ISSUERS)}"
+    )
+    try:
+        response = client.get(url, expected_content_types=("application/json", "text/json"))
+        if urlsplit(response.url).hostname != "efts.sec.gov":
+            raise ValueError(f"unexpected response host: {urlsplit(response.url).hostname or 'missing'}")
+        payload = json.loads(response.content.decode("utf-8"))
+        summary = summarize_efts_payload(payload)
+    except (DiscoveryHttpError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        if isinstance(exc, DiscoveryHttpError):
+            print(f"efts_probe status=unavailable kind={exc.kind} http={exc.status_code or 'n/a'}")
+        else:
+            print(f"efts_probe status=invalid error={type(exc).__name__}: {exc}")
+        return False
+    print(f"efts_probe status=valid total_hits={summary['total_hits']} returned_hits={summary['returned_hits']} sample_rows={len(summary['sample'])}")
+    for row in summary["sample"]:
+        print(
+            f"  efts_hit date={row['file_date'] or 'unknown'} form={row['form'] or 'unknown'} "
+            f"entity={row['entity_name'][:100]!r} accession={row['accession']} "
+            f"items={row['items']!r} description={row['file_description']!r}"
+        )
+    return True
 
 
 def select_index_targets(
@@ -251,10 +331,12 @@ def main() -> int:
         time.sleep(1.05)
         if not _probe_filing_index(client, label, cik, row):
             index_failures += 1
+    time.sleep(1.05)
+    efts_ok = _probe_efts(client, email)
     print(
         f"probe_complete issuers={len(ISSUERS)} submission_failures={failures} "
         f"index_pages={len(index_targets)} index_failures={index_failures} "
-        "mode=read_only state_write=disabled publishing=disabled"
+        f"efts_ok={efts_ok} mode=read_only state_write=disabled publishing=disabled"
     )
     return 1 if failures or index_failures else 0
 
