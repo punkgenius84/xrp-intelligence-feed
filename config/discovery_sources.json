@@ -546,6 +546,32 @@
       "max_items": 100,
       "publisher_host": "coinbase.com",
       "publisher_name": "Coinbase"
+    },
+    {
+      "source_id": "swift-google-news-discovery",
+      "name": "SWIFT (Google News discovery)",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Aswift.com+%28Ripple+OR+XRP+OR+digital+assets+OR+tokenisation+OR+tokenization+OR+stablecoin+OR+payments+OR+ISO+20022%29+when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "swift.com",
+      "publisher_name": "SWIFT"
+    },
+    {
+      "source_id": "imf-google-news-discovery",
+      "name": "International Monetary Fund (Google News discovery)",
+      "authority_tier": 1,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Aimf.org+%28digital+assets+OR+tokenization+OR+tokenisation+OR+stablecoin+OR+crypto+OR+cross-border+payments+OR+Ripple+OR+XRP%29+when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": false,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "imf.org",
+      "publisher_name": "International Monetary Fund"
     }
   ]
 }
