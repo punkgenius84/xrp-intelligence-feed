@@ -31,14 +31,16 @@ class QueuedPublication:
 
 
 def publication_key(item: Any) -> str:
+    # Persisted outbox records carry the canonical publication key. Prefer it
+    # unconditionally: legacy NewsItem records can have only one of candidate_id
+    # and content_hash populated, while their original key used fingerprint as
+    # the fallback for the missing half. Reconstructing from the partial fields
+    # would produce a different key and make successful posts impossible to remove.
+    stored_key = getattr(item, "key", "")
+    if isinstance(stored_key, str) and stored_key.startswith("discord|"):
+        return stored_key
     identity = getattr(item, "candidate_id", "") or getattr(item, "fingerprint", "")
     content_hash = getattr(item, "content_hash", "") or getattr(item, "fingerprint", "")
-    if not identity and not content_hash:
-        # Persisted QueuedPublication records keep their canonical key but do not
-        # carry the NewsItem fingerprint property. Preserve that key on retries.
-        stored_key = getattr(item, "key", "")
-        if isinstance(stored_key, str) and stored_key.startswith("discord|"):
-            return stored_key
     return f"discord|{identity}|{content_hash}"
 
 
