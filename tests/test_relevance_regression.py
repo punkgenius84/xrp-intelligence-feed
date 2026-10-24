@@ -260,6 +260,53 @@ def test_sec_filing_context_requires_a_concrete_digital_asset_action(title, summ
         assert score < 30, f"generic risk-factor filing should stay below gate: {score}, {reasons}"
 
 
+@pytest.mark.parametrize(
+    ("title", "summary", "source", "source_id", "expected_entity", "expected_category"),
+    [
+        (
+            "Federal Reserve announces modernization of its payment settlement network",
+            "The Federal Reserve announced improvements to payment settlement infrastructure.",
+            "Board of Governors of the Federal Reserve System",
+            "federal-reserve-board-rss",
+            "Federal Reserve",
+            "relevant_regulatory_payment_action",
+        ),
+        (
+            "U.S. Treasury launches an updated government payment platform",
+            "The Treasury launched an updated government payment platform.",
+            "U.S. Department of the Treasury",
+            "treasury-press-releases",
+            "Treasury",
+            "government_payment_action",
+        ),
+    ],
+)
+def test_payment_only_public_sector_actions_do_not_claim_digital_asset_link(
+    title, summary, source, source_id, expected_entity, expected_category
+):
+    item = NewsItem(
+        title=title,
+        summary=summary,
+        url="https://example.test/payment-modernization",
+        source=source,
+        source_id=source_id,
+        source_quality="primary",
+        authority_tier=1,
+        category="government",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert expected_entity in item.detected_entities
+    assert expected_category in item.relevance_categories
+    assert "relevant_regulatory_digital_asset_payments" not in item.relevance_categories
+    assert "government_digital_asset_action" not in item.relevance_categories
+    assert score >= 30, f"important payment-system action should clear gate: {score}, {reasons}"
+
+
 def test_swift_conventional_cross_border_payment_action_does_not_claim_digital_asset_link():
     item = NewsItem(
         title="Swift to launch AI-powered fraud defence for cross-border payments",
