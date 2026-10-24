@@ -66,8 +66,8 @@ def validate_sec_source(source: object) -> dict[str, Any]:
     if type(maximum) is not int or not 1 <= maximum <= 10:
         raise ValueError("max_issuers_per_run must be from 1 to 10")
     enrichment_limit = source.get("detail_enrichment_limit", 0)
-    if type(enrichment_limit) is not int or not 0 <= enrichment_limit <= 5:
-        raise ValueError("detail_enrichment_limit must be from 0 to 5")
+    if type(enrichment_limit) is not int or not 0 <= enrichment_limit <= 2:
+        raise ValueError("detail_enrichment_limit must be from 0 to 2")
     return source
 
 
@@ -171,6 +171,7 @@ class SECEdgarDiscovery:
         self.request_interval = max(1.0, request_interval)
         self.now = now
         self._last_request: float | None = None
+        self._detail_enrichment_remaining = 0
 
     def _pace(self) -> None:
         if self._last_request is not None:
@@ -276,16 +277,15 @@ class SECEdgarDiscovery:
                 last_seen_at=fetched_at,
             ))
         candidates.sort(key=lambda item: (item.published_at or fetched_at, item.source_native_id), reverse=True)
-        detail_limit = self.source.get("detail_enrichment_limit", 0)
-        enriched = 0
         for candidate in candidates:
-            if enriched >= detail_limit:
+            if self._detail_enrichment_remaining <= 0:
                 break
             if candidate.document_type.casefold() != "8-k":
                 continue
             accession = candidate.source_native_metadata.get("accession_number", "")
             index_url = _filing_index_url(cik, accession)
             try:
+                self._detail_enrichment_remaining -= 1
                 self._pace()
                 detail = self.http.get(index_url, expected_content_types=("text/html", "application/xhtml+xml"))
                 context = _extract_filing_context(detail.content)
@@ -299,7 +299,6 @@ class SECEdgarDiscovery:
                 if context_parts:
                     candidate.summary = (candidate.summary + " " + " ".join(context_parts))[:2000]
                     candidate.provenance = list(dict.fromkeys([*candidate.provenance, index_url]))
-                enriched += 1
             except (DiscoveryHttpError, ValueError, TypeError) as exc:
                 errors.append(f"CIK {cik}: filing-index enrichment failed for {accession}: {exc}")
                 candidate.source_status = "partial"
@@ -328,6 +327,7 @@ class SECEdgarDiscovery:
         ciks = ordered_ciks[:self.source["max_issuers_per_run"]]
         next_index = (start_index + len(ciks)) % len(all_ciks)
 
+        self._detail_enrichment_remaining = self.source.get("detail_enrichment_limit", 0)
         candidates: list[DiscoveryCandidate] = []
         updates: dict[str, dict[str, str]] = {}
         errors: list[str] = []
