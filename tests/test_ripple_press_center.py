@@ -91,6 +91,27 @@ def test_parser_does_not_require_article_wrapper_elements():
     assert rows[0]["date"] == datetime(2026, 9, 10, tzinfo=timezone.utc)
 
 
+
+def test_parser_does_not_borrow_date_from_previous_release_card():
+    html = b"""<main>
+      <div class="card">
+        <a href="/ripple-press/dated-release/">Dated Release</a>
+        <p>Sep 29, 2026</p>
+      </div>
+      <div class="card">
+        <a href="/ripple-press/undated-release/">Undated Release</a>
+        <p>Details without a publication date</p>
+      </div>
+    </main>"""
+
+    rows, complete = _parse_page(html)
+
+    assert complete is False
+    assert len(rows) == 1
+    assert rows[0]["slug"] == "dated-release"
+    assert rows[0]["date"] == datetime(2026, 9, 29, tzinfo=timezone.utc)
+
+
 def test_collect_deduplicates_and_uses_official_page_pagination():
     payload = FIXTURE.read_bytes()
     result = RipplePressCenterDiscovery(
