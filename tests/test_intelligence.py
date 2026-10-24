@@ -347,3 +347,47 @@ def test_crypto_entity_stock_plan_without_onchain_context_is_not_relevant():
     assert "crypto_ecosystem_action" not in item.relevance_categories
     assert score < 30
 
+
+def test_asian_governments_join_digital_money_initiative_is_relevant():
+    item = NewsItem(
+        "Malaysia, Thailand Join Singapore's BLOOM Digital Money Initiative",
+        "https://example.com/bloom-digital-money",
+        "Cointelegraph",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert {"Malaysia", "Thailand", "Singapore"}.issubset(set(item.detected_entities))
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"government digital-money initiative should clear gate: {score}, {reasons}"
+
+
+def test_china_blockchain_network_buildout_target_is_relevant():
+    item = NewsItem(
+        "China Targets 2030 for Its National Blockchain Network Buildout",
+        "https://example.com/china-blockchain-network",
+        "Cointelegraph",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "China" in item.detected_entities
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"government blockchain buildout should clear gate: {score}, {reasons}"
+
+
+def test_government_target_without_digital_asset_context_does_not_qualify():
+    item = NewsItem(
+        "China targets new high-speed rail construction by 2030",
+        "https://example.com/china-rail",
+        "Example News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "government_digital_asset_action" not in item.relevance_categories
+    assert score < 30
+
