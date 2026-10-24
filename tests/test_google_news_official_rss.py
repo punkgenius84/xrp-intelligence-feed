@@ -90,6 +90,22 @@ def test_google_news_source_rejects_broadened_or_misleading_site_filters(query):
         validate_google_news_source(invalid)
 
 
+def test_swift_google_news_fallback_is_publisher_restricted_and_enabled_after_live_validation():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote
+
+    configured = load_discovery_sources()
+    source = next(item for item in configured if item["source_id"] == "swift-google-news-discovery")
+    assert source["enabled"] is True
+    assert source["publisher_host"] == "swift.com"
+    assert validate_google_news_source(source) == source
+    query = unquote(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+    assert query.startswith("site:swift.com ")
+    assert "blockchain" in query
+    assert "tokenized deposits" in query
+    assert "cross-border payments" in query
+
+
 def test_google_news_source_requires_domain_restricted_query():
     assert validate_google_news_source(SOURCE) == SOURCE
     # The hostname label "or" must not be mistaken for an OR search operator.
