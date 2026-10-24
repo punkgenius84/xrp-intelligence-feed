@@ -6,7 +6,7 @@ import json
 import re
 import time
 from typing import Any, Callable
-from urllib.parse import urlencode, urljoin, urlsplit
+from urllib.parse import unquote, urlencode, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 from discovery.base import DiscoveryResult
@@ -22,6 +22,7 @@ SGPC_ORIGIN = "https://www.sgpc.gov.sg"
 SGPC_HOSTS = {"www.sgpc.gov.sg", "sgpc.gov.sg"}
 SINGAPORE_TZ = ZoneInfo("Asia/Singapore")
 _NATIVE_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,100}$")
+_ARTICLE_PATH_RE = re.compile(r"^/media_releases/[a-z0-9-]{1,40}/[a-z0-9-]{1,40}/[A-Za-z0-9-]{1,100}$", re.IGNORECASE)
 _AGENCY_ABBR_RE = re.compile(r"""['"]AgencyAbbr['"]\s*:\s*['"]([A-Z0-9-]{2,20})['"]""")
 _MAX_TERMS_HARD = 16
 _MAX_TERMS_PER_RUN_HARD = 5
@@ -87,8 +88,9 @@ def _official_article_url(value: object) -> str:
         or parts.port not in (None, 443)
         or parts.username is not None
         or parts.password is not None
-        or not parts.path.startswith("/media_releases/")
-        or any(segment in {".", ".."} for segment in parts.path.split("/"))
+        or not _ARTICLE_PATH_RE.fullmatch(unquote(parts.path))
+        or "\\" in unquote(parts.path)
+        or any(segment in {".", ".."} for segment in unquote(parts.path).split("/"))
         or parts.query
         or parts.fragment
     ):
