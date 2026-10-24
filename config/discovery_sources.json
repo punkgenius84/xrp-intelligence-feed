@@ -447,7 +447,7 @@
         "www.bot.or.th",
         "bot.or.th"
       ],
-      "article_path_regex": "/en/news-and-media/news/news-\\\\d{8}\\\\.html",
+      "article_path_regex": "/en/news-and-media/news/news-\\d{8}\\.html",
       "detail_fallback_limit": 2
     },
     {
