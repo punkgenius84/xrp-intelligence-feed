@@ -315,20 +315,20 @@ Omit `--source-id` to inspect observations from all opted-in sources. Use `--pat
 - **IMF web endpoints remain parked.** GitHub Actions returned HTTP 403 from public News, Blogs, GFSR, RSS, sitemap and the official IMF Data news listing; the official Media Center listing returned HTTP 202 with an empty body. No access-control workaround is used. Re-enable only after an official RSS/API endpoint returns usable dated items from the runner; parser fixtures remain covered.
 - **Push-triggered feed runs are source-diagnostic dry runs.** They skip Ollama setup, live inference smoke testing, and full per-headline enrichment to shorten feedback cycles. Scheduled and manual runs still perform the real model inference smoke test and full intelligence layer in shadow mode.
 
-## Isolated one-event intelligence delivery test
+## Full fresh-start launch reset
 
-The manual **XRP Intelligence Feed** workflow supports a narrowly scoped delivery test without enabling normal-feed publishing. Use it only after reviewing a genuinely fresh queued event:
+The launch plan is to start the normal feed from clean operational state after the live-run defects are fixed—not to use the isolated one-event intelligence delivery test. Use the manual **Fresh Start Launch Reset** workflow only at the agreed launch point.
 
-1. Open **Actions → XRP Intelligence Feed → Run workflow** on `main`.
-2. Leave **Dry run** enabled and **Preview intelligence** off.
-3. Enable **Publish exactly one explicitly selected queued intelligence event**.
-4. Copy the exact `event_id` from the current queued-intelligence preview/logs into **Exact queued event ID**. There is deliberately no default ID.
-5. Enter `POST-ONE-INTELLIGENCE-EVENT` in the confirmation field.
-6. Inspect the run output. The test must stop unless the exact ID matches one queued event, is not already in delivery history, and has at least one valid HTTP(S) evidence URL with a publication timestamp within the 30-day freshness window.
+1. Open **Actions → Fresh Start Launch Reset → Run workflow** on `main`.
+2. Leave **Apply the full operational-state reset** disabled for the first run. Review the read-only counts; this does not change state or post to Discord.
+3. At launch, run it again with apply enabled and enter the exact confirmation `FRESH-START-XRP-INTELLIGENCE`.
+4. Apply mode requires a restored production state cache. It archives the pre-reset operational state to a workflow artifact before the new state is saved.
+5. It clears normal seen/dedup state, discovery and correlation memory, the normal outbox and delivery history, intelligence state/outbox, and intelligence delivery history. Quarantine remains an audit-only store.
+6. It verifies the operational stores are empty, then saves a new cache lineage. It sends no Discord messages and does not enable intelligence-event publishing.
 
-The test path temporarily enables delivery for that one event only, with a one-post limit. It leaves the normal feed in dry-run mode, refuses missing/ambiguous/stale/already-delivered targets, and retains unrelated queued items. A successful workflow run alone is not proof that a Discord post occurred; confirm the log reports exactly one delivered event and verify the Discord message.
+The workflow shares the stateful feed concurrency lock and leaves the configured schedule unchanged. If archive upload or verification fails, cache-save steps do not run, so the reset is not treated as complete. The archive artifact is retained for 90 days; download it if a longer-term audit copy is needed.
 
-Do not enable routine intelligence publishing until the one-event test and subsequent shadow-output review are accepted. The former hardcoded DriveWealth test workflow has been removed; there is now one supported, confirmation-gated path for an actual one-event delivery test.
+This resets the bot's saved working memory, not old messages in Discord. Since the launch starts fresh, previously published stories may be rediscovered and reposted; that is intentional for this launch plan.
 
 ## Safe merged-branch cleanup
 

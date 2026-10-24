@@ -19,7 +19,7 @@ permissions:
 
 # Share the production feed's lock so cache state cannot race a scheduled feed run.
 concurrency:
-  group: xrp-intelligence-feed
+  group: xrp-intelligence-feed-stateful
   cancel-in-progress: false
 
 jobs:
