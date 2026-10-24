@@ -107,7 +107,7 @@ def main() -> None:
             print(f"  sitemap_url_count={len(locations)}")
             recent = [(loc, modified) for loc, modified in locations if "2026" in loc or "stablecoin" in loc.lower() or "public-hearing" in loc.lower() or (modified and modified[:4] >= "2025")]
             for loc, modified in recent[:40]:
-                print(f"  sitemap_candidate lastmod={modified or "unknown"} url={loc}")
+                print(f"  sitemap_candidate lastmod={modified or 'unknown'} url={loc}")
             if not locations:
                 print(f"  xml_preview={text[:220].replace(chr(10), chr(32))}")
 
