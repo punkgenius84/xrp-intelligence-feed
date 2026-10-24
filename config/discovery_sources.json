@@ -560,7 +560,7 @@
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
       "source_url": "https://news.google.com/rss/search?q=site%3Aswift.com+%28Ripple+OR+XRP+OR+blockchain+OR+CBDC+OR+%22digital+assets%22+OR+tokenised+OR+tokenized+OR+%22tokenized+deposits%22+OR+stablecoin+OR+%22cross-border+payments%22+OR+%22digital+currency%22+OR+interoperability+OR+%22ISO+20022%22%29+when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
-      "enabled": false,
+      "enabled": true,
       "lookback_days": 30,
       "max_items": 100,
       "publisher_host": "swift.com",
