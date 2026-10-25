@@ -23,17 +23,25 @@ BLOOM_URL = (
 )
 
 
-def score_item(title: str, summary: str, url: str) -> NewsItem:
+def score_item(
+    title: str,
+    summary: str,
+    url: str,
+    *,
+    source: str = "Monetary Authority of Singapore",
+    source_id: str = "mas-google-news-discovery",
+    published_at: datetime = STAMP,
+) -> NewsItem:
     item = NewsItem(
         title=title,
         summary=summary,
         url=url,
-        source="Monetary Authority of Singapore",
-        source_id="mas-google-news-discovery",
+        source=source,
+        source_id=source_id,
         source_quality="primary",
         authority_tier=1,
         category="regulatory",
-        published_at=STAMP,
+        published_at=published_at,
     )
     detect_entities(item)
     classify_source_quality(item)
@@ -81,6 +89,40 @@ def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query
         f"score={item.relevance_score}, reasons={item.score_reasons}"
     )
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+
+
+def test_bot_tokenization_cbdc_discovery_clears_relevance_gate():
+    item = score_item(
+        "Central Bank Digital Currency, Tokenization & Emerging Payment Technologies - Bank of Thailand",
+        "Google News discovery; publisher attribution: Bank of Thailand.",
+        "https://news.google.com/rss/articles/example-bot-tokenization-cbdc",
+        source="Bank of Thailand",
+        source_id="bot-google-news-english-discovery",
+        published_at=datetime(2026, 9, 30, 7, 31, tzinfo=timezone.utc),
+    )
+
+    assert "Bank of Thailand" in item.detected_entities
+    assert item.relevance_score >= 30, (
+        f"BOT tokenization/CBDC discovery unexpectedly missed the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+
+
+def test_unrelated_bot_appointment_does_not_clear_relevance_gate():
+    item = score_item(
+        "Appointment of Expert Members for the Financial Institutions Policy Committee - Bank of Thailand",
+        "Google News discovery; publisher attribution: Bank of Thailand.",
+        "https://news.google.com/rss/articles/example-bot-appointment",
+        source="Bank of Thailand",
+        source_id="bot-google-news-english-discovery",
+        published_at=datetime(2026, 10, 7, 7, tzinfo=timezone.utc),
+    )
+
+    assert item.relevance_score < 30, (
+        f"unrelated BOT appointment incorrectly cleared the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
 
 
 def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
