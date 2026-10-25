@@ -157,9 +157,10 @@ def test_only_runner_validated_google_news_sources_are_enabled():
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # These queries remain disabled until the live probe proves useful,
-    # correctly attributed candidates pass the relevance gate.
-    assert sources["bot-google-news-english-discovery"]["enabled"] is False
+    # BOT discovery was enabled only after a live runner probe found a
+    # correctly attributed tokenization/CBDC candidate scoring 36, while
+    # unrelated official BOT announcements scored 0.
+    assert sources["bot-google-news-english-discovery"]["enabled"] is True
     # SWIFT's publisher-restricted query now returns two concrete payment/
     # blockchain milestones that clear the existing relevance gate. Its
     # first-party HTML collector remains disabled because the runner gets 403.
