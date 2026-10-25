@@ -45,7 +45,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
-    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))" in save
+    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
     assert "id: feed" in contents
 
 
@@ -155,7 +155,7 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     assert "default: false" in contents
 
     save = _step_block(contents, "name: Save persistent state")
-    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))" in save
+    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
     assert "id: feed" in run
 
 
