@@ -551,7 +551,7 @@
       "category": "regulatory",
       "discovery_method": "google_news_official_rss",
       "source_url": "https://news.google.com/rss/search?q=site%3Abot.or.th+%28stablecoin+OR+%22digital+asset%22+OR+tokenization+OR+tokenisation+OR+CBDC+OR+cryptocurrency+OR+blockchain+OR+payments+OR+Ripple+OR+XRP%29+when%3A30d&hl=en&gl=US&ceid=US%3Aen",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 30,
       "max_items": 100,
       "publisher_host": "bot.or.th",
