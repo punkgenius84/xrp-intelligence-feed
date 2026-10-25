@@ -79,7 +79,9 @@ def _classify(item, combined: str) -> list[str]:
         "postpones", "postpone", "postponing", "postponed",
         "terminates", "terminate", "terminating", "terminated",
         "seeks answers", "investigates", "investigation", "investigations", "probes", "probe",
-        "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged", "charges",
+        "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
+        "hack", "hacked", "hack attempt", "exploit", "exploited", "security breach",
+        "funds drained", "outflow", "stolen funds", "charges",
         "alleges", "allegation", "inquiry", "inquiries",
         "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
@@ -133,7 +135,7 @@ def _classify(item, combined: str) -> list[str]:
     crypto_ecosystem_entities = {
         "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
         "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
-        "Coinbase", "Chainlink",
+        "Coinbase", "Chainlink", "CoinDCX",
     }
     crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
     ecosystem_context = any(_contains(combined, term) for term in (
@@ -141,6 +143,8 @@ def _classify(item, combined: str) -> list[str]:
         "payments", "payment", "blockchain", "token", "tokenized", "tokenised",
         "protocol", "network upgrade", "validator", "custody", "reserve", "reserves",
         "sanctions", "money laundering", "market manipulation", "fraud",
+        "hack", "hacked", "hack attempt", "exploit", "exploited", "security breach",
+        "funds drained", "outflow", "stolen funds",
         "investigation", "investigates", "probes", "probe", "seeks answers",
         "subpoena", "files suit", "filed suit", "sues", "charged", "alleges",
     ))
