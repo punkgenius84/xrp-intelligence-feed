@@ -23,6 +23,12 @@ It looks beyond headlines that literally mention XRP. Regulatory decisions, gove
 
 The goal is useful situational awareness—not price predictions, promotional hype, or a claim that every signal will affect XRP.
 
+## Publishing and intelligence selection
+
+The scheduled workflow can publish up to **8 scored news items per run**. This is a delivery cap, not a relevance threshold: items still have to pass scoring, freshness, and source/evidence checks. If more than eight qualify, the highest-scoring items are selected, with newer items winning ties, and selected posts are sent oldest-first for readable chronology. Remaining eligible items stay queued for a later run.
+
+The inference stage considers up to **12 fresh candidates per run** (minimum relevance score 30 in GitHub Actions) before grouping related items into intelligence events. This wider selection gives event clustering more evidence to work with; it does not mean all candidates become posts. Event publishing remains separately guarded and is not automatically enabled by this selection setting. Correlation should be evidence-led: shared words alone are not proof that two developments are connected.
+
 ## Coverage
 
 Coverage includes XRP/Ripple/XRPL, crypto markets and infrastructure, stablecoins, tokenization and real-world assets, CBDCs, regulation, government policy, banks, cross-border payments, institutional finance, and relevant partnerships.
