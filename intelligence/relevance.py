@@ -152,6 +152,8 @@ def _classify(item, combined: str) -> list[str]:
         "seeks answers", "investigates", "investigation", "probes", "probe",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
+        "hack", "hacked", "hack attempt", "exploit", "exploited", "security breach",
+        "funds drained", "outflow", "stolen funds",
         "announces", "announced", "partnered", "integrates",
         "integrated", "upgrades", "upgraded", "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
