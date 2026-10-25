@@ -374,7 +374,7 @@ def test_workflow_defaults_manual_runs_to_dry_run_and_skips_state_save_when_dry(
     assert "state/outbox.json" in text
     assert "publish_intelligence_test:" in text
     assert "default: false" in text
-    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))" in text
+    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in text
     assert "id: feed" in text
 
 
