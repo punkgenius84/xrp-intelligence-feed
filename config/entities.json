@@ -62,6 +62,9 @@
       "Coinbase Payments",
       "Coinbase Institutional"
     ],
+    "CoinDCX": [
+      "CoinDCX"
+    ],
     "Mastercard": [
       "Mastercard",
       "Mastercard Digital Assets"
