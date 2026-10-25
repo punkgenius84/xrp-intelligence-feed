@@ -91,7 +91,7 @@ def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
 
 
-def test_bot_tokenization_cbdc_discovery_clears_relevance_gate():
+def test_bot_tokenization_cbdc_context_without_concrete_action_stays_below_gate():
     item = score_item(
         "Central Bank Digital Currency, Tokenization & Emerging Payment Technologies - Bank of Thailand",
         "Google News discovery; publisher attribution: Bank of Thailand.",
@@ -102,11 +102,10 @@ def test_bot_tokenization_cbdc_discovery_clears_relevance_gate():
     )
 
     assert "Bank of Thailand" in item.detected_entities
-    assert item.relevance_score >= 30, (
-        f"BOT tokenization/CBDC discovery unexpectedly missed the relevance gate: "
+    assert item.relevance_score < 30, (
+        f"non-actionable BOT tokenization context incorrectly cleared the relevance gate: "
         f"score={item.relevance_score}, reasons={item.score_reasons}"
     )
-    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
 
 
 def test_unrelated_bot_appointment_does_not_clear_relevance_gate():
@@ -199,10 +198,11 @@ def test_only_runner_validated_google_news_sources_are_enabled():
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # BOT discovery was enabled only after a live runner probe found a
-    # correctly attributed tokenization/CBDC candidate scoring 36, while
-    # unrelated official BOT announcements scored 0.
-    assert sources["bot-google-news-english-discovery"]["enabled"] is True
+    # The broad live query found tokenization/CBDC context, but the
+    # relevance gate correctly rejects it without a concrete action.
+    # Keep English discovery disabled until a genuinely actionable candidate
+    # clears the final relevance gate.
+    assert sources["bot-google-news-english-discovery"]["enabled"] is False
     # SWIFT's publisher-restricted query now returns two concrete payment/
     # blockchain milestones that clear the existing relevance gate. Its
     # first-party HTML collector remains disabled because the runner gets 403.
