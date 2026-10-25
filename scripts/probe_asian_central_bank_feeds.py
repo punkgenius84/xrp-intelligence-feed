@@ -571,22 +571,27 @@ def main() -> None:
         if label == "BOT stablecoin hearing":
             canonical = re.search(r'<link\b(?=[^>]*\brel\s*=\s*["\']canonical["\'])(?=[^>]*\bhref\s*=\s*["\']([^"\']+)["\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
             title_match = re.search(r'<h1\b[^>]*>(.*?)</h1>', text, re.IGNORECASE | re.DOTALL)
+            page_title = re.search(r'<title\b[^>]*>(.*?)</title>', text, re.IGNORECASE | re.DOTALL)
+            og_title = re.search(r'<meta\b(?=[^>]*\bproperty\s*=\s*["\']og:title["\'])(?=[^>]*\bcontent\s*=\s*["\']([^"\']+)["\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
             title_text = re.sub(r'<[^>]+>', ' ', title_match.group(1)).strip() if title_match else "missing"
+            page_title_text = re.sub(r'<[^>]+>', ' ', page_title.group(1)).strip() if page_title else "missing"
             print(f"  official_canonical={unescape(canonical.group(1)) if canonical else 'missing'}")
             print(f"  official_h1={title_text[:220]}")
+            print(f"  official_page_title={unescape(page_title_text)[:220]}")
+            print(f"  official_og_title={unescape(og_title.group(1))[:220] if og_title else 'missing'}")
             for meta in re.finditer(r'<meta\b[^>]*>', text, re.IGNORECASE | re.DOTALL):
                 tag = meta.group(0)
-                if re.search(r'published|publish|date|created|modified|canonical|og:url', tag, re.IGNORECASE):
+                if re.search(r'published|publish|date|created|modified|canonical|og:url|og:title', tag, re.IGNORECASE):
                     print(f"  hearing_metadata={tag[:420]}")
             for raw in re.findall(r'<script\b(?=[^>]*\btype\s*=\s*["\']application/ld\+json["\'])[^>]*>(.*?)</script\s*>', text, re.IGNORECASE | re.DOTALL):
                 if re.search(r'datePublished|dateCreated|NewsArticle|PressRelease', raw, re.IGNORECASE):
                     jsonld_preview = re.sub(r'\s+', ' ', raw)
                     print(f"  hearing_jsonld={jsonld_preview[:900]}")
-            for pattern in (r'2026[-/]10[-/]\d{1,2}', r'\d{1,2}\s+October\s+2026', r'October\s+\d{1,2},?\s+2026'):
-                match = re.search(pattern, text, re.IGNORECASE)
-                if match:
-                    print(f"  hearing_visible_date_match={match.group(0)!r}")
-                    break
+            date_matches = list(re.finditer(r'2026[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}\s+October\s+2026|October\s+\d{1,2},?\s+2026', text, re.IGNORECASE))
+            for match in date_matches[:8]:
+                context = re.sub(r'\s+', ' ', text[max(0, match.start()-180):match.end()+180])
+                context = re.sub(r'<[^>]+>', ' ', context)
+                print(f"  hearing_date_context={unescape(context)[:360]}")
         if urlsplit(url).path.lower().endswith("robots.txt"):
             sitemaps = [line.split(":", 1)[1].strip() for line in text.splitlines() if line.lower().startswith("sitemap:")]
             for sitemap in sitemaps[:5]:
