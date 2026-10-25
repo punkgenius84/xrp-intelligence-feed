@@ -331,6 +331,37 @@ def test_non_xrp_protocol_upgrade_surfaces_as_crypto_ecosystem_action():
     assert score >= 30, f"concrete non-XRP protocol development should clear gate: {score}, {reasons}"
 
 
+def test_crypto_exchange_security_incident_clears_gate_without_xrp():
+    item = NewsItem(
+        "CoinDCX denies hack, blames broken clean up job for $16 million outflow",
+        "https://example.com/coindcx-security-incident",
+        "CoinDesk",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert "CoinDCX" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"material exchange security incident should clear gate: {score}, {reasons}"
+    assert "direct_xrp_xrpl" not in item.relevance_categories
+
+
+def test_crypto_exchange_security_incident_terms_do_not_promote_unrelated_company_news():
+    item = NewsItem(
+        "CoinDCX announces employee wellness program",
+        "https://example.com/coindcx-wellness",
+        "Example News",
+        authority_tier=2,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "CoinDCX" in item.detected_entities
+    assert "crypto_ecosystem_action" not in item.relevance_categories
+    assert score == 0
+
+
 def test_crypto_entity_alone_does_not_make_unrelated_corporate_news_relevant():
     item = NewsItem(
         "Tether announces employee wellness program",
