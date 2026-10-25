@@ -569,18 +569,20 @@ def main() -> None:
         print(f"{label}: http={response.status_code} type={content_type or 'missing'} bytes={len(response.content)} final_host={urlsplit(response.url).hostname}")
         text = response.content.decode("utf-8", errors="replace")
         if label == "BOT stablecoin hearing":
-            canonical = re.search(r'<link\\b(?=[^>]*\\brel\\s*=\\s*["\\']canonical["\\'])(?=[^>]*\\bhref\\s*=\\s*["\\']([^"\\']+)["\\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
-            title_match = re.search(r'<h1\\b[^>]*>(.*?)</h1>', text, re.IGNORECASE | re.DOTALL)
+            canonical = re.search(r'<link\b(?=[^>]*\brel\s*=\s*["\']canonical["\'])(?=[^>]*\bhref\s*=\s*["\']([^"\']+)["\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
+            title_match = re.search(r'<h1\b[^>]*>(.*?)</h1>', text, re.IGNORECASE | re.DOTALL)
+            title_text = re.sub(r'<[^>]+>', ' ', title_match.group(1)).strip() if title_match else "missing"
             print(f"  official_canonical={unescape(canonical.group(1)) if canonical else 'missing'}")
-            print(f"  official_h1={re.sub(r'<[^>]+>', ' ', title_match.group(1)).strip()[:220] if title_match else 'missing'}")
-            for meta in re.finditer(r'<meta\\b[^>]*>', text, re.IGNORECASE | re.DOTALL):
+            print(f"  official_h1={title_text[:220]}")
+            for meta in re.finditer(r'<meta\b[^>]*>', text, re.IGNORECASE | re.DOTALL):
                 tag = meta.group(0)
                 if re.search(r'published|publish|date|created|modified|canonical|og:url', tag, re.IGNORECASE):
                     print(f"  hearing_metadata={tag[:420]}")
-            for raw in re.findall(r'<script\\b(?=[^>]*\\btype\\s*=\\s*["\\']application/ld\\+json["\\'])[^>]*>(.*?)</script\\s*>', text, re.IGNORECASE | re.DOTALL):
+            for raw in re.findall(r'<script\b(?=[^>]*\btype\s*=\s*["\']application/ld\+json["\'])[^>]*>(.*?)</script\s*>', text, re.IGNORECASE | re.DOTALL):
                 if re.search(r'datePublished|dateCreated|NewsArticle|PressRelease', raw, re.IGNORECASE):
-                    print(f"  hearing_jsonld={re.sub(r'\\s+', ' ', raw)[:900]}")
-            for pattern in (r'2026[-/]10[-/]\\d{1,2}', r'\\d{1,2}\\s+October\\s+2026', r'October\\s+\\d{1,2},?\\s+2026'):
+                    jsonld_preview = re.sub(r'\s+', ' ', raw)
+                    print(f"  hearing_jsonld={jsonld_preview[:900]}")
+            for pattern in (r'2026[-/]10[-/]\d{1,2}', r'\d{1,2}\s+October\s+2026', r'October\s+\d{1,2},?\s+2026'):
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     print(f"  hearing_visible_date_match={match.group(0)!r}")
