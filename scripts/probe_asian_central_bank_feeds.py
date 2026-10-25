@@ -37,8 +37,10 @@ TARGETS = (
     ("SG Press Centre releases page", "https://www.sgpc.gov.sg/home?Page=1", "www.sgpc.gov.sg"),
     ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
     ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
+    ("Google News RSS BOT broad digital-asset discovery", "https://news.google.com/rss/search?q=site%3Abot.or.th+%28stablecoin+OR+%22digital+asset%22+OR+tokenization+OR+tokenisation+OR+CBDC+OR+cryptocurrency+OR+blockchain+OR+payments+OR+Ripple+OR+XRP%29+when%3A30d&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
     ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
     ("BOT English news", "https://www.bot.or.th/en/news-and-media/news.html", "www.bot.or.th"),
+    ("BOT historical RSS directory", "https://www.bot.or.th/English/RSS/Pages/index.aspx", "www.bot.or.th"),
     ("BOT English hearings", "https://www.bot.or.th/en/laws-and-rules/public-hearing.html", "www.bot.or.th"),
     ("BOT generic sitemap", "https://www.bot.or.th/sitemap.xml", "www.bot.or.th"),
     ("BOT English sitemap from robots", "https://www.bot.or.th/en.sitemap.xml", "www.bot.or.th"),
@@ -567,6 +569,30 @@ def main() -> None:
         content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
         print(f"{label}: http={response.status_code} type={content_type or 'missing'} bytes={len(response.content)} final_host={urlsplit(response.url).hostname}")
         text = response.content.decode("utf-8", errors="replace")
+        if label == "BOT stablecoin hearing":
+            canonical = re.search(r'<link\b(?=[^>]*\brel\s*=\s*["\']canonical["\'])(?=[^>]*\bhref\s*=\s*["\']([^"\']+)["\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
+            title_match = re.search(r'<h1\b[^>]*>(.*?)</h1>', text, re.IGNORECASE | re.DOTALL)
+            page_title = re.search(r'<title\b[^>]*>(.*?)</title>', text, re.IGNORECASE | re.DOTALL)
+            og_title = re.search(r'<meta\b(?=[^>]*\bproperty\s*=\s*["\']og:title["\'])(?=[^>]*\bcontent\s*=\s*["\']([^"\']+)["\'])[^>]*>', text, re.IGNORECASE | re.DOTALL)
+            title_text = re.sub(r'<[^>]+>', ' ', title_match.group(1)).strip() if title_match else "missing"
+            page_title_text = re.sub(r'<[^>]+>', ' ', page_title.group(1)).strip() if page_title else "missing"
+            print(f"  official_canonical={unescape(canonical.group(1)) if canonical else 'missing'}")
+            print(f"  official_h1={title_text[:220]}")
+            print(f"  official_page_title={unescape(page_title_text)[:220]}")
+            print(f"  official_og_title={unescape(og_title.group(1))[:220] if og_title else 'missing'}")
+            for meta in re.finditer(r'<meta\b[^>]*>', text, re.IGNORECASE | re.DOTALL):
+                tag = meta.group(0)
+                if re.search(r'published|publish|date|created|modified|canonical|og:url|og:title', tag, re.IGNORECASE):
+                    print(f"  hearing_metadata={tag[:420]}")
+            for raw in re.findall(r'<script\b(?=[^>]*\btype\s*=\s*["\']application/ld\+json["\'])[^>]*>(.*?)</script\s*>', text, re.IGNORECASE | re.DOTALL):
+                if re.search(r'datePublished|dateCreated|NewsArticle|PressRelease', raw, re.IGNORECASE):
+                    jsonld_preview = re.sub(r'\s+', ' ', raw)
+                    print(f"  hearing_jsonld={jsonld_preview[:900]}")
+            date_matches = list(re.finditer(r'2026[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}\s+October\s+2026|October\s+\d{1,2},?\s+2026', text, re.IGNORECASE))
+            for match in date_matches[:8]:
+                context = re.sub(r'\s+', ' ', text[max(0, match.start()-180):match.end()+180])
+                context = re.sub(r'<[^>]+>', ' ', context)
+                print(f"  hearing_date_context={unescape(context)[:360]}")
         if urlsplit(url).path.lower().endswith("robots.txt"):
             sitemaps = [line.split(":", 1)[1].strip() for line in text.splitlines() if line.lower().startswith("sitemap:")]
             for sitemap in sitemaps[:5]:

@@ -23,17 +23,25 @@ BLOOM_URL = (
 )
 
 
-def score_item(title: str, summary: str, url: str) -> NewsItem:
+def score_item(
+    title: str,
+    summary: str,
+    url: str,
+    *,
+    source: str = "Monetary Authority of Singapore",
+    source_id: str = "mas-google-news-discovery",
+    published_at: datetime = STAMP,
+) -> NewsItem:
     item = NewsItem(
         title=title,
         summary=summary,
         url=url,
-        source="Monetary Authority of Singapore",
-        source_id="mas-google-news-discovery",
+        source=source,
+        source_id=source_id,
         source_quality="primary",
         authority_tier=1,
         category="regulatory",
-        published_at=STAMP,
+        published_at=published_at,
     )
     detect_entities(item)
     classify_source_quality(item)
@@ -81,6 +89,39 @@ def test_thai_stablecoin_public_hearing_clears_relevance_gate_with_labeled_query
         f"score={item.relevance_score}, reasons={item.score_reasons}"
     )
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+
+
+def test_bot_tokenization_cbdc_context_without_concrete_action_stays_below_gate():
+    item = score_item(
+        "Central Bank Digital Currency, Tokenization & Emerging Payment Technologies - Bank of Thailand",
+        "Google News discovery; publisher attribution: Bank of Thailand.",
+        "https://news.google.com/rss/articles/example-bot-tokenization-cbdc",
+        source="Bank of Thailand",
+        source_id="bot-google-news-english-discovery",
+        published_at=datetime(2026, 9, 30, 7, 31, tzinfo=timezone.utc),
+    )
+
+    assert "Bank of Thailand" in item.detected_entities
+    assert item.relevance_score < 30, (
+        f"non-actionable BOT tokenization context incorrectly cleared the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
+
+
+def test_unrelated_bot_appointment_does_not_clear_relevance_gate():
+    item = score_item(
+        "Appointment of Expert Members for the Financial Institutions Policy Committee - Bank of Thailand",
+        "Google News discovery; publisher attribution: Bank of Thailand.",
+        "https://news.google.com/rss/articles/example-bot-appointment",
+        source="Bank of Thailand",
+        source_id="bot-google-news-english-discovery",
+        published_at=datetime(2026, 10, 7, 7, tzinfo=timezone.utc),
+    )
+
+    assert item.relevance_score < 30, (
+        f"unrelated BOT appointment incorrectly cleared the relevance gate: "
+        f"score={item.relevance_score}, reasons={item.score_reasons}"
+    )
 
 
 def test_coinbase_thunes_stablecoin_payout_connection_clears_relevance_gate():
@@ -157,8 +198,10 @@ def test_only_runner_validated_google_news_sources_are_enabled():
     assert expected <= sources.keys()
     assert sources["mas-google-news-discovery"]["enabled"] is True
     assert sources["bot-google-news-thai-stablecoin-hearing"]["enabled"] is True
-    # These queries remain disabled until the live probe proves useful,
-    # correctly attributed candidates pass the relevance gate.
+    # The broad live query found tokenization/CBDC context, but the
+    # relevance gate correctly rejects it without a concrete action.
+    # Keep English discovery disabled until a genuinely actionable candidate
+    # clears the final relevance gate.
     assert sources["bot-google-news-english-discovery"]["enabled"] is False
     # SWIFT's publisher-restricted query now returns two concrete payment/
     # blockchain milestones that clear the existing relevance gate. Its
