@@ -39,7 +39,7 @@ TARGETS = (
     ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
     ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
     ("BOT English news", "https://www.bot.or.th/en/news-and-media/news.html", "www.bot.or.th"),
-    ("BOT historical RSS directory", "http://www.bot.or.th/English/RSS/Pages/index.aspx", "www.bot.or.th"),
+    ("BOT historical RSS directory", "https://www.bot.or.th/English/RSS/Pages/index.aspx", "www.bot.or.th"),
     ("BOT English hearings", "https://www.bot.or.th/en/laws-and-rules/public-hearing.html", "www.bot.or.th"),
     ("BOT generic sitemap", "https://www.bot.or.th/sitemap.xml", "www.bot.or.th"),
     ("BOT English sitemap from robots", "https://www.bot.or.th/en.sitemap.xml", "www.bot.or.th"),
