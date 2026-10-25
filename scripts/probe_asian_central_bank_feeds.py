@@ -37,6 +37,7 @@ TARGETS = (
     ("SG Press Centre releases page", "https://www.sgpc.gov.sg/home?Page=1", "www.sgpc.gov.sg"),
     ("Google News RSS MAS releases", "https://news.google.com/rss/search?q=site%3Amas.gov.sg%2Fnews%2Fmedia-releases&hl=en-SG&gl=SG&ceid=SG%3Aen", "news.google.com"),
     ("Google News RSS BOT English news", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fen%2Fnews-and-media%2Fnews&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
+    ("Google News RSS BOT broad digital-asset discovery", "https://news.google.com/rss/search?q=site%3Abot.or.th+%28stablecoin+OR+%22digital+asset%22+OR+tokenization+OR+tokenisation+OR+CBDC+OR+cryptocurrency+OR+blockchain+OR+payments+OR+Ripple+OR+XRP%29+when%3A30d&hl=en&gl=US&ceid=US%3Aen", "news.google.com"),
     ("Google News RSS BOT Thai stablecoin hearing", "https://news.google.com/rss/search?q=site%3Abot.or.th%2Fth%2Flaws-and-rules%2Fpublic-hearing+stablecoin&hl=th&gl=TH&ceid=TH%3Ath", "news.google.com"),
     ("BOT English news", "https://www.bot.or.th/en/news-and-media/news.html", "www.bot.or.th"),
     ("BOT historical RSS directory", "https://www.bot.or.th/English/RSS/Pages/index.aspx", "www.bot.or.th"),
