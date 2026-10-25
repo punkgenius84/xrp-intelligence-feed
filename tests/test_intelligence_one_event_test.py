@@ -14,7 +14,7 @@ NOW = datetime.now(timezone.utc)
 
 
 def _event(event_id: str, *, published_at: str | None = None) -> IntelligenceEvent:
-    stamp = published_at or (NOW - timedelta(days=1)).isoformat()
+    stamp = (NOW - timedelta(days=1)).isoformat() if published_at is None else published_at
     return IntelligenceEvent(
         event_id=event_id,
         event_type="announcement",
