@@ -387,7 +387,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Save persistent state
-        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -401,7 +401,7 @@ jobs:
           key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
       - name: Check intelligence delivery history
         id: intelligence_delivery_history
-        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
         run: |
           if [ -f state/intelligence_delivery_history.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -409,14 +409,14 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Save intelligence delivery history
-        if: steps.intelligence_delivery_history.outputs.present == 'true'
+        if: ${{ !cancelled() && steps.intelligence_delivery_history.outputs.present == 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: state/intelligence_delivery_history.json
           key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
       - name: Check intelligence quarantine
         id: intelligence_quarantine
-        if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
         run: |
           if [ -f state/intelligence_quarantine.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -424,7 +424,7 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Save intelligence quarantine
-        if: steps.intelligence_quarantine.outputs.present == 'true'
+        if: ${{ !cancelled() && steps.intelligence_quarantine.outputs.present == 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: state/intelligence_quarantine.json

@@ -45,7 +45,7 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
-    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))" in save
+    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
     assert "id: feed" in contents
 
 
@@ -155,7 +155,7 @@ def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     assert "default: false" in contents
 
     save = _step_block(contents, "name: Save persistent state")
-    assert "if: steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test)))" in save
+    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
     assert "id: feed" in run
 
 
@@ -294,3 +294,24 @@ def test_all_state_mutating_workflows_share_the_stateful_feed_lock():
         workflow = Path(path).read_text(encoding="utf-8")
         assert "group: xrp-intelligence-feed-stateful" in workflow, path
         assert "cancel-in-progress: false" in workflow, path
+
+
+
+def test_persistent_state_saves_are_not_skipped_by_model_cache_save_failure():
+    contents = WORKFLOW.read_text(encoding="utf-8")
+    persistent_steps = (
+        "name: Save persistent state",
+        "name: Check intelligence delivery history",
+        "name: Save intelligence delivery history",
+        "name: Check intelligence quarantine",
+        "name: Save intelligence quarantine",
+    )
+    for marker in persistent_steps:
+        block = _step_block(contents, marker)
+        condition = next((line.strip() for line in block.splitlines() if line.strip().startswith("if:")), "")
+        assert "!cancelled()" in condition, marker
+        assert "success()" not in condition, marker
+
+    assert "steps.feed.outcome == 'success'" in _step_block(contents, "name: Save persistent state")
+    assert "steps.feed.outcome == 'success'" in _step_block(contents, "name: Check intelligence delivery history")
+    assert "steps.feed.outcome == 'success'" in _step_block(contents, "name: Check intelligence quarantine")
