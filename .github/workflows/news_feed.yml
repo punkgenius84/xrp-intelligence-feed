@@ -363,8 +363,8 @@ jobs:
           # Push-triggered runs are dry-run source diagnostics; the separate smoke test above validates inference.
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
-          # Publishing is off except for an explicit manual one-event test.
-          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
+          # Scheduled runs publish fresh, validated intelligence; manual publishing remains limited to the guarded one-event test.
+          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT') && 'true' || 'false' }}
           INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
           INTELLIGENCE_TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
           # Analyze a wider candidate set so clustering can connect related developments beyond the top five.
