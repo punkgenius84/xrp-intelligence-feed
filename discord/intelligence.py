@@ -29,7 +29,7 @@ def _sources(event: IntelligenceEvent) -> list[str]:
 def format_intelligence_event(
     event: IntelligenceEvent,
     *,
-    status: str = "active",
+    status: str = "reported",
     superseded_by: list[str] | None = None,
 ) -> str:
     """Render an intelligence event for Discord without adding interpretation."""
@@ -48,8 +48,16 @@ def format_intelligence_event(
     if event.claims:
         lines.append("**Claims:**")
         for claim in event.claims[:MAX_CLAIMS]:
-            certainty = _clean(claim.certainty, 30)
-            lines.append(f"• [{certainty}] {_clean(claim.text, 300)}")
+            certainty_value = str(claim.certainty or "").strip().casefold()
+            claim_text = _clean(claim.text, 300)
+            # "unknown" is missing metadata, not a useful confidence label.
+            # Keep the grounded claim visible without presenting that placeholder
+            # as if it were an assessed confidence level.
+            if certainty_value and certainty_value != "unknown":
+                certainty = _clean(certainty_value, 30)
+                lines.append(f"• [{certainty}] {claim_text}")
+            else:
+                lines.append(f"• {claim_text}")
 
     if event.conflicts:
         lines.append("**Conflicts:**")

@@ -65,3 +65,26 @@ def test_format_does_not_add_unverified_content():
     assert "therefore" not in message.lower()
     assert "likely" not in message.lower()
     assert "confirmed" not in message.lower()
+
+
+
+def test_unknown_claim_certainty_is_not_rendered_as_a_confidence_label():
+    event = replace(
+        make_event(),
+        claims=[
+            Claim(
+                text="The source reports a partnership.",
+                certainty="unknown",
+                evidence=["source title"],
+            )
+        ],
+    )
+    message = format_intelligence_event(event)
+    assert "• The source reports a partnership." in message
+    assert "[unknown]" not in message
+
+
+def test_default_status_does_not_claim_event_is_active():
+    message = format_intelligence_event(make_event())
+    assert "**Status:** reported" in message
+    assert "**Status:** active" not in message
