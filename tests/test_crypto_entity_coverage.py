@@ -48,3 +48,25 @@ def test_chainlink_name_alone_does_not_make_generic_commentary_relevant():
     assert "Chainlink" in item.detected_entities
     assert "crypto_ecosystem_action" not in item.relevance_categories
     assert item.relevance_score < 30
+
+
+def test_blackrock_tokenized_fund_launch_qualifies_as_institutional_tokenization():
+    item = make_item(
+        "BlackRock launches a tokenized fund on a public blockchain",
+        "BlackRock announced a tokenized fund share class recorded on-chain.",
+    )
+
+    assert "BlackRock" in item.detected_entities
+    assert "institutional_tokenization_action" in item.relevance_categories
+    assert item.relevance_score >= 30
+
+
+def test_blackrock_generic_market_commentary_does_not_qualify_by_name_alone():
+    item = make_item(
+        "BlackRock market outlook and quarterly earnings discussion",
+        "Analysts discussed equity markets and quarterly performance.",
+    )
+
+    assert "BlackRock" in item.detected_entities
+    assert "institutional_tokenization_action" not in item.relevance_categories
+    assert item.relevance_score < 30
