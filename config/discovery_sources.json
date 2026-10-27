@@ -271,7 +271,7 @@
       "category": "institutional",
       "discovery_method": "institutional_press_html",
       "source_url": "https://www.coinbase.com/blog",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
@@ -578,7 +578,7 @@
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
       "source_url": "https://news.google.com/rss/search?q=site%3Acoinbase.com%2Fblog+%28XRP+OR+Ripple+OR+stablecoin+OR+custody+OR+payments+OR+tokenization%29+when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 30,
       "max_items": 100,
       "publisher_host": "coinbase.com",
