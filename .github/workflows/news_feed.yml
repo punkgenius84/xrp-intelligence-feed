@@ -164,16 +164,6 @@ jobs:
               except Exception as exc:
                   print(f"State: {name}: unreadable ({exc})")
           PY
-      - name: Preview queued intelligence events (read-only)
-        # Push runs are diagnostic dry runs: they never publish or save persistent state.
-        # Preview there so queue review does not depend on remembering a manual checkbox.
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.preview_intelligence && inputs.dry_run)
-        run: python scripts/preview_intelligence_outbox.py --limit 20
-      - name: Preview quarantined intelligence events (read-only)
-        # Preserve quarantined records for audit; this step only exposes them for review.
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.preview_intelligence && inputs.dry_run)
-        run: python scripts/preview_intelligence_quarantine.py --limit 20
-
       - name: Restore intelligence model cache
         if: github.event_name != 'push'
         id: ollama_cache
@@ -234,10 +224,10 @@ jobs:
           DISCORD_MAX_POSTS: "8"
           # Never post anything published more than this many days ago (0 disables).
           DISCORD_MAX_AGE_DAYS: "14"
-          # Push-triggered runs are dry-run source diagnostics; the separate smoke test above validates inference.
+          # Push-triggered runs are diagnostics only; scheduled/manual runs perform enrichment.
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
-          # Scheduled runs publish fresh, validated intelligence; manual publishing remains limited to the guarded one-event test.
+          # Scheduled runs publish fresh, validated intelligence. Manual runs publish only when dry_run is unchecked.
           INTELLIGENCE_PUBLISH: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && 'true' || 'false' }}
           INTELLIGENCE_TEST_ONLY: "false"
           # Analyze a wider candidate set so clustering can connect related developments beyond the top five.
