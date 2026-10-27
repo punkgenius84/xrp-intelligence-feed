@@ -1726,6 +1726,9 @@ def test_coinbase_unresolved_index_date_does_not_trigger_blocked_detail_request(
         item for item in load_discovery_sources()
         if item["source_id"] == "coinbase-blog"
     )
+    # Exercise the collector's parsing behavior independently of the active
+    # source toggle; Coinbase is intentionally disabled in production config.
+    coinbase_blog["enabled"] = True
     index_url = "https://www.coinbase.com/blog"
     known_url = "https://www.coinbase.com/blog/known-official-article"
     unresolved_url = (
