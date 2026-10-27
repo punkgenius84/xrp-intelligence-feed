@@ -59,45 +59,19 @@ def test_headline_evaluation_workflow_does_not_escape_shell_or_github_expression
 
 def test_production_inference_smoke_test_allows_slow_cold_model_startup():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
-    assert "timeout_seconds=90" in workflow
-    assert 'OllamaProvider(model="qwen2.5:3b", timeout=90)' in workflow
-
+    assert "Validate intelligence inference" not in workflow
+    assert "timeout_seconds=90" not in workflow
 
 def test_source_specific_parser_probes_are_parked_from_push_diagnostics():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
-    # Parser/access investigations are deferred; the scripts remain available for
-    # a deliberate future run but should not slow or distract normal code pushes.
-    parked_scripts = (
-        "probe_coinbase_article_metadata.py",
-        "probe_coinbase_official_sitemap.py",
-        "probe_coinbase_blog_rss.py",
-        "probe_coinbase_landing_index.py",
-        "probe_coinbase_product_index.py",
-        "probe_coinbase_yahoo_index.py",
-        "probe_coinbase_investor_news.py",
-        "probe_swift_press_index.py",
-        "probe_imf_media_center.py",
-        "probe_citi_production_sitemap_collector.py",
-    )
+    parked_scripts = ("probe_coinbase_article_metadata.py", "probe_coinbase_official_sitemap.py", "probe_coinbase_blog_rss.py", "probe_coinbase_landing_index.py", "probe_coinbase_product_index.py", "probe_coinbase_yahoo_index.py", "probe_coinbase_investor_news.py", "probe_swift_press_index.py", "probe_imf_media_center.py", "probe_citi_production_sitemap_collector.py")
     for script in parked_scripts:
-        assert f"run: python scripts/{script}" not in workflow, f"parked probe still runs automatically: {script}"
-        assert (Path(__file__).resolve().parents[1] / "scripts" / script).is_file(), f"keep probe for later: {script}"
-
-    assert "Preview persisted Coinbase undated observations" not in workflow
-    assert "Preview queued intelligence events" in workflow
-    assert "Preview quarantined intelligence events" in workflow
-
-
+        assert f"run: python scripts/{script}" not in workflow
+        assert (Path(__file__).resolve().parents[1] / "scripts" / script).is_file()
+    assert "Preview queued intelligence events" not in workflow
+    assert "Preview quarantined intelligence events" not in workflow
 
 def test_read_only_delivery_verification_never_runs_feed_or_publishes():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
-    assert "verify_intelligence_test_result:" in workflow
-    assert "VERIFY-INTELLIGENCE-DELIVERY" in workflow
-    assert "publish_intelligence_test=false" in workflow
-    assert "if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) }}" in workflow
-    assert "if: github.event_name == 'workflow_dispatch' && (inputs.publish_intelligence_test || inputs.verify_intelligence_test_result) && success()" in workflow
-    assert "python scripts/verify_intelligence_test_result.py --event-id \"$TEST_EVENT_ID\"" in workflow
-    # Verification-only runs join the stateful concurrency group to avoid racing
-    # scheduled cache writes, while the feed and model startup are skipped.
-    assert "!inputs.verify_intelligence_test_result)) && 'diagnostic' || 'stateful'" in workflow
-    assert workflow.count("&& !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)") >= 5
+    for removed in ("verify_intelligence_test_result:", "VERIFY-INTELLIGENCE-DELIVERY", "publish_intelligence_test:", "POST-ONE-INTELLIGENCE-EVENT", "prepare_quarantined_intelligence_test.py", "verify_intelligence_test_result.py"):
+        assert removed not in workflow
