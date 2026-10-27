@@ -17,33 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run: print what would be posted to Discord, post nothing, save no state"
+        description: "Dry run: collect and analyze without posting to Discord or saving state"
         type: boolean
         default: true
-      preview_intelligence:
-        description: "Preview queued intelligence summaries and evidence in logs (read-only; requires dry_run=true)"
-        type: boolean
-        default: false
-      publish_intelligence_test:
-        description: "Publish exactly one explicitly selected queued intelligence event; normal feed remains dry-run"
-        type: boolean
-        default: false
-      intelligence_test_event_id:
-        description: "Exact fresh event ID copied from the queued-event preview; blank by default"
-        type: string
-        default: ""
-      intelligence_test_confirmation:
-        description: "Required only for the one-event post: type POST-ONE-INTELLIGENCE-EVENT"
-        type: string
-        default: ""
-      verify_intelligence_test_result:
-        description: "Read-only: verify a previously delivered event in saved history without posting or running the feed"
-        type: boolean
-        default: false
-      intelligence_test_verification_confirmation:
-        description: "Required only for read-only verification: type VERIFY-INTELLIGENCE-DELIVERY"
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -51,7 +27,7 @@ permissions:
 # Read-only pushes and manual dry runs must not replace a pending scheduled run.
 # Schedules and any manual run that may persist state or publish stay serialized.
 concurrency:
-  group: xrp-intelligence-feed-${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run && !inputs.publish_intelligence_test && !inputs.verify_intelligence_test_result)) && 'diagnostic' || 'stateful' }}
+  group: xrp-intelligence-feed-${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)) && 'diagnostic' || 'stateful' }}
   cancel-in-progress: false
 jobs:
   run:
@@ -62,9 +38,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      # CI/test tooling lives in the development requirements file; runtime requirements stay lean.
-      - run: python -m pip install -r requirements-dev.txt
-      - run: python -m pytest -q
+      - run: python -m pip install -r requirements.txt
       # Source-specific parser/access probes are intentionally parked while launch work
       # focuses on relevance and publishing safety. Their scripts remain available for
       # a future explicit diagnostic run; ordinary pushes do not execute them.
@@ -201,7 +175,7 @@ jobs:
         run: python scripts/preview_intelligence_quarantine.py --limit 20
 
       - name: Restore intelligence model cache
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
+        if: github.event_name != 'push'
         id: ollama_cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -209,7 +183,7 @@ jobs:
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Install Ollama
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
+        if: github.event_name != 'push'
         # Pinned v0.40.3 release archive; verify the published SHA-256 before extraction.
         run: |
           set -euo pipefail
@@ -225,7 +199,7 @@ jobs:
           ollama --version
 
       - name: Start Ollama
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
+        if: github.event_name != 'push'
         env:
           OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
         run: |
@@ -241,7 +215,7 @@ jobs:
           exit 1
 
       - name: Ensure intelligence model is available
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
+        if: github.event_name != 'push'
         env:
           OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
         run: |
@@ -251,107 +225,7 @@ jobs:
             ollama pull qwen2.5:3b
           fi
 
-      - name: Validate intelligence inference
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)
-        env:
-          OLLAMA_MODELS: ${{ github.workspace }}/.ollama/models
-          OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
-          OLLAMA_MODEL: "qwen2.5:3b"
-        run: |
-          python - <<'PY'
-          from datetime import datetime, timezone
-          from intelligence.configuration import IntelligenceRuntimeConfig
-          from intelligence.llm.ollama import OllamaProvider
-          from intelligence.pipeline import enrich_clusters
-          from models import NewsItem
-
-          item = NewsItem(
-              title="Federal Reserve announces a new framework for tokenized payment assets",
-              url="https://example.com/shadow-test",
-              source="Shadow test source",
-              source_id="shadow-test",
-              summary="The Federal Reserve announced a policy framework for tokenized payment assets and digital asset settlement.",
-              published_at=datetime.now(timezone.utc),
-              source_quality="primary",
-              detected_entities=["Federal Reserve"],
-              relevance_score=90,
-              candidate_id="shadow-test-candidate",
-          )
-          config = IntelligenceRuntimeConfig(
-              enabled=True,
-              publish_enabled=False,
-              model="qwen2.5:3b",
-              max_items_per_run=1,
-              min_relevance_score=50,
-              timeout_seconds=90,
-          )
-          events, failures = enrich_clusters([item], OllamaProvider(model="qwen2.5:3b", timeout=90), config)
-          if failures or len(events) != 1:
-              raise SystemExit(f"intelligence inference smoke test failed: events={len(events)} failures={failures}")
-          event = events[0]
-          if not event.model or not event.summary or not event.significance or not event.claims:
-              raise SystemExit("intelligence inference smoke test returned an incomplete event or no grounded claims")
-          print(f"Intelligence inference smoke test passed: model={event.model!r} type={event.event_type!r} claims={len(event.claims)}")
-          PY
-
-      - name: Validate isolated one-event request
-        if: github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test
-        env:
-          TEST_ENABLED: ${{ inputs.publish_intelligence_test }}
-          TEST_DRY_RUN: ${{ inputs.dry_run }}
-          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
-          TEST_CONFIRMATION: ${{ inputs.intelligence_test_confirmation }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$TEST_DRY_RUN" != "true" ]]; then
-            echo "::error::One-event test requires dry_run=true so normal feed delivery remains disabled."
-            exit 1
-          fi
-          if [[ ! "$TEST_EVENT_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$ ]]; then
-            echo "::error::Provide the exact event ID from the current queued-event preview; no default target is allowed."
-            exit 1
-          fi
-          if [[ "$TEST_CONFIRMATION" != "POST-ONE-INTELLIGENCE-EVENT" ]]; then
-            echo "::error::Explicit confirmation is required: POST-ONE-INTELLIGENCE-EVENT"
-            exit 1
-          fi
-          echo "Request validated. Runtime must still verify unique queue match, freshness, evidence, and delivery history."
-
-      - name: Validate read-only delivery verification request
-        if: github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result
-        env:
-          VERIFY_ENABLED: ${{ inputs.verify_intelligence_test_result }}
-          VERIFY_DRY_RUN: ${{ inputs.dry_run }}
-          VERIFY_PUBLISH_TEST: ${{ inputs.publish_intelligence_test }}
-          VERIFY_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
-          VERIFY_CONFIRMATION: ${{ inputs.intelligence_test_verification_confirmation }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$VERIFY_DRY_RUN" != "true" || "$VERIFY_PUBLISH_TEST" == "true" ]]; then
-            echo "::error::Read-only verification requires dry_run=true and publish_intelligence_test=false."
-            exit 1
-          fi
-          if [[ ! "$VERIFY_EVENT_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$ ]]; then
-            echo "::error::Provide the exact event ID to verify; no default target is allowed."
-            exit 1
-          fi
-          if [[ "$VERIFY_CONFIRMATION" != "VERIFY-INTELLIGENCE-DELIVERY" ]]; then
-            echo "::error::Explicit read-only confirmation is required: VERIFY-INTELLIGENCE-DELIVERY"
-            exit 1
-          fi
-          echo "Read-only verification request validated. No feed execution or publication is permitted in this mode."
-
-      - name: Prepare selected event from quarantine if needed
-        if: github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test
-        env:
-          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
-          TEST_CONFIRMATION: ${{ inputs.intelligence_test_confirmation }}
-        run: python scripts/prepare_quarantined_intelligence_test.py --event-id "$TEST_EVENT_ID" --confirm "$TEST_CONFIRMATION"
-
       - name: Run feed
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) }}
         id: feed
         run: python main.py
         env:
@@ -364,9 +238,8 @@ jobs:
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
           # Scheduled runs publish fresh, validated intelligence; manual publishing remains limited to the guarded one-event test.
-          INTELLIGENCE_PUBLISH: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT') && 'true' || 'false' }}
-          INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}
-          INTELLIGENCE_TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
+          INTELLIGENCE_PUBLISH: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && 'true' || 'false' }}
+          INTELLIGENCE_TEST_ONLY: "false"
           # Analyze a wider candidate set so clustering can connect related developments beyond the top five.
           INTELLIGENCE_MAX_ITEMS: "12"
           INTELLIGENCE_MIN_SCORE: "30"
@@ -374,23 +247,15 @@ jobs:
           OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
 
-      - name: Preview queued intelligence events after inference (read-only)
-        if: github.event_name == 'schedule' && steps.feed.outcome == 'success'
-        run: python scripts/preview_intelligence_outbox.py --limit 20
-
-      - name: Preview quarantined intelligence events after inference (read-only)
-        if: github.event_name == 'schedule' && steps.feed.outcome == 'success'
-        run: python scripts/preview_intelligence_quarantine.py --limit 20
-
       - name: Save intelligence model cache
-        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result) && success() && steps.ollama_cache.outputs.cache-hit != 'true'
+        if: github.event_name != 'push' && success() && steps.ollama_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ollama/models
           key: ollama-${{ runner.os }}-qwen2.5-3b-v1
 
       - name: Save persistent state
-        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -404,7 +269,7 @@ jobs:
           key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
       - name: Check intelligence delivery history
         id: intelligence_delivery_history
-        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) }}
         run: |
           if [ -f state/intelligence_delivery_history.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -419,7 +284,7 @@ jobs:
           key: xrp-intelligence-delivery-history-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_delivery_history.json') }}
       - name: Check intelligence quarantine
         id: intelligence_quarantine
-        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}
+        if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) }}
         run: |
           if [ -f state/intelligence_quarantine.json ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -432,8 +297,3 @@ jobs:
         with:
           path: state/intelligence_quarantine.json
           key: xrp-intelligence-quarantine-${{ github.ref_name }}-v1-${{ github.run_id }}-${{ hashFiles('state/intelligence_quarantine.json') }}
-      - name: Verify guarded intelligence delivery postconditions
-        if: github.event_name == 'workflow_dispatch' && (inputs.publish_intelligence_test || inputs.verify_intelligence_test_result) && success()
-        env:
-          TEST_EVENT_ID: ${{ inputs.intelligence_test_event_id }}
-        run: python scripts/verify_intelligence_test_result.py --event-id "$TEST_EVENT_ID"
