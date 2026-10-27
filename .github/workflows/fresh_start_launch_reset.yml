@@ -135,7 +135,7 @@ jobs:
             state/intelligence_outbox.json
             state/outbox.json
             state/delivery_history.json
-          key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
+          key: xrp-state-${{ github.ref_name }}-v1-reset-${{ github.run_id }}-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}
 
       - name: Reset summary
         if: inputs.apply_reset
