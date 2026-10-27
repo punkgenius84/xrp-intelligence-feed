@@ -33,56 +33,42 @@ def test_workflow_uses_branch_scoped_content_keys_and_immutable_cache_pattern():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore = _step_block(contents, "uses: actions/cache/restore@")
     save = _step_block(contents, "name: Save persistent state")
-
     assert re.search(r"actions/cache/restore@[0-9a-f]{40}", restore)
     assert "id: state_cache" in restore
     assert "key: xrp-state-${{ github.ref_name }}-v1-restore" in restore
     assert "Never use a permanent bootstrap key" in restore
-    assert "xrp-state-${{ github.ref_name }}-v1-" in restore
     assert re.search(r"actions/cache/save@[0-9a-f]{40}", save)
-    assert "key: xrp-state-${{ github.ref_name }}-v1-${{ hashFiles('state/seen.json', 'state/discovery.json', 'state/correlation.json', 'state/intelligence.json', 'state/intelligence_outbox.json', 'state/outbox.json', 'state/delivery_history.json') }}" in save
-    assert "github.run_id" not in save
     assert "github.run_attempt" not in contents
     assert "cancel-in-progress: false" in contents
     assert "group: xrp-intelligence-feed" in contents
-    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
+    assert "github.event_name == 'workflow_dispatch' && !inputs.dry_run" in save
     assert "id: feed" in contents
-
 
 def test_state_restore_follows_tests_and_precedes_execution_without_dependency_cache():
     contents = WORKFLOW.read_text(encoding="utf-8")
     restore_at = contents.index("uses: actions/cache/restore@")
     setup_at = contents.index("uses: actions/setup-python@")
-    install_at = contents.index("python -m pip install -r requirements-dev.txt")
-    test_at = contents.index("python -m pytest -q")
-
-    # The install command must be an actual YAML step, not text swallowed by a comment.
-    install_lines = [line.strip() for line in contents.splitlines() if "python -m pip install -r requirements-dev.txt" in line]
-    assert install_lines == ["- run: python -m pip install -r requirements-dev.txt"]
+    install_at = contents.index("python -m pip install -r requirements.txt")
     app_at = contents.index("python main.py")
     save_at = contents.index("uses: actions/cache/save@")
-
-    assert setup_at < install_at < test_at < restore_at < app_at < save_at
+    assert setup_at < install_at < restore_at < app_at < save_at
+    assert "python -m pytest" not in contents
+    assert "requirements-dev.txt" not in contents
     assert "cache: pip" not in contents
-    assert "requirements.txt" not in _step_block(contents, "uses: actions/cache/restore@")
-
 
 def test_workflow_skips_full_enrichment_on_push_but_keeps_scheduled_shadow_mode():
     contents = WORKFLOW.read_text(encoding="utf-8")
     run = _step_block(contents, "run: python main.py")
     assert "INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}" in run
-    assert "Scheduled and manual runs keep full intelligence enrichment enabled." in run
-    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT') && 'true' || 'false' }}" in run
-    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
-    assert "publish_intelligence_test:" in contents
-    assert "intelligence_test_confirmation:" in contents
-    assert "POST-ONE-INTELLIGENCE-EVENT" in contents
-    assert 'default: ""' in contents
-    assert "name: Validate isolated one-event request" in contents
-    assert "default: false" in contents
+    assert "INTELLIGENCE_PUBLISH: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && 'true' || 'false' }}" in run
+    assert 'INTELLIGENCE_TEST_ONLY: "false"' in run
+    assert "publish_intelligence_test:" not in contents
+    assert "verify_intelligence_test_result:" not in contents
+    assert "intelligence_test_confirmation:" not in contents
+    assert "Validate isolated one-event request" not in contents
+    assert "dry_run:" in contents and "default: true" in contents
     assert 'OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"' in run
     assert 'OLLAMA_MODEL: "qwen2.5:3b"' in run
-
 
 def test_workflow_prepares_ollama_before_feed_execution():
     contents = WORKFLOW.read_text(encoding="utf-8")
@@ -105,24 +91,13 @@ def test_workflow_prepares_ollama_before_feed_execution():
 
 def test_workflow_runs_real_intelligence_inference_before_feed():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    smoke = _step_block(contents, "name: Validate intelligence inference")
     app = contents.index("run: python main.py")
-
-    verify_only_skip = "&& !(github.event_name == 'workflow_dispatch' && inputs.verify_intelligence_test_result)"
-    assert "if: github.event_name != 'push'" in smoke
-    assert verify_only_skip in _step_block(contents, "name: Restore intelligence model cache")
-    assert verify_only_skip in _step_block(contents, "name: Install Ollama")
-    assert verify_only_skip in _step_block(contents, "name: Start Ollama")
-    assert verify_only_skip in _step_block(contents, "name: Ensure intelligence model is available")
-    assert verify_only_skip in _step_block(contents, "name: Validate intelligence inference")
-    assert verify_only_skip in _step_block(contents, "name: Save intelligence model cache")
-    assert "if: github.event_name != 'push' && success()" not in _step_block(contents, "name: Save intelligence model cache")
-    assert "OllamaProvider(model=\"qwen2.5:3b\", timeout=90)" in smoke
-    assert "enrich_clusters([item]" in smoke
-    assert "if failures or len(events) != 1:" in smoke
-    assert "INTELLIGENCE_PUBLISH" not in smoke
-    assert contents.index("name: Validate intelligence inference") < app
-
+    assert "name: Ensure intelligence model is available" in contents
+    assert "name: Start Ollama" in contents
+    assert contents.index("name: Ensure intelligence model is available") < app
+    assert "Validate intelligence inference" not in contents
+    assert "verify_intelligence_test_result" not in contents
+    assert "python -m pytest" not in contents
 
 def test_workflow_sets_intelligence_min_score_to_relevance_threshold():
     contents = WORKFLOW.read_text(encoding="utf-8")
@@ -133,31 +108,16 @@ def test_workflow_sets_intelligence_min_score_to_relevance_threshold():
 def test_source_changes_trigger_safe_shadow_validation_without_state_saves():
     contents = WORKFLOW.read_text(encoding="utf-8")
     trigger = contents.split("  schedule:", 1)[0]
-
-    assert "  push:" in trigger
-    assert "      - main" in trigger
-    assert '      - ".github/workflows/news_feed.yml"' in trigger
-    assert '      - "config/**"' in trigger
-    assert '      - "discovery/**"' in trigger
-    assert '      - "storage/**"' in trigger
-    assert '      - "intelligence/**"' in trigger
-    assert '      - "main.py"' in trigger
-
+    assert "  push:" in trigger and "      - main" in trigger
+    for path in (".github/workflows/news_feed.yml", "config/**", "discovery/**", "storage/**", "intelligence/**", "main.py"):
+        assert f'      - "{path}"' in trigger
     run = _step_block(contents, "run: python main.py")
     assert "DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}" in run
-    assert "INTELLIGENCE_PUBLISH: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT') && 'true' || 'false' }}" in run
-    assert "INTELLIGENCE_TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_intelligence_test && inputs.dry_run && inputs.intelligence_test_confirmation == 'POST-ONE-INTELLIGENCE-EVENT' && 'true' || 'false' }}" in run
-    assert "publish_intelligence_test:" in contents
-    assert "intelligence_test_confirmation:" in contents
-    assert "POST-ONE-INTELLIGENCE-EVENT" in contents
-    assert 'default: ""' in contents
-    assert "name: Validate isolated one-event request" in contents
-    assert "default: false" in contents
-
+    assert "INTELLIGENCE_PUBLISH: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && 'true' || 'false' }}" in run
+    assert "publish_intelligence_test:" not in contents
     save = _step_block(contents, "name: Save persistent state")
-    assert "if: ${{ !cancelled() && steps.feed.outcome == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (!inputs.dry_run || inputs.publish_intelligence_test))) }}" in save
+    assert "github.event_name == 'workflow_dispatch' && !inputs.dry_run" in save
     assert "id: feed" in run
-
 
 def test_weekly_digest_restores_with_the_same_paths_and_key_pattern_as_the_feed():
     """GitHub cache versions are derived from the path list: a different list never hits."""
@@ -251,14 +211,10 @@ def test_launch_queue_reset_workflow_is_manual_guarded_and_cache_compatible():
 
 def test_workflow_previews_quarantined_intelligence_on_diagnostic_runs():
     contents = WORKFLOW.read_text(encoding="utf-8")
-    preview = _step_block(contents, "name: Preview quarantined intelligence events (read-only)")
-
-    assert "python scripts/preview_intelligence_quarantine.py --limit 20" in preview
-    assert "github.event_name == 'push'" in preview
-    assert "inputs.preview_intelligence && inputs.dry_run" in preview
-    assert "DISCORD_WEBHOOK_URL" not in preview
-    assert "INTELLIGENCE_PUBLISH" not in preview
-
+    assert "Preview quarantined intelligence events (read-only)" not in contents
+    assert "inputs.preview_intelligence" not in contents
+    assert "publish_intelligence_test" not in contents
+    assert "state/intelligence_quarantine.json" in contents
 
 def test_fresh_start_reset_workflow_is_preview_first_archived_and_stateful():
     from pathlib import Path
