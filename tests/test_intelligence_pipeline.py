@@ -621,3 +621,54 @@ def test_cluster_enrichment_includes_prior_events_only_as_context():
     assert "status=superseded" in captured["user"]
     assert "not current-event evidence" in captured["user"]
     assert events[0].evidence[0].url == current.url
+
+
+def test_failed_enrichment_candidates_are_released_from_seen_state():
+    from types import SimpleNamespace
+    from intelligence.pipeline import restore_failed_items_for_retry
+
+    now = datetime.now(timezone.utc)
+    failed = SimpleNamespace(
+        candidate_id="failed-candidate", fingerprint="fp-failed",
+        event_fingerprint="event-failed", relevance_score=64,
+        published_at=now, collected_at=now,
+    )
+    succeeded = SimpleNamespace(
+        candidate_id="successful-candidate", fingerprint="fp-success",
+        event_fingerprint="event-success", relevance_score=57,
+        published_at=now, collected_at=now,
+    )
+    config = SimpleNamespace(min_relevance_score=30, max_items_per_run=12)
+    seen = {"fp-failed", "event-failed", "fp-success", "event-success"}
+    successful_event = SimpleNamespace(
+        event_id="evt-" + __import__("hashlib").sha256(b"successful-candidate").hexdigest()[:24],
+        member_ids=[],
+    )
+
+    retry_ids = restore_failed_items_for_retry(
+        [failed, succeeded], [successful_event], ["transient Ollama timeout"], seen, config
+    )
+
+    assert retry_ids == ["failed-candidate"]
+    assert "fp-failed" not in seen
+    assert "event-failed" not in seen
+    assert "fp-success" in seen
+    assert "event-success" in seen
+
+
+def test_no_enrichment_failures_do_not_change_seen_state():
+    from types import SimpleNamespace
+    from intelligence.pipeline import restore_failed_items_for_retry
+
+    now = datetime.now(timezone.utc)
+    item = SimpleNamespace(
+        candidate_id="candidate", fingerprint="fp", event_fingerprint="event",
+        relevance_score=64, published_at=now, collected_at=now,
+    )
+    seen = {"fp", "event"}
+    retry_ids = restore_failed_items_for_retry(
+        [item], [], [], seen,
+        SimpleNamespace(min_relevance_score=30, max_items_per_run=12),
+    )
+    assert retry_ids == []
+    assert seen == {"fp", "event"}
