@@ -5,7 +5,7 @@ from storage.delivery_history import JsonDeliveryHistory
 from storage.outbox import JsonOutboxState
 
 
-STAMP = datetime(2026, 9, 23, 12, tzinfo=timezone.utc)
+STAMP = datetime.now(timezone.utc)
 
 
 class Item:
