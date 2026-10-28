@@ -35,6 +35,47 @@ def select_items(
     return eligible[:config.max_items_per_run]
 
 
+def restore_failed_items_for_retry(
+    items: list[NewsItem],
+    events: list[IntelligenceEvent],
+    failures: list[str],
+    seen: set[str],
+    config: IntelligenceRuntimeConfig,
+) -> list[str]:
+    """Keep failed high-relevance enrichment candidates eligible for a later run.
+
+    Deduplication adds candidates to the in-memory seen set before enrichment. If
+    enrichment fails and that set is persisted unchanged, a transient model timeout
+    permanently hides the candidate from future enrichment. Successful event member
+    IDs remain seen; selected candidates with no successful event are released.
+    """
+    if not failures:
+        return []
+
+    successful_member_ids = {
+        member_id
+        for event in events
+        for member_id in getattr(event, "member_ids", [])
+    }
+    # Single-item events may not populate member_ids; their stable event ID is based
+    # on the same candidate identity, so account for that representation too.
+    successful_member_ids.update(
+        item.candidate_id or item.fingerprint
+        for item in items
+        if any(event.event_id == event_id_for(item) for event in events)
+    )
+
+    retry_ids: list[str] = []
+    for item in select_items(items, config):
+        identity = item.candidate_id or item.fingerprint
+        if identity in successful_member_ids:
+            continue
+        seen.discard(item.fingerprint)
+        seen.discard(item.event_fingerprint)
+        retry_ids.append(identity)
+    return retry_ids
+
+
 def enrich_items(
     items: list[NewsItem],
     provider: LLMProvider,
