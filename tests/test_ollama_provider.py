@@ -16,7 +16,7 @@ def test_ollama_provider_allows_slow_cpu_inference_by_default(monkeypatch):
     result = provider.generate(system="system", user="user")
 
     assert result.model == "qwen2.5:3b"
-    assert post.call_args.kwargs["timeout"] == 90.0
+    assert post.call_args.kwargs["timeout"] == 300.0
 
 
 def test_ollama_provider_respects_explicit_timeout_override():
