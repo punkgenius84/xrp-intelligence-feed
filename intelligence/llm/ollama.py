@@ -16,7 +16,7 @@ DEFAULT_MODEL = "qwen2.5:7b"
 class OllamaProvider:
     """Small local Ollama adapter. Failure is explicit; callers decide whether to degrade."""
 
-    def __init__(self, endpoint: str | None = None, model: str | None = None, timeout: float = 45.0):
+    def __init__(self, endpoint: str | None = None, model: str | None = None, timeout: float = 90.0):
         self.endpoint = (endpoint or os.getenv("OLLAMA_ENDPOINT") or DEFAULT_ENDPOINT).strip()
         self.model = (model or os.getenv("OLLAMA_MODEL") or DEFAULT_MODEL).strip()
         self.timeout = timeout
