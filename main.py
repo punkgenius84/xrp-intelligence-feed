@@ -24,7 +24,7 @@ from intelligence.correlation import (build_correlation_card, correlate,
                                       suppress_correlated_secondary_duplicates)
 from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
-from intelligence.pipeline import enrich_clusters, select_items
+from intelligence.pipeline import enrich_clusters, select_items, restore_failed_items_for_retry
 from intelligence.events import event_to_dict
 
 from intelligence.buried_signals import detect_buried_signals
@@ -415,6 +415,14 @@ def run_pipeline(
                 else {}
             ),
         )
+        retry_ids = restore_failed_items_for_retry(
+            fresh, intelligence_events, intelligence_failures, seen, intelligence_config
+        )
+        if retry_ids:
+            print(
+                f"Intelligence retry safety: released {len(retry_ids)} failed high-relevance "
+                "candidate(s) from seen state so a later run can retry enrichment"
+            )
         if intelligence_state_value is not None:
             now = datetime.now().astimezone().isoformat()
             for event in intelligence_events:
