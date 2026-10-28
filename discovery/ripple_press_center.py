@@ -262,6 +262,7 @@ class RipplePressCenterDiscovery:
         errors: list[str] = []
         state_updates: dict[str, dict[str, str]] = {}
         pages_checked = 0
+        not_modified_pages = 0
 
         for page in range(1, self.source["max_pages"] + 1):
             pages_checked += 1
@@ -286,6 +287,7 @@ class RipplePressCenterDiscovery:
                 )
                 break
             if response.status_code == 304:
+                not_modified_pages += 1
                 state_updates[request_id] = {
                     key: response.headers.get(key) or response.headers.get(key.replace("_", "-")) or validators.get(key, "")
                     for key in ("etag", "last_modified")
@@ -334,6 +336,7 @@ class RipplePressCenterDiscovery:
         status = (
             "partial" if errors and ordered
             else "failed" if errors
+            else "not_modified" if not ordered and not_modified_pages == pages_checked
             else "empty" if not ordered
             else "success"
         )
