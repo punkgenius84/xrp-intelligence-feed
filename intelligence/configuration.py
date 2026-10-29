@@ -81,7 +81,7 @@ class IntelligenceRuntimeConfig:
     model: str = "qwen2.5:7b"
     max_items_per_run: int = 5
     min_relevance_score: int = 50
-    timeout_seconds: float = 45.0
+    timeout_seconds: float = 300.0
     stale_after_days: int = 30
 
 
@@ -91,14 +91,14 @@ def load_intelligence_config() -> IntelligenceRuntimeConfig:
 
     max_items = int(os.getenv("INTELLIGENCE_MAX_ITEMS", "5"))
     minimum = int(os.getenv("INTELLIGENCE_MIN_SCORE", "50"))
-    timeout = float(os.getenv("INTELLIGENCE_TIMEOUT", "45"))
+    timeout = float(os.getenv("INTELLIGENCE_TIMEOUT", "300"))
     stale_after_days = int(os.getenv("INTELLIGENCE_STALE_DAYS", "30"))
     if not 0 <= max_items <= 50:
         raise ConfigurationError("INTELLIGENCE_MAX_ITEMS must be between 0 and 50")
     if not 0 <= minimum <= 100:
         raise ConfigurationError("INTELLIGENCE_MIN_SCORE must be between 0 and 100")
-    if not 5 <= timeout <= 180:
-        raise ConfigurationError("INTELLIGENCE_TIMEOUT must be between 5 and 180 seconds")
+    if not 5 <= timeout <= 600:
+        raise ConfigurationError("INTELLIGENCE_TIMEOUT must be between 5 and 600 seconds")
     if not 1 <= stale_after_days <= 3650:
         raise ConfigurationError("INTELLIGENCE_STALE_DAYS must be between 1 and 3650 days")
     return IntelligenceRuntimeConfig(
