@@ -155,7 +155,7 @@ def test_conditional_validators_are_saved():
         )]),
         now=lambda: STAMP,
     ).collect(state)
-    assert result.status == "empty"
+    assert result.status == "not_modified"
     assert result.state_updates["page-1"]["etag"] == '"new"'
 
 
