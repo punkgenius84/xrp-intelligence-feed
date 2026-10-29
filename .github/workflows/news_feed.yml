@@ -32,7 +32,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -233,6 +233,8 @@ jobs:
           # Analyze a wider candidate set so clustering can connect related developments beyond the top five.
           INTELLIGENCE_MAX_ITEMS: "12"
           INTELLIGENCE_MIN_SCORE: "30"
+          # The runtime config previously overrode Ollama’s 300s provider default with 45s.
+          INTELLIGENCE_TIMEOUT: "300"
           OLLAMA_ENDPOINT: "http://127.0.0.1:11434/api/chat"
           OLLAMA_MODEL: "qwen2.5:3b"
           DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}
