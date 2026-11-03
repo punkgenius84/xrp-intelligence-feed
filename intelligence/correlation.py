@@ -20,6 +20,7 @@ _CORRELATION_ENTITIES = {
     "XRP", "Ripple", "RLUSD", "SEC", "CFTC", "Treasury", "Federal Reserve",
     "OCC", "FDIC", "FinCEN", "OFAC", "DOJ", "BIS",
     "Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS",
+    "Binance",
     "J.P. Morgan", "BNY",
 }
 
@@ -79,7 +80,22 @@ def _score_fields(
     # an event can cross midnight or be reported after an initial announcement.
     day_gap = abs((left_day - right_day).days)
     if day_gap > 1:
-        return 0, set()
+        # Developing security-incident coverage can arrive over several days.
+        # Extend the normal one-day window only when the same tracked crypto
+        # entity, incident type, and distinctive numeric detail all recur.
+        incident_terms = {"hack", "hacked", "exploit", "exploited", "breach", "breached"}
+        shared_incident_terms = overlap & incident_terms
+        shared_numeric_tokens = {token for token in overlap if token.isdigit()}
+        crypto_incident_entities = {
+            "Binance", "Coinbase", "Kraken", "Uniswap", "Aave",
+        }
+        if not (
+            day_gap <= 3
+            and shared_entities & crypto_incident_entities
+            and shared_incident_terms
+            and len(shared_numeric_tokens) >= 2
+        ):
+            return 0, set()
 
     # Require meaningful lexical overlap in addition to an important shared entity.
     # This prevents two unrelated XRP/SEC stories from becoming one cluster.
