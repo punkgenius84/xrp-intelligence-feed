@@ -29,7 +29,7 @@ def _tokens(item: NewsItem) -> set[str]:
     text = unicodedata.normalize("NFKC", item.title).casefold()
     return {
         token for token in re.findall(r"[a-z0-9]+", text)
-        if token not in _STOPWORDS and len(token) > 2
+        if token not in _STOPWORDS and (len(token) > 2 or token.isdigit())
     }
 
 
@@ -79,6 +79,7 @@ def _score_fields(
     # Same-day reporting is the strongest case. Allow one day either side because
     # an event can cross midnight or be reported after an initial announcement.
     day_gap = abs((left_day - right_day).days)
+    incident_follow_up = False
     if day_gap > 1:
         # Developing security-incident coverage can arrive over several days.
         # Extend the normal one-day window only when the same tracked crypto
@@ -89,19 +90,20 @@ def _score_fields(
         crypto_incident_entities = {
             "Binance", "Coinbase", "Kraken", "Uniswap", "Aave",
         }
-        if not (
+        incident_follow_up = (
             day_gap <= 3
-            and shared_entities & crypto_incident_entities
-            and shared_incident_terms
+            and bool(shared_entities & crypto_incident_entities)
+            and bool(shared_incident_terms)
             and len(shared_numeric_tokens) >= 2
-        ):
+        )
+        if not incident_follow_up:
             return 0, set()
 
     # Require meaningful lexical overlap in addition to an important shared entity.
     # This prevents two unrelated XRP/SEC stories from becoming one cluster.
     if len(overlap) < 2:
         return 0, set()
-    if jaccard < 0.30 and sequence < 0.72:
+    if jaccard < 0.30 and sequence < 0.72 and not incident_follow_up:
         return 0, set()
 
     score = 60
