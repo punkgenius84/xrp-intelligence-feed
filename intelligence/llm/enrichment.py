@@ -278,9 +278,10 @@ def analyze_item(
             response.content,
             source_url=item.url,
             model=response.model,
-            allowed_evidence={"source title", "source summary"},
+            allowed_evidence={"source publisher", "source title", "source summary"},
         )
         evidence_text = {
+            "source publisher": item.source,
             "source title": item.title,
             "source summary": item.summary,
         }
@@ -330,10 +331,11 @@ def analyze_cluster(
             response.content,
             source_url=primary.url,
             model=response.model,
-            allowed_evidence=({f"source-{index} title" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} summary" for index in range(1, len(cluster.members) + 1)}),
+            allowed_evidence=({f"source-{index} publisher" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} title" for index in range(1, len(cluster.members) + 1)} | {f"source-{index} summary" for index in range(1, len(cluster.members) + 1)}),
         )
         evidence_text = {}
         for index, item in enumerate(cluster.members, start=1):
+            evidence_text[f"source-{index} publisher"] = item.source
             evidence_text[f"source-{index} title"] = item.title
             evidence_text[f"source-{index} summary"] = item.summary
         analysis = _normalize_source_anchored_acronym_expansions(
