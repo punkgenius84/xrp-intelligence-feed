@@ -555,8 +555,8 @@ def test_source_publisher_label_supports_publisher_attribution_only():
                 '{"event_type":"regulatory_action","event_summary":"A Federal Register notice was published.",'
                 '"significance":"The notice records an official regulatory action.",'
                 '"entities":["Federal Register"],'
-                '"claims":[{"text":"The Federal Register publishes a notice of filing.",'
-                '"evidence":["source publisher","source title"]}]}',
+                '"claims":[{"text":"The Federal Register notice concerns a proposed rule change.",'
+                '"evidence":["source publisher","source title","source summary"]}]}',
                 model="test-model",
             )
 
@@ -572,7 +572,7 @@ def test_source_publisher_label_supports_publisher_attribution_only():
         FakeProvider(),
     )
 
-    assert result.claims[0].evidence == ["source publisher", "source title"]
+    assert result.claims[0].evidence == ["source publisher", "source title", "source summary"]
 
 
 def test_source_publisher_label_does_not_support_substantive_claims():
