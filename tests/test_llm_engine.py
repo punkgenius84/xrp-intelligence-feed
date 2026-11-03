@@ -284,7 +284,7 @@ def test_single_source_analysis_accepts_only_controlled_evidence():
         '{"event_type":"announcement","event_summary":"x","significance":"y",'
         '"claims":[{"text":"Claim","evidence":["source title","source summary"]}]}',
         source_url="https://example.test",
-        allowed_evidence={"source title", "source summary"},
+        allowed_evidence={"source publisher", "source title", "source summary"},
     )
     assert result.claims[0].evidence == ["source title", "source summary"]
 
@@ -432,7 +432,7 @@ def test_single_source_prompt_guides_evidence_label_selection():
 def test_single_source_prompt_forbids_urls_and_free_form_evidence_labels():
     from intelligence.llm.prompts import SYSTEM_PROMPT
 
-    assert 'the ONLY valid evidence labels are the exact strings "source title" and "source summary"' in SYSTEM_PROMPT
+    assert 'the ONLY valid evidence labels are the exact strings "source publisher", "source title", and "source summary"' in SYSTEM_PROMPT
     assert "never put a URL, source name, citation, quote, or free-form explanation in the evidence array" in SYSTEM_PROMPT
 
 
@@ -546,3 +546,56 @@ def test_prompt_allows_cautious_crypto_wide_significance_without_xrp_mentions():
     assert "The scope is crypto-wide, not limited to articles that explicitly mention XRP or Ripple." in SYSTEM_PROMPT
     assert 'In "significance", you may make cautious, clearly labeled inferences' in SYSTEM_PROMPT
     assert "Do not claim direct XRP, XRPL, or Ripple involvement, usage, adoption, or price impact unless the current evidence supports that specific connection." in SYSTEM_PROMPT
+
+
+def test_source_publisher_label_supports_publisher_attribution_only():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"regulatory_action","event_summary":"A Federal Register notice was published.",'
+                '"significance":"The notice records an official regulatory action.",'
+                '"entities":["Federal Register"],'
+                '"claims":[{"text":"The Federal Register publishes a notice of filing.",'
+                '"evidence":["source publisher","source title"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_item(
+        NewsItem(
+            title="Self-Regulatory Organizations; Notice of Filing",
+            url="https://www.federalregister.gov/documents/2026/11/03/2026-12345/example",
+            source="Federal Register",
+            source_id="federal-register-api",
+            summary="The notice concerns a proposed rule change.",
+            published_at=datetime.now(timezone.utc),
+        ),
+        FakeProvider(),
+    )
+
+    assert result.claims[0].evidence == ["source publisher", "source title"]
+
+
+def test_source_publisher_label_does_not_support_substantive_claims():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"regulatory_action","event_summary":"A notice was published.",'
+                '"significance":"The notice records an official regulatory action.",'
+                '"entities":["Federal Register"],'
+                '"claims":[{"text":"The Federal Register approved the rule on November 3.",'
+                '"evidence":["source publisher"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported evidence anchor"):
+        analyze_item(
+            NewsItem(
+                title="Notice of Filing",
+                url="https://www.federalregister.gov/documents/2026/11/03/2026-12345/example",
+                source="Federal Register",
+                source_id="federal-register-api",
+                summary="The notice concerns a proposed rule change.",
+                published_at=datetime.now(timezone.utc),
+            ),
+            FakeProvider(),
+        )
