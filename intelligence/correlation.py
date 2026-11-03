@@ -195,11 +195,15 @@ def correlate(
         buckets[_day(item)].append(item)
 
     for day, bucket in buckets.items():
-        nearby = (
-            bucket
-            + buckets.get(day.fromordinal(day.toordinal() - 1), [])
-            + buckets.get(day.fromordinal(day.toordinal() + 1), [])
-        )
+        # Inspect a three-day neighborhood so the stricter incident-only
+        # exception in _score_fields can connect delayed follow-up reporting.
+        nearby = [
+            candidate
+            for offset in range(-3, 4)
+            for candidate in buckets.get(
+                day.fromordinal(day.toordinal() + offset), []
+            )
+        ]
         for left in bucket:
             for right in nearby:
                 if left is right:
