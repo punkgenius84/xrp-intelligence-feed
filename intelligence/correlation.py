@@ -20,6 +20,7 @@ _CORRELATION_ENTITIES = {
     "XRP", "Ripple", "RLUSD", "SEC", "CFTC", "Treasury", "Federal Reserve",
     "OCC", "FDIC", "FinCEN", "OFAC", "DOJ", "BIS",
     "Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS",
+    "Binance",
     "J.P. Morgan", "BNY",
 }
 
@@ -28,7 +29,7 @@ def _tokens(item: NewsItem) -> set[str]:
     text = unicodedata.normalize("NFKC", item.title).casefold()
     return {
         token for token in re.findall(r"[a-z0-9]+", text)
-        if token not in _STOPWORDS and len(token) > 2
+        if token not in _STOPWORDS and (len(token) > 2 or token.isdigit())
     }
 
 
@@ -78,14 +79,31 @@ def _score_fields(
     # Same-day reporting is the strongest case. Allow one day either side because
     # an event can cross midnight or be reported after an initial announcement.
     day_gap = abs((left_day - right_day).days)
+    incident_follow_up = False
     if day_gap > 1:
-        return 0, set()
+        # Developing security-incident coverage can arrive over several days.
+        # Extend the normal one-day window only when the same tracked crypto
+        # entity, incident type, and distinctive numeric detail all recur.
+        incident_terms = {"hack", "hacked", "exploit", "exploited", "breach", "breached"}
+        shared_incident_terms = overlap & incident_terms
+        shared_numeric_tokens = {token for token in overlap if token.isdigit()}
+        crypto_incident_entities = {
+            "Binance", "Coinbase", "Kraken", "Uniswap", "Aave",
+        }
+        incident_follow_up = (
+            day_gap <= 3
+            and bool(shared_entities & crypto_incident_entities)
+            and bool(shared_incident_terms)
+            and len(shared_numeric_tokens) >= 2
+        )
+        if not incident_follow_up:
+            return 0, set()
 
     # Require meaningful lexical overlap in addition to an important shared entity.
     # This prevents two unrelated XRP/SEC stories from becoming one cluster.
     if len(overlap) < 2:
         return 0, set()
-    if jaccard < 0.30 and sequence < 0.72:
+    if jaccard < 0.30 and sequence < 0.72 and not incident_follow_up:
         return 0, set()
 
     score = 60
@@ -179,11 +197,15 @@ def correlate(
         buckets[_day(item)].append(item)
 
     for day, bucket in buckets.items():
-        nearby = (
-            bucket
-            + buckets.get(day.fromordinal(day.toordinal() - 1), [])
-            + buckets.get(day.fromordinal(day.toordinal() + 1), [])
-        )
+        # Inspect a three-day neighborhood so the stricter incident-only
+        # exception in _score_fields can connect delayed follow-up reporting.
+        nearby = [
+            candidate
+            for offset in range(-3, 4)
+            for candidate in buckets.get(
+                day.fromordinal(day.toordinal() + offset), []
+            )
+        ]
         for left in bucket:
             for right in nearby:
                 if left is right:
