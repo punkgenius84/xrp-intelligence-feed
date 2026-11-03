@@ -83,10 +83,10 @@ def _normalize_source_anchored_acronym_expansions(
     source_text = " ".join(evidence_text.values()).lower()
     replacements = []
     for acronym, expansions in _KNOWN_ACRONYM_EXPANSIONS.items():
-        if not re.search(r"\\b" + re.escape(acronym) + r"\\b", source_text):
+        if not re.search(r"\b" + re.escape(acronym) + r"\b", source_text):
             continue
         for expansion in expansions:
-            if re.search(r"\\b" + re.escape(expansion) + r"\\b", source_text):
+            if re.search(r"\b" + re.escape(expansion) + r"\b", source_text):
                 continue
             replacements.append((expansion, acronym.upper()))
 
@@ -97,8 +97,8 @@ def _normalize_source_anchored_acronym_expansions(
         result = value
         for expansion, acronym in replacements:
             pattern = re.compile(
-                r"\\b" + re.escape(expansion) + r"\\s*\\(\\s*"
-                + re.escape(acronym) + r"\\s*\\)",
+                r"\b" + re.escape(expansion) + r"\s*\(\s*"
+                + re.escape(acronym) + r"\s*\)",
                 flags=re.IGNORECASE,
             )
             result = pattern.sub(acronym, result)
