@@ -334,7 +334,7 @@ def test_acquisition_event_type_fails_closed_for_speculative_or_proposed_source_
 
 
 
-def test_claim_grounding_diagnostic_identifies_unsupported_anchor_and_evidence():
+def test_claim_grounding_repairs_omitted_headline_citation():
     class FakeProvider:
         def generate(self, **kwargs):
             return LLMResponse(
@@ -344,18 +344,81 @@ def test_claim_grounding_diagnostic_identifies_unsupported_anchor_and_evidence()
                 model="test-model",
             )
 
-    with pytest.raises(LLMError, match="unsupported evidence anchor 'ripple'.*source summary"):
-        analyze_item(
-            NewsItem(
-                title="Ripple announces payments partnership",
-                url="https://example.test/article",
-                source="Example",
-                published_at=datetime.now(timezone.utc),
-                summary="The companies announced a partnership.",
-                source_id="example",
-            ),
-            FakeProvider(),
-        )
+    result = analyze_item(
+        NewsItem(
+            title="Ripple announces payments partnership",
+            url="https://example.test/article",
+            source="Example",
+            published_at=datetime.now(timezone.utc),
+            summary="The companies announced a partnership.",
+            source_id="example",
+        ),
+        FakeProvider(),
+    )
+
+    assert result.claims[0].evidence == ["source summary", "source title"]
+
+
+def test_claim_grounding_normalizes_unsupported_bny_expansion_to_source_acronym():
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"The Bank of New York Mellon (BNY) was selected.",'
+                '"significance":"The Bank of New York Mellon (BNY) was selected for custody.",'
+                '"entities":["The Bank of New York Mellon (BNY)"],'
+                '"claims":[{"text":"The Bank of New York Mellon (BNY) was selected for custody.",'
+                '"evidence":["source-1 summary"]}]}',
+                model="test-model",
+            )
+
+    source = NewsItem(
+        title="Ripple selects BNY to custody RLUSD reserves",
+        url="https://example.test/bny",
+        source="Ripple",
+        source_id="ripple",
+        summary="Ripple selected BNY as custodian for RLUSD reserves.",
+        published_at=datetime.now(timezone.utc),
+    )
+    cluster = EventCluster(cluster_id="bny", members=(source, item("Secondary source confirms custody")))
+    result = analyze_cluster(cluster, FakeProvider())
+
+    assert "Bank of New York Mellon" not in result.claims[0].text
+    assert "BNY" in result.claims[0].text
+    assert "BNY" in result.entities[0]
+
+
+def test_claim_grounding_repairs_title_only_numeric_anchor_in_cluster():
+    first = NewsItem(
+        title="Nasdaq-listed company may sell $450 million in bitcoin",
+        url="https://example.test/bitcoin-sale",
+        source="Example",
+        source_id="example",
+        summary="A company may sell bitcoin.",
+        published_at=datetime.now(timezone.utc),
+    )
+    second = NewsItem(
+        title="Secondary report discusses the potential bitcoin sale",
+        url="https://secondary.test/bitcoin-sale",
+        source="Secondary",
+        source_id="secondary",
+        summary="The report discusses a potential bitcoin sale.",
+        published_at=datetime.now(timezone.utc),
+    )
+    cluster = EventCluster(cluster_id="sale", members=(first, second))
+
+    class FakeProvider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"A possible bitcoin sale was reported.",'
+                '"significance":"The report may matter to crypto markets.",'
+                '"claims":[{"text":"A Nasdaq-listed company may sell $450 million in bitcoin.",'
+                '"evidence":["source-1 summary"]}]}',
+                model="test-model",
+            )
+
+    result = analyze_cluster(cluster, FakeProvider())
+
+    assert result.claims[0].evidence == ["source-1 summary", "source-1 title"]
 
 
 def test_single_source_prompt_guides_evidence_label_selection():
