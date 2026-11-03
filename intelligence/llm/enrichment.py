@@ -68,24 +68,107 @@ def _claim_anchor_tokens(text: str) -> set[str]:
     }
 
 
+# Some local models expand an acronym even when the supplied source uses only
+# the acronym. Keep the source's exact naming rather than accepting an invented
+# legal-name expansion as a factual anchor.
+_KNOWN_ACRONYM_EXPANSIONS = {
+    "bny": ("the bank of new york mellon",),
+}
+
+
+def _normalize_source_anchored_acronym_expansions(
+    analysis: IntelligenceAnalysis,
+    evidence_text: dict[str, str],
+) -> IntelligenceAnalysis:
+    source_text = " ".join(evidence_text.values()).lower()
+    replacements = []
+    for acronym, expansions in _KNOWN_ACRONYM_EXPANSIONS.items():
+        if not re.search(r"\\b" + re.escape(acronym) + r"\\b", source_text):
+            continue
+        for expansion in expansions:
+            if re.search(r"\\b" + re.escape(expansion) + r"\\b", source_text):
+                continue
+            replacements.append((expansion, acronym.upper()))
+
+    if not replacements:
+        return analysis
+
+    def normalize(value: str) -> str:
+        result = value
+        for expansion, acronym in replacements:
+            pattern = re.compile(
+                r"\\b" + re.escape(expansion) + r"\\s*\\(\\s*"
+                + re.escape(acronym) + r"\\s*\\)",
+                flags=re.IGNORECASE,
+            )
+            result = pattern.sub(acronym, result)
+        return result
+
+    claims = [
+        replace(claim, text=normalize(claim.text))
+        for claim in analysis.claims
+    ]
+    return replace(
+        analysis,
+        event_summary=normalize(analysis.event_summary),
+        significance=normalize(analysis.significance),
+        entities=[normalize(entity) for entity in analysis.entities],
+        claims=claims,
+        conflicts=[normalize(value) for value in analysis.conflicts],
+        uncertainties=[normalize(value) for value in analysis.uncertainties],
+    )
+
+
+def _contains_anchor(text: str, anchor: str) -> bool:
+    """Match a factual token, not an accidental substring of a different word."""
+    return bool(re.search(
+        r"(?<![a-z0-9])" + re.escape(anchor) + r"(?![a-z0-9])",
+        text.lower(),
+    ))
+
+
 def _validate_claim_grounding(
     analysis: IntelligenceAnalysis,
     evidence_text: dict[str, str],
 ) -> IntelligenceAnalysis:
-    """Reject claims whose high-signal factual anchors are absent from cited evidence."""
+    """Repair omitted valid citations, but reject anchors absent from all supplied evidence."""
+    repaired_claims = []
     for claim in analysis.claims:
+        cited_references = list(claim.evidence)
         cited_text = " ".join(
             evidence_text.get(reference, "")
-            for reference in claim.evidence
-        ).lower()
-        for anchor in sorted(_claim_anchor_tokens(claim.text)):
-            if anchor not in cited_text:
+            for reference in cited_references
+        )
+        missing_anchors = [
+            anchor for anchor in sorted(_claim_anchor_tokens(claim.text))
+            if not _contains_anchor(cited_text, anchor)
+        ]
+
+        # A model sometimes cites the summary while taking a concrete name, date,
+        # or amount from the supplied headline. Add that exact supplied field as
+        # a citation; never manufacture evidence or accept an anchor absent from
+        # every source field.
+        for anchor in missing_anchors:
+            supporting_reference = next(
+                (
+                    reference for reference, text in evidence_text.items()
+                    if _contains_anchor(text, anchor)
+                ),
+                None,
+            )
+            if supporting_reference is None:
                 excerpt = " ".join(claim.text.split())[:180]
                 raise LLMError(
                     "LLM analysis rejected: claim contains an unsupported evidence anchor "
                     f"{anchor!r}; claim={excerpt!r}; evidence={claim.evidence!r}"
                 )
-    return analysis
+            if supporting_reference not in cited_references:
+                cited_references.append(supporting_reference)
+            cited_text += " " + evidence_text[supporting_reference]
+
+        repaired_claims.append(replace(claim, evidence=cited_references))
+
+    return replace(analysis, claims=repaired_claims)
 
 
 def _validate_event_metadata_grounding(
@@ -201,6 +284,9 @@ def analyze_item(
             "source title": item.title,
             "source summary": item.summary,
         }
+        analysis = _normalize_source_anchored_acronym_expansions(
+            analysis, evidence_text
+        )
         analysis = _validate_claim_grounding(analysis, evidence_text)
         analysis = _validate_event_metadata_grounding(
             analysis,
@@ -250,6 +336,9 @@ def analyze_cluster(
         for index, item in enumerate(cluster.members, start=1):
             evidence_text[f"source-{index} title"] = item.title
             evidence_text[f"source-{index} summary"] = item.summary
+        analysis = _normalize_source_anchored_acronym_expansions(
+            analysis, evidence_text
+        )
         analysis = _validate_claim_grounding(analysis, evidence_text)
         source_text = combined_text
         analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
