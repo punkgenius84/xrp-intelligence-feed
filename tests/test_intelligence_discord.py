@@ -45,13 +45,14 @@ def make_event():
     )
 
 
-def test_format_includes_evidence_and_conflicts():
+def test_format_uses_compact_labels_and_clickable_source_titles():
     message = format_intelligence_event(make_event())
-    assert "**Conflicts:**" in message
+    assert "**Conflicting reports:**" in message
     assert "Source A says planned; Source B says launched." in message
-    assert "**Evidence:**" in message
-    assert "https://example.test/source-1" in message
-    assert "**Independent members:** 2" in message
+    assert "**Sources:**" in message
+    assert "[Formal action](https://example.test/source-1)" in message
+    assert "[Company response](https://example.test/source-2)" in message
+    assert "**Independent members:**" not in message
 
 
 def test_format_is_bounded():
