@@ -71,7 +71,7 @@ def test_send_posts_json_with_mentions_suppressed_and_content_truncated():
     url, kwargs = session.calls[0]
     assert url == URL
     assert kwargs["timeout"] == 20
-    assert kwargs["json"]["allowed_mentions"] == {"parse": []}\n    assert kwargs["json"]["flags"] == 4
+    assert kwargs["json"]["allowed_mentions"] == {"parse": []}\n    assert kwargs["json"]["flags"] == 4\n    assert kwargs["json"]["flags"] == 4
     assert len(kwargs["json"]["content"]) == 2000
 
 
@@ -179,7 +179,7 @@ def test_empty_secret_means_not_configured_not_an_error():
 def test_message_uses_compact_headline_summary_metadata_and_source_link():
     news = item(url="https://www.fincen.gov/news/news-releases/x",
                 summary="FinCEN published guidance for financial institutions.")
-    lines = format_message(news).split("\\n")
+    lines = format_message(news).split("\n")
     assert lines[0] == "**FinCEN issues digital asset guidance**"
     assert lines[1] == "FinCEN published guidance for financial institutions."
     assert lines[2] == "*FinCEN · 2026-09-27 · FinCEN, XRP*"
@@ -191,9 +191,9 @@ def test_message_uses_compact_headline_summary_metadata_and_source_link():
 
 def test_message_escapes_markdown_and_is_bounded():
     message = format_message(item(title="**bold** _x_ `code` | " + "long " * 200))
-    assert message.split("\n")[1].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
+    assert message.split("\n")[0].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
     assert len(message) < 2000
-    assert "…" in message.split("\n")[1]
+    assert "…" in message.split("\n")[0]
 
 
 # ---- publishing --------------------------------------------------------------------------
