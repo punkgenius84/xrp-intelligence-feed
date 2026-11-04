@@ -72,6 +72,7 @@ def test_send_posts_json_with_mentions_suppressed_and_content_truncated():
     assert url == URL
     assert kwargs["timeout"] == 20
     assert kwargs["json"]["allowed_mentions"] == {"parse": []}
+    assert kwargs["json"]["flags"] == 4
     assert len(kwargs["json"]["content"]) == 2000
 
 
@@ -176,22 +177,24 @@ def test_empty_secret_means_not_configured_not_an_error():
 
 # ---- message format ----------------------------------------------------------------------
 
-def test_message_leads_with_source_date_title_reason_and_score_last():
-    lines = format_message(item(url="https://www.fincen.gov/news/news-releases/x")).split("\n")
-    assert lines[0] == "**Source:** FinCEN · **Date:** 2026-09-27"
-    assert lines[1] == "**FinCEN issues digital asset guidance**"
-    assert lines[2] == "**Why this fired:** digital asset signal"
-    assert lines[3] == "**Entities:** FinCEN, XRP"
-    assert lines[4] == "**Score:** 50"
-    assert lines[-1] == "https://www.fincen.gov/news/news-releases/x"
-    assert len(lines) == 6
+def test_message_uses_compact_headline_summary_metadata_and_source_link():
+    news = item(url="https://www.fincen.gov/news/news-releases/x",
+                summary="FinCEN published guidance for financial institutions.")
+    lines = format_message(news).split("\n")
+    assert lines[0] == "**FinCEN issues digital asset guidance**"
+    assert lines[1] == "FinCEN published guidance for financial institutions."
+    assert lines[2] == "*FinCEN · 2026-09-27 · FinCEN, XRP*"
+    assert lines[3] == "[Read source](https://www.fincen.gov/news/news-releases/x)"
+    assert len(lines) == 4
+    assert "Why this fired" not in "\\n".join(lines)
+    assert "**Score:**" not in "\\n".join(lines)
 
 
 def test_message_escapes_markdown_and_is_bounded():
     message = format_message(item(title="**bold** _x_ `code` | " + "long " * 200))
-    assert message.split("\n")[1].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
+    assert message.split("\n")[0].startswith("**\\*\\*bold\\*\\* \\_x\\_ \\`code\\` \\|")
     assert len(message) < 2000
-    assert "…" in message.split("\n")[1]
+    assert "…" in message.split("\n")[0]
 
 
 # ---- publishing --------------------------------------------------------------------------
@@ -205,7 +208,7 @@ def test_cap_keeps_highest_scores_and_posts_oldest_first():
              item("Mid score story here", 60, 10), item("Also mid story here", 60, 2)]
     hook, lines = FakeHook(), []
     report = publish(items, live(3), webhook=hook, sleep=lambda _: None, out=lines.append)
-    order = [message.split("\n")[1] for message in hook.sent]
+    order = [message.split("\n")[0] for message in hook.sent]
     # Kept: Top (90) and both 60s, dropped: Low (40). Posted by publication time: minutes 2, 5, 10.
     assert order == ["**Also mid story here**", "**Top score story here**", "**Mid score story here**"]
     assert (report.posted, report.not_selected, report.failed) == (3, 1, 0)

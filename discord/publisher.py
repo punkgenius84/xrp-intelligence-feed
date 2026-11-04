@@ -80,21 +80,21 @@ def _clean(value: str, limit: int) -> str:
 
 
 def format_message(item: Any) -> str:
+    """Render a compact source-first post; keep scoring internals out of the channel."""
     when = _when(item).astimezone(timezone.utc).strftime("%Y-%m-%d")
-    source = _clean(item.source, 100) or "Unknown source"
-    lines = [
-        f"**Source:** {source} · **Date:** {when}",
-        f"**{_clean(item.title, 220)}**",
-        "**Why this fired:** " + (
-            _clean(item.score_reasons[0], 240)
-            if item.score_reasons
-            else "Matched configured relevance criteria."
-        ),
-    ]
+    source = _clean(item.source, 80) or "Unknown source"
+    title = _clean(item.title, 220) or "Untitled source item"
+    lines = [f"**{title}**"]
+    summary = _clean(getattr(item, "summary", "") or "", 360)
+    if summary:
+        lines.append(summary)
+    metadata = f"{source} · {when}"
     if item.detected_entities:
-        lines.append("**Entities:** " + _clean(", ".join(item.detected_entities[:6]), 120))
-    lines.append(f"**Score:** {item.relevance_score}")
-    lines.append(item.url.strip())  # last, so Discord unfurls the link preview
+        entities = _clean(", ".join(item.detected_entities[:4]), 100)
+        if entities:
+            metadata += f" · {entities}"
+    lines.append(f"*{metadata}*")
+    lines.append(f"[Read source]({item.url.strip()})")
     return "\n".join(lines)
 
 

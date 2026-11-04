@@ -92,6 +92,8 @@ class DiscordWebhook:
             "allowed_mentions": {
                 "parse": [],
             },
+            # Keep source links clickable without expanding large Google News/publisher embeds.
+            "flags": 4,
         }
 
         for attempt in range(2):
