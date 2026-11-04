@@ -37,7 +37,7 @@ def format_intelligence_event(
         f"**{_clean(event.event_type.replace('_', ' ').title(), 70)}**",
         _clean(event.summary, 420),
         f"**Why it matters:** {_clean(event.significance, 320)}",
-        f"*Status: {_clean(status, 32)}*",
+        f"**Status:** {_clean(status, 32)}",
     ]
 
     if event.entities:
