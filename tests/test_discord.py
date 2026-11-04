@@ -71,7 +71,7 @@ def test_send_posts_json_with_mentions_suppressed_and_content_truncated():
     url, kwargs = session.calls[0]
     assert url == URL
     assert kwargs["timeout"] == 20
-    assert kwargs["json"]["allowed_mentions"] == {"parse": []}
+    assert kwargs["json"]["allowed_mentions"] == {"parse": []}\n    assert kwargs["json"]["flags"] == 4
     assert len(kwargs["json"]["content"]) == 2000
 
 
