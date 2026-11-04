@@ -34,56 +34,45 @@ def format_intelligence_event(
 ) -> str:
     """Render an intelligence event for Discord without adding interpretation."""
     lines = [
-        f"**{_clean(event.event_type.replace('_', ' ').title(), 80)}**",
-        _clean(event.summary, 500),
-        f"**Significance:** {_clean(event.significance, 400)}",
-        f"**Status:** {_clean(status, 40)}",
+        f"**{_clean(event.event_type.replace('_', ' ').title(), 70)}**",
+        _clean(event.summary, 420),
+        f"**Why it matters:** {_clean(event.significance, 320)}",
+        f"*Status: {_clean(status, 32)}*",
     ]
 
     if event.entities:
         entities = sorted({value.strip() for value in event.entities if value.strip()}, key=str.casefold)
         if entities:
-            lines.append("**Entities:** " + _clean(", ".join(entities[:8]), 300))
+            lines.append("**Key entities:** " + _clean(", ".join(entities[:6]), 180))
 
     if event.claims:
-        lines.append("**Claims:**")
+        lines.append("**Grounded updates:**")
         for claim in event.claims[:MAX_CLAIMS]:
             certainty_value = str(claim.certainty or "").strip().casefold()
-            claim_text = _clean(claim.text, 300)
-            # "unknown" is missing metadata, not a useful confidence label.
-            # Keep the grounded claim visible without presenting that placeholder
-            # as if it were an assessed confidence level.
+            claim_text = _clean(claim.text, 240)
             if certainty_value and certainty_value != "unknown":
-                certainty = _clean(certainty_value, 30)
-                lines.append(f"• [{certainty}] {claim_text}")
+                lines.append(f"• *{_clean(certainty_value, 20)}* — {claim_text}")
             else:
                 lines.append(f"• {claim_text}")
 
     if event.conflicts:
-        lines.append("**Conflicts:**")
+        lines.append("**Conflicting reports:**")
         for conflict in event.conflicts[:MAX_CONFLICTS]:
-            lines.append(f"• {_clean(conflict, 300)}")
+            lines.append(f"• {_clean(conflict, 220)}")
 
     if event.uncertainties:
-        lines.append("**Uncertainties:**")
+        lines.append("**Still unclear:**")
         for uncertainty in event.uncertainties[:MAX_UNCERTAINTIES]:
-            lines.append(f"• {_clean(uncertainty, 300)}")
-
-    sources = _sources(event)
-    if sources:
-        lines.append("**Sources:** " + _clean(", ".join(sources[:MAX_EVIDENCE]), 300))
+            lines.append(f"• {_clean(uncertainty, 220)}")
 
     if event.evidence:
-        lines.append("**Evidence:**")
+        lines.append("**Sources:**")
         for evidence in event.evidence[:MAX_EVIDENCE]:
-            label = _clean(evidence.title, 180)
-            lines.append(f"• {_clean(evidence.source, 100)} — {label}: {evidence.url.strip()}")
-
-    if event.member_ids:
-        lines.append(f"**Independent members:** {len(event.member_ids)}")
+            label = _clean(evidence.title, 130) or _clean(evidence.source, 80)
+            lines.append(f"• [{label}]({evidence.url.strip()})")
 
     if superseded_by:
-        lines.append("**Replaced by:** " + _clean(", ".join(superseded_by[:3]), 180))
+        lines.append("**Updated by:** " + _clean(", ".join(superseded_by[:3]), 140))
 
     message = "\n".join(lines)
     return message[:MAX_INTELLIGENCE_MESSAGE_LENGTH]
