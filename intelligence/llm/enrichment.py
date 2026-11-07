@@ -55,7 +55,7 @@ _GROUNDING_STOPWORDS = {
     "how", "one", "two", "each", "some", "many", "more", "less", "such",
     "other", "another", "if", "not", "only", "rather", "than", "without",
     "through", "across", "following", "amid", "during", "over", "under",
-    "potentially", "potential", "relevant", "independent", "plausible", "possible",
+    "potentially", "potential", "relevant", "independent", "shared", "plausible", "possible",
     "likely", "important", "significant", "significance", "development",
     "disclosure", "filing", "reporting", "further", "broader", "overall",
     "current", "unclear", "unknown", "clear", "supported", "based",
@@ -251,7 +251,7 @@ def _validate_metadata_anchors(
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(source_text, anchor)
             and not (
-                not re.search(r"\\d", anchor)
+                not re.search(r"\d", anchor)
                 and _contains_anchor(publisher_text, anchor)
             )
             and not any(
