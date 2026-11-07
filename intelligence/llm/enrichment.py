@@ -78,6 +78,13 @@ def _claim_anchor_tokens(text: str) -> set[str]:
 # legal-name expansion as a factual anchor.
 _KNOWN_ACRONYM_EXPANSIONS = {
     "bny": ("the bank of new york mellon",),
+    "eth": ("ethereum",),
+    "btc": ("bitcoin",),
+    "sol": ("solana",),
+    "ada": ("cardano",),
+    "avax": ("avalanche",),
+    "pol": ("polygon",),
+    "matic": ("polygon",),
 }
 
 
@@ -88,25 +95,32 @@ def _normalize_source_anchored_acronym_expansions(
     source_text = " ".join(evidence_text.values()).lower()
     replacements = []
     for acronym, expansions in _KNOWN_ACRONYM_EXPANSIONS.items():
-        if not re.search(r"\b" + re.escape(acronym) + r"\b", source_text):
-            continue
+        acronym_present = re.search(r"\b" + re.escape(acronym) + r"\b", source_text) is not None
         for expansion in expansions:
-            if re.search(r"\b" + re.escape(expansion) + r"\b", source_text):
-                continue
-            replacements.append((expansion, acronym.upper()))
+            expansion_present = re.search(r"\b" + re.escape(expansion) + r"\b", source_text) is not None
+            if acronym_present and not expansion_present:
+                replacements.append((expansion, acronym.upper()))
+            elif expansion_present and not acronym_present:
+                replacements.append((acronym, expansion.title()))
 
     if not replacements:
         return analysis
 
     def normalize(value: str) -> str:
         result = value
-        for expansion, acronym in replacements:
-            pattern = re.compile(
-                r"\b" + re.escape(expansion) + r"\s*\(\s*"
-                + re.escape(acronym) + r"\s*\)",
-                flags=re.IGNORECASE,
+        for remove_value, keep_value in replacements:
+            patterns = (
+                re.compile(
+                    r"\b" + re.escape(remove_value) + r"\s*\(\s*"
+                    + re.escape(keep_value) + r"\s*\)", flags=re.IGNORECASE,
+                ),
+                re.compile(
+                    r"\b" + re.escape(keep_value) + r"\s*\(\s*"
+                    + re.escape(remove_value) + r"\s*\)", flags=re.IGNORECASE,
+                ),
             )
-            result = pattern.sub(acronym, result)
+            for pattern in patterns:
+                result = pattern.sub(keep_value, result)
         return result
 
     claims = [
