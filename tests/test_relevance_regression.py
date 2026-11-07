@@ -564,3 +564,21 @@ def test_secondary_crypto_institution_partnership_clears_relevance_gate():
     assert {"Circle", "Visa"} <= set(item.detected_entities)
     assert "institutional_digital_asset_payment" in item.relevance_categories
     assert score >= 30, f"material crypto-institution partnership should clear gate: {score}, {reasons}"
+
+def test_election_shift_with_crypto_market_structure_context_is_relevant_policy_news():
+    item = NewsItem(
+        title="Will the Democratic sweep cloud crypto market structure?",
+        summary="The U.S. midterm election outcome could reshape the path for the CLARITY Act and digital asset legislation.",
+        url="https://example.test/crypto-market-structure-election",
+        source="CoinDesk",
+        source_id="coindesk-xrpl-technical-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "legislative_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"election-driven crypto policy coverage should clear gate: {score}, {reasons}"
