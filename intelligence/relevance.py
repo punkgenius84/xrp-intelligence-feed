@@ -63,6 +63,13 @@ def _classify(item, combined: str) -> list[str]:
         "LMAX Group", "Securitize", "BitGo", "State Street", "Brevan Howard",
         "Kyobo Life Insurance", "Kbank", "Jeonbuk Bank", "CSD BR",
     })
+    partnership_action = len(entities) >= 2 and any(_contains(combined, term) for term in (
+        "partner to", "partner with", "partners with", "partners to",
+        "partnered with", "partnered to", "partnership with",
+        "strategic partnership with", "announces partnership with",
+        "announced partnership with", "collaborates with", "collaborated with",
+        "joins forces with",
+    ))
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "authorizes", "authorize", "authorizing", "authorized", "authorises", "authorise",
@@ -93,12 +100,12 @@ def _classify(item, combined: str) -> list[str]:
         "join", "targets 2030", "network buildout", "buildout target",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
-        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
+        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
         "collaborate", "collaboration", "connect", "connects", "connected", "connecting", "integrate", "integration",
         "roll out", "rolls out", "rolled out", "unveil", "unveils", "unveiled", "deploy", "deploys", "deployed",
         "go live", "goes live", "went live",
         "designation", "designations", "designates", "removal", "removals", "delisting",
-        "announcement", "announcements", "partnership", "partnerships",
+        "announcement", "announcements",
         "agreement", "agreements", "integration", "integrations", "issuance", "issuances",
         "progresses", "progressed", "progressing", "MVP implementation", "minimum viable product",
         "pilot", "pilots", "pilot program", "proof of concept", "proof-of-concept",
@@ -159,7 +166,7 @@ def _classify(item, combined: str) -> list[str]:
         "payments", "tokenization", "tokenisation", "settlement",
         "infrastructure", "prime brokerage", "reserve", "stablecoin",
     ))
-    if direct and action and digital_asset_topic and partnership_context:
+    if direct and institutional and action and digital_asset_topic and partnership_context:
         categories.append("direct_ripple_institutional_action")
 
     # Broader ecosystem coverage is entity- and action-gated. A crypto company
@@ -188,9 +195,8 @@ def _classify(item, combined: str) -> list[str]:
         "loses", "lost", "hacked", "exploited", "breached", "drained",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
-        "announces", "announced", "partner", "partners", "partnered",
-        "partnership", "partnerships", "collaboration", "collaborates",
-        "joins", "joined", "integrates", "integrated", "upgrades", "upgraded",
+        "announces", "announced", "partnered",
+        "integrates", "integrated", "upgrades", "upgraded",
         "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
         "issued", "expands", "expanded", "connects", "connected", "adds",
@@ -199,7 +205,7 @@ def _classify(item, combined: str) -> list[str]:
         "activates", "activated", "settles", "settled", "adopts", "adopted",
         "deploys", "deployed", "introduces", "introduced",
     )
-    crypto_ecosystem_action = any(
+    crypto_ecosystem_action = partnership_action or any(
         _contains(combined, term) for term in crypto_ecosystem_action_terms
     )
     # Securities language is only a crypto signal when the headline ties the
