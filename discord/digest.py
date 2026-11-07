@@ -135,7 +135,7 @@ def format_weekly_digest(
         if len(weekly) > MAX_ITEMS:
             lines.append(f"…and {len(weekly) - MAX_ITEMS} more news-feed posts.")
     else:
-        lines.append("**News-feed posts:** none.")
+        lines.append("No publishable items were posted during this period.")
 
     message = "\n".join(lines)
     if len(message) <= MAX_DIGEST_LENGTH:
