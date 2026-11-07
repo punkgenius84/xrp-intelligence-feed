@@ -216,6 +216,7 @@ def _validate_entities_grounding(
 
 def _metadata_anchor_tokens(text: str) -> set[str]:
     """Extract numeric facts and explicit acronyms without sentence-initial prose words."""
+    text = re.sub(r"\\b(?:source|article)\\s*[-#]?\\s*\\d+\\b", "", text, flags=re.IGNORECASE)
     return {
         token.lower().strip(".,:;!?()[]{}")
         for token in re.findall(
