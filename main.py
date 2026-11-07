@@ -18,7 +18,7 @@ from discord.publisher import (DEFAULT_MAX_AGE_DAYS, publish, settings_from_env,
                                split_future_dated, split_stale)
 from discord.intelligence import format_intelligence_event
 from discord.webhook import DiscordError, DiscordWebhook
-from intelligence.deduplication import deduplicate
+from intelligence.deduplication import deduplicate, reconsider_newly_qualified
 from intelligence.correlation import (build_correlation_card, correlate,
                                       filter_secondary_opinion_commentary,
                                       suppress_correlated_secondary_duplicates)
@@ -84,6 +84,7 @@ class PipelineResult:
     publishable: list | None = None
     intelligence_events: list = field(default_factory=list)
     intelligence_failures: list[str] = field(default_factory=list)
+    reconsidered: list = field(default_factory=list)
 
 
 class _PlainText(HTMLParser):
@@ -192,6 +193,7 @@ def run_pipeline(
     intelligence_state=None,
     intelligence_outbox=None,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
+    allow_reconsideration: bool = False,
 ) -> PipelineResult:
     from intelligence.configuration import (read_object, validate_keyword_groups,
                                             validate_thresholds, validate_word_groups)
@@ -320,6 +322,24 @@ def run_pipeline(
     # not made fresh or publishable by this audit.
     _score_observed_relevance(normalized, thresholds["publish_score"])
     fresh, seen = deduplicate(normalized, seen)
+    reconsidered = (
+        reconsider_newly_qualified(
+            normalized,
+            fresh,
+            correlation_state_value["cards"],
+            publish_score=thresholds["publish_score"],
+            max_age_days=max_age_days,
+        )
+        if allow_reconsideration else []
+    )
+    if reconsidered:
+        print(
+            f"Relevance reconsideration: released {len(reconsidered)} recent previously-seen "
+            f"candidate(s) that newly cleared score {thresholds['publish_score']}"
+        )
+        for item in reconsidered[:5]:
+            print(f"  reconsidered: [{item.relevance_score}] {item.title} — {item.source}")
+    processing_items = [*fresh, *reconsidered]
 
     # Refresh cards already in memory even when deduplication says an item is not fresh.
     # A stable candidate ID with a new content hash is an update to the same event, not
@@ -360,11 +380,11 @@ def run_pipeline(
     # Correlation is downstream of relevance scoring and never changes scores.
     # Delivery gates run in live and dry-run modes alike so previews reflect the
     # same stale-item, secondary-commentary, and duplicate rules as production.
-    correlate(fresh, history=list(correlation_state_value["cards"].values()))
+    correlate(processing_items, history=list(correlation_state_value["cards"].values()))
     buried_signals = detect_buried_signals(
-        fresh, publish_score=thresholds["publish_score"]
+        processing_items, publish_score=thresholds["publish_score"]
     )
-    publishable = [item for item in fresh if item.relevance_score >= thresholds["publish_score"]]
+    publishable = [item for item in processing_items if item.relevance_score >= thresholds["publish_score"]]
     publishable, held_commentary = filter_secondary_opinion_commentary(publishable)
     if held_commentary:
         print(
@@ -406,7 +426,7 @@ def run_pipeline(
             timeout=intelligence_config.timeout_seconds,
         )
         intelligence_events, intelligence_failures = enrich_clusters(
-            fresh,
+            processing_items,
             provider,
             intelligence_config,
             historical_events=(
@@ -416,7 +436,7 @@ def run_pipeline(
             ),
         )
         retry_ids = restore_failed_items_for_retry(
-            fresh, intelligence_events, intelligence_failures, seen, intelligence_config
+            processing_items, intelligence_events, intelligence_failures, seen, intelligence_config
         )
         if retry_ids:
             print(
@@ -445,7 +465,7 @@ def run_pipeline(
     # Persist only the thin, bounded correlation memory after enrichment. This must
     # succeed before the shared seen set is saved, so a failed memory write leaves
     # candidates eligible for pairing on the next run.
-    for item in fresh:
+    for item in processing_items:
         if item.source_id:
             card = build_correlation_card(item)
             JsonCorrelationState.upsert_card(
@@ -528,6 +548,7 @@ def run_pipeline(
         publishable,
         intelligence_events,
         intelligence_failures,
+        reconsidered,
     )
 
 
@@ -554,6 +575,7 @@ def collect_feed(discord_settings):
                     discovery_state=_NoSaveState(JsonDiscoveryState()),
                     correlation_state=_NoSaveState(JsonCorrelationState()),
                     intelligence_state=_NoSaveState(JsonIntelligenceState()),
+                    allow_reconsideration=False,
                 ),
                 None,
                 None,
@@ -568,7 +590,8 @@ def collect_feed(discord_settings):
             outbox_state=outbox_store,
             intelligence_outbox=intelligence_outbox_store,
             max_age_days=getattr(discord_settings, "max_age_days", DEFAULT_MAX_AGE_DAYS),
-        ) if outbox_store is not None else run_pipeline()
+            allow_reconsideration=True,
+        ) if outbox_store is not None else run_pipeline(allow_reconsideration=True)
         return result, outbox_store, intelligence_outbox_store
     except (
         StateFileError,
