@@ -599,3 +599,53 @@ def test_source_publisher_label_does_not_support_substantive_claims():
             ),
             FakeProvider(),
         )
+
+
+def test_entity_grounding_rejects_model_added_quantum_computing_entity():
+    source = NewsItem(
+        title="Coinbase says 99% of customer assets sit in cold storage after Binance breach",
+        url="https://example.test/coinbase-cold-storage",
+        source="Example",
+        source_id="example",
+        summary="Coinbase says 99% of customer assets are held in cold storage after a Binance security incident.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Coinbase reports cold storage.",'
+                '"significance":"The disclosure may influence institutional custody expectations.",'
+                '"entities":["Coinbase","Binance","quantum computing"],'
+                '"claims":[{"text":"Coinbase says 99% of customer assets are in cold storage.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="entity is not grounded"):
+        analyze_item(source, Provider())
+
+
+def test_metadata_grounding_rejects_unsupported_numeric_claim():
+    source = NewsItem(
+        title="Anchorage Digital seeks CFTC swap dealer registration",
+        url="https://example.test/anchorage-cftc",
+        source="Example",
+        source_id="example",
+        summary="Anchorage Digital seeks registration for its crypto options business.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"filing","event_summary":"Anchorage Digital seeks CFTC registration.",'
+                '"significance":"The filing covers a $450 million derivatives portfolio.",'
+                '"entities":["Anchorage Digital","CFTC"],'
+                '"claims":[{"text":"Anchorage Digital seeks registration.",'
+                '"evidence":["source title"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported factual anchor"):
+        analyze_item(source, Provider())

@@ -171,6 +171,55 @@ def _validate_claim_grounding(
     return replace(analysis, claims=repaired_claims)
 
 
+
+def _validate_entities_grounding(
+    analysis: IntelligenceAnalysis,
+    evidence_text: dict[str, str],
+) -> IntelligenceAnalysis:
+    """Reject model-added entities that do not appear in supplied article evidence."""
+    source_text = " ".join(
+        text for label, text in evidence_text.items()
+        if not label.endswith("publisher")
+    )
+    for entity in analysis.entities:
+        normalized = " ".join(entity.split())
+        if not normalized or not re.search(
+            r"(?<![a-z0-9])" + re.escape(normalized) + r"(?![a-z0-9])",
+            source_text,
+            flags=re.IGNORECASE,
+        ):
+            raise LLMError(
+                "LLM analysis rejected: entity is not grounded in article title/summary "
+                f"({entity!r})"
+            )
+    return analysis
+
+
+def _validate_metadata_anchors(
+    analysis: IntelligenceAnalysis,
+    evidence_text: dict[str, str],
+) -> IntelligenceAnalysis:
+    """Keep names, dates, tickers, and numeric facts in summaries/significance source-grounded."""
+    source_text = " ".join(
+        text for label, text in evidence_text.items()
+        if not label.endswith("publisher")
+    )
+    for field_name, value in (
+        ("event_summary", analysis.event_summary),
+        ("significance", analysis.significance),
+    ):
+        unsupported = [
+            anchor for anchor in sorted(_claim_anchor_tokens(value))
+            if not _contains_anchor(source_text, anchor)
+        ]
+        if unsupported:
+            raise LLMError(
+                "LLM analysis rejected: " + field_name
+                + " contains unsupported factual anchor(s): "
+                + ", ".join(repr(value) for value in unsupported[:8])
+            )
+    return analysis
+
 def _validate_event_metadata_grounding(
     analysis: IntelligenceAnalysis,
     source_text: str,
@@ -289,6 +338,8 @@ def analyze_item(
             analysis, evidence_text
         )
         analysis = _validate_claim_grounding(analysis, evidence_text)
+        analysis = _validate_entities_grounding(analysis, evidence_text)
+        analysis = _validate_metadata_anchors(analysis, evidence_text)
         analysis = _validate_event_metadata_grounding(
             analysis,
             f"{item.title}\n{item.summary}",
@@ -342,6 +393,8 @@ def analyze_cluster(
             analysis, evidence_text
         )
         analysis = _validate_claim_grounding(analysis, evidence_text)
+        analysis = _validate_entities_grounding(analysis, evidence_text)
+        analysis = _validate_metadata_anchors(analysis, evidence_text)
         source_text = combined_text
         analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
         return _validate_event_type(analysis, source_text)

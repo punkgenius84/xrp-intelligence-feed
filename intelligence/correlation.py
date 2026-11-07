@@ -47,6 +47,27 @@ def _card_day(card: dict) -> object:
     return value.astimezone(timezone.utc).date()
 
 
+
+def _incident_amounts(title: str) -> list[float]:
+    """Extract explicit million/billion amounts for matching incident follow-ups."""
+    values = []
+    for match in re.finditer(
+        r"\\$?\\s*(\\d+(?:\\.\\d+)?)\\s*(billion|bn|million|m)\\b",
+        title,
+        flags=re.IGNORECASE,
+    ):
+        amount = float(match.group(1))
+        unit = match.group(2).casefold()
+        values.append(amount * (1_000_000_000 if unit in {"billion", "bn"} else 1_000_000))
+    return values
+
+
+def _amounts_match(left: list[float], right: list[float], tolerance: float = 0.03) -> bool:
+    return any(
+        abs(a - b) / max(abs(a), abs(b), 1.0) <= tolerance
+        for a in left for b in right
+    )
+
 def _score_fields(
     *,
     left_source_id: str,
@@ -57,6 +78,8 @@ def _score_fields(
     right_entities: set[str],
     right_tokens: set[str],
     right_day: object,
+    left_amounts: list[float] | None = None,
+    right_amounts: list[float] | None = None,
 ) -> tuple[int, set[str]]:
     if left_source_id and left_source_id == right_source_id:
         return 0, set()
@@ -85,16 +108,19 @@ def _score_fields(
         # Extend the normal one-day window only when the same tracked crypto
         # entity, incident type, and distinctive numeric detail all recur.
         incident_terms = {"hack", "hacked", "exploit", "exploited", "breach", "breached"}
-        shared_incident_terms = overlap & incident_terms
-        shared_numeric_tokens = {token for token in overlap if token.isdigit()}
+        left_incident_terms = left_tokens & incident_terms
+        right_incident_terms = right_tokens & incident_terms
         crypto_incident_entities = {
             "Binance", "Coinbase", "Kraken", "Uniswap", "Aave",
         }
+        # Slightly different reported magnitudes can describe the same incident;
+        # materially different amounts should remain separate events.
         incident_follow_up = (
             day_gap <= 3
             and bool(shared_entities & crypto_incident_entities)
-            and bool(shared_incident_terms)
-            and len(shared_numeric_tokens) >= 2
+            and bool(left_incident_terms)
+            and bool(right_incident_terms)
+            and _amounts_match(left_amounts or [], right_amounts or [])
         )
         if not incident_follow_up:
             return 0, set()
@@ -126,6 +152,8 @@ def _candidate_score(left: NewsItem, right: NewsItem) -> int:
         right_entities=set(right.detected_entities),
         right_tokens=_tokens(right),
         right_day=_day(right),
+        left_amounts=_incident_amounts(left.title),
+        right_amounts=_incident_amounts(right.title),
     )
     return score
 
@@ -152,6 +180,7 @@ def _card_from_item(item: NewsItem) -> dict:
         "last_seen": item.collected_at.astimezone(timezone.utc).isoformat(),
         "source_quality": item.source_quality,
         "relevance_score": item.relevance_score,
+        "incident_amounts": _incident_amounts(item.title),
     }
 
 
@@ -242,6 +271,8 @@ def correlate(
                 right_entities=set(card["high_value_entities"]),
                 right_tokens=set(card["title_tokens"]),
                 right_day=_card_day(card),
+                left_amounts=_incident_amounts(item.title),
+                right_amounts=card.get("incident_amounts", []),
             )
             _apply_match(
                 item,

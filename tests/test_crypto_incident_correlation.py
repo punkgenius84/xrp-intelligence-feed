@@ -79,3 +79,43 @@ def test_ordinary_binance_updates_keep_the_one_day_correlation_window():
 
     assert second.correlated_candidate_ids == []
     assert first.correlated_candidate_ids == []
+
+
+def test_binance_follow_up_correlates_when_reported_amounts_differ_slightly():
+    first = make_item(
+        "first",
+        "Binance says withdrawals normalised after $6.4 billion hack",
+        1,
+        ["Binance"],
+    )
+    second = make_item(
+        "second",
+        "Coinbase says cold storage protects assets after Binance $6.3 billion breach",
+        3,
+        ["Binance", "Coinbase"],
+    )
+
+    correlate([first, second])
+
+    assert "second" in first.correlated_candidate_ids
+    assert "first" in second.correlated_candidate_ids
+
+
+def test_binance_follow_up_does_not_merge_a_materially_different_incident_amount():
+    first = make_item(
+        "first",
+        "Binance reports a $6.4 billion hack and opens phased withdrawals",
+        1,
+        ["Binance"],
+    )
+    second = make_item(
+        "second",
+        "Binance investigates a separate $2.1 billion exchange breach",
+        3,
+        ["Binance"],
+    )
+
+    correlate([first, second])
+
+    assert second.correlated_candidate_ids == []
+    assert first.correlated_candidate_ids == []
