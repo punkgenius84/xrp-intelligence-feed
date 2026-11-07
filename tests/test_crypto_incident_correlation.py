@@ -119,3 +119,26 @@ def test_binance_follow_up_does_not_merge_a_materially_different_incident_amount
 
     assert second.correlated_candidate_ids == []
     assert first.correlated_candidate_ids == []
+
+
+def test_incident_amount_correlation_survives_a_prior_run():
+    from intelligence.correlation import build_correlation_card
+
+    first = make_item(
+        "first",
+        "Binance reports a $6.4 billion hack and opens phased withdrawals",
+        1,
+        ["Binance"],
+    )
+    history_card = build_correlation_card(first)
+    follow_up = make_item(
+        "follow-up",
+        "Coinbase says cold storage protects assets after Binance $6.3 billion breach",
+        3,
+        ["Binance", "Coinbase"],
+    )
+
+    correlate([follow_up], history=[history_card])
+
+    assert "first" in follow_up.correlated_candidate_ids
+    assert follow_up.correlation_score >= 60
