@@ -89,3 +89,10 @@ def test_default_status_does_not_claim_event_is_active():
     message = format_intelligence_event(make_event())
     assert "**Status:** reported" in message
     assert "**Status:** active" not in message
+
+
+def test_partnership_uses_strategic_read_through_label():
+    event = replace(make_event(), event_type="partnership")
+    message = format_intelligence_event(event)
+    assert "**Strategic read-through:**" in message
+    assert "**Why it matters:**" not in message

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ _CARD_FIELDS = {
     "last_seen",
 }
 _CARD_METADATA_FIELDS = {"source_quality", "relevance_score"}
+_CARD_INCIDENT_FIELDS = {"incident_amounts"}
 
 
 class CorrelationStateError(RuntimeError):
@@ -72,7 +74,12 @@ class JsonCorrelationState:
                 not isinstance(candidate_id, str)
                 or not candidate_id
                 or not isinstance(card, dict)
-                or (set(card) != _CARD_FIELDS and set(card) != (_CARD_FIELDS | _CARD_METADATA_FIELDS))
+                or frozenset(card) not in {
+                    frozenset(_CARD_FIELDS),
+                    frozenset(_CARD_FIELDS | _CARD_METADATA_FIELDS),
+                    frozenset(_CARD_FIELDS | _CARD_INCIDENT_FIELDS),
+                    frozenset(_CARD_FIELDS | _CARD_METADATA_FIELDS | _CARD_INCIDENT_FIELDS),
+                }
                 or card.get("candidate_id") != candidate_id
                 or not isinstance(card["source_id"], str)
                 or not card["source_id"]
@@ -86,6 +93,10 @@ class JsonCorrelationState:
                 or ("source_quality" in card and card["source_quality"] not in {"primary", "high_signal", "discovery"})
                 or ("relevance_score" in card and (type(card["relevance_score"]) is not int or not 0 <= card["relevance_score"] <= 100))
                 or (("source_quality" in card) != ("relevance_score" in card))
+                or ("incident_amounts" in card and (
+                    not isinstance(card["incident_amounts"], list)
+                    or any(type(amount) not in {int, float} or not math.isfinite(amount) or amount <= 0 for amount in card["incident_amounts"])
+                ))
             ):
                 raise CorrelationStateError("Correlation state contains an invalid card")
 
@@ -168,6 +179,7 @@ class JsonCorrelationState:
         last_seen: datetime,
         source_quality: str = "discovery",
         relevance_score: int = 0,
+        incident_amounts: list[float] | None = None,
     ) -> None:
         if not candidate_id:
             raise ValueError("correlation card candidate_id cannot be empty")
@@ -183,6 +195,7 @@ class JsonCorrelationState:
             "last_seen": last_seen.astimezone(timezone.utc).isoformat(),
             "source_quality": source_quality,
             "relevance_score": relevance_score,
+            "incident_amounts": sorted(set(incident_amounts or [])),
         }
 
 

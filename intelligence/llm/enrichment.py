@@ -49,7 +49,16 @@ _GROUNDING_STOPWORDS = {
     "the", "this", "that", "these", "those", "both", "source", "sources",
     "report", "reports", "reported", "according", "after", "before", "during",
     "under", "from", "into", "with", "for", "and", "but", "new", "first",
-    "second", "third",
+    "second", "third", "it", "its", "they", "their", "them", "we", "our",
+    "could", "may", "might", "would", "should", "will", "can", "also",
+    "however", "because", "while", "which", "what", "when", "where", "who",
+    "how", "one", "two", "each", "some", "many", "more", "less", "such",
+    "other", "another", "if", "not", "only", "rather", "than", "without",
+    "through", "across", "following", "amid", "during", "over", "under",
+    "potentially", "potential", "relevant", "independent", "shared", "plausible", "possible",
+    "likely", "important", "significant", "significance", "development",
+    "disclosure", "filing", "reporting", "further", "broader", "overall",
+    "current", "unclear", "unknown", "clear", "supported", "based",
 }
 
 
@@ -73,6 +82,13 @@ def _claim_anchor_tokens(text: str) -> set[str]:
 # legal-name expansion as a factual anchor.
 _KNOWN_ACRONYM_EXPANSIONS = {
     "bny": ("the bank of new york mellon",),
+    "eth": ("ethereum",),
+    "btc": ("bitcoin",),
+    "sol": ("solana",),
+    "ada": ("cardano",),
+    "avax": ("avalanche",),
+    "pol": ("polygon",),
+    "matic": ("polygon",),
 }
 
 
@@ -83,25 +99,38 @@ def _normalize_source_anchored_acronym_expansions(
     source_text = " ".join(evidence_text.values()).lower()
     replacements = []
     for acronym, expansions in _KNOWN_ACRONYM_EXPANSIONS.items():
-        if not re.search(r"\b" + re.escape(acronym) + r"\b", source_text):
-            continue
+        acronym_present = re.search(r"\b" + re.escape(acronym) + r"\b", source_text) is not None
         for expansion in expansions:
-            if re.search(r"\b" + re.escape(expansion) + r"\b", source_text):
-                continue
-            replacements.append((expansion, acronym.upper()))
+            expansion_present = re.search(r"\b" + re.escape(expansion) + r"\b", source_text) is not None
+            if acronym_present and not expansion_present:
+                replacements.append((expansion, acronym.upper()))
+            elif expansion_present and not acronym_present:
+                replacements.append((acronym, expansion.title()))
 
     if not replacements:
         return analysis
 
     def normalize(value: str) -> str:
         result = value
-        for expansion, acronym in replacements:
-            pattern = re.compile(
-                r"\b" + re.escape(expansion) + r"\s*\(\s*"
-                + re.escape(acronym) + r"\s*\)",
+        for remove_value, keep_value in replacements:
+            patterns = (
+                re.compile(
+                    r"\b" + re.escape(remove_value) + r"\s*\(\s*"
+                    + re.escape(keep_value) + r"\s*\)", flags=re.IGNORECASE,
+                ),
+                re.compile(
+                    r"\b" + re.escape(keep_value) + r"\s*\(\s*"
+                    + re.escape(remove_value) + r"\s*\)", flags=re.IGNORECASE,
+                ),
+            )
+            for pattern in patterns:
+                result = pattern.sub(keep_value, result)
+            result = re.sub(
+                r"\b" + re.escape(remove_value) + r"\b",
+                keep_value,
+                result,
                 flags=re.IGNORECASE,
             )
-            result = pattern.sub(acronym, result)
         return result
 
     claims = [
@@ -170,6 +199,73 @@ def _validate_claim_grounding(
 
     return replace(analysis, claims=repaired_claims)
 
+
+
+def _validate_entities_grounding(
+    analysis: IntelligenceAnalysis,
+    evidence_text: dict[str, str],
+) -> IntelligenceAnalysis:
+    """Reject model-added entities that do not appear in supplied article evidence."""
+    source_text = " ".join(evidence_text.values())
+    for entity in analysis.entities:
+        normalized = " ".join(entity.split())
+        aliases = _DOMAIN_GROUNDING_ALIASES.get(normalized.casefold(), (normalized,))
+        if not normalized or not any(re.search(
+            r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])",
+            source_text,
+            flags=re.IGNORECASE,
+        ) for alias in aliases):
+            raise LLMError(
+                "LLM analysis rejected: entity is not grounded in article title/summary "
+                f"({entity!r})"
+            )
+    return analysis
+
+
+def _metadata_anchor_tokens(text: str) -> set[str]:
+    """Extract high-signal factual anchors while ignoring structural source labels."""
+    text = re.sub(r"\b(?:source|article)\s*[-#]?\s*\d+\b", "", text, flags=re.IGNORECASE)
+    return _claim_anchor_tokens(text)
+
+def _validate_metadata_anchors(
+    analysis: IntelligenceAnalysis,
+    evidence_text: dict[str, str],
+) -> IntelligenceAnalysis:
+    """Keep numerical facts and acronyms in summaries/significance source-grounded."""
+    source_text = " ".join(
+        text for label, text in evidence_text.items()
+        if not label.endswith("publisher")
+    )
+    publisher_text = " ".join(
+        text for label, text in evidence_text.items()
+        if label.endswith("publisher")
+    )
+    fields = [
+        ("event_summary", analysis.event_summary),
+        ("significance", analysis.significance),
+        *[(f"conflicts[{index}]", value) for index, value in enumerate(analysis.conflicts)],
+        *[(f"uncertainties[{index}]", value) for index, value in enumerate(analysis.uncertainties)],
+    ]
+    for field_name, value in fields:
+        unsupported = [
+            anchor for anchor in sorted(_metadata_anchor_tokens(value))
+            if not _contains_anchor(source_text, anchor)
+            and not (
+                not re.search(r"\d", anchor)
+                and _contains_anchor(publisher_text, anchor)
+            )
+            and not any(
+                _contains_anchor(source_text, alias)
+                for alias in _DOMAIN_GROUNDING_ALIASES.get(anchor, ())
+            )
+        ]
+        if unsupported:
+            raise LLMError(
+                "LLM analysis rejected: " + field_name
+                + " contains unsupported factual anchor(s): "
+                + ", ".join(repr(value) for value in unsupported[:8])
+            )
+    return analysis
 
 def _validate_event_metadata_grounding(
     analysis: IntelligenceAnalysis,
@@ -288,13 +384,14 @@ def analyze_item(
         analysis = _normalize_source_anchored_acronym_expansions(
             analysis, evidence_text
         )
-        analysis = _validate_claim_grounding(analysis, evidence_text)
+        source_text = f"{item.title}\n{item.summary}"
+        analysis = _validate_event_type(analysis, source_text)
         analysis = _validate_event_metadata_grounding(
-            analysis,
-            f"{item.title}\n{item.summary}",
-            historical_context,
+            analysis, source_text, historical_context,
         )
-        return _validate_event_type(analysis, f"{item.title}\n{item.summary}")
+        analysis = _validate_claim_grounding(analysis, evidence_text)
+        analysis = _validate_entities_grounding(analysis, evidence_text)
+        return _validate_metadata_anchors(analysis, evidence_text)
     except ValueError as exc:
         raise LLMError(f"LLM analysis rejected: {exc}") from exc
 
@@ -341,9 +438,11 @@ def analyze_cluster(
         analysis = _normalize_source_anchored_acronym_expansions(
             analysis, evidence_text
         )
-        analysis = _validate_claim_grounding(analysis, evidence_text)
         source_text = combined_text
+        analysis = _validate_event_type(analysis, source_text)
         analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
-        return _validate_event_type(analysis, source_text)
+        analysis = _validate_claim_grounding(analysis, evidence_text)
+        analysis = _validate_entities_grounding(analysis, evidence_text)
+        return _validate_metadata_anchors(analysis, evidence_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc

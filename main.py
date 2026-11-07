@@ -367,6 +367,7 @@ def run_pipeline(
                 ),
                 source_quality=item.source_quality,
                 relevance_score=item.relevance_score,
+                incident_amounts=card["incident_amounts"],
             )
         else:
             JsonCorrelationState.touch_card(

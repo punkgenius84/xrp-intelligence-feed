@@ -599,3 +599,104 @@ def test_source_publisher_label_does_not_support_substantive_claims():
             ),
             FakeProvider(),
         )
+
+
+def test_entity_grounding_rejects_model_added_quantum_computing_entity():
+    source = NewsItem(
+        title="Coinbase says 99% of customer assets sit in cold storage after Binance breach",
+        url="https://example.test/coinbase-cold-storage",
+        source="Example",
+        source_id="example",
+        summary="Coinbase says 99% of customer assets are held in cold storage after a Binance security incident.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Coinbase reports cold storage.",'
+                '"significance":"The disclosure may influence institutional custody expectations.",'
+                '"entities":["Coinbase","Binance","quantum computing"],'
+                '"claims":[{"text":"Coinbase says 99% of customer assets are in cold storage.",'
+                '"evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="entity is not grounded"):
+        analyze_item(source, Provider())
+
+
+def test_metadata_grounding_rejects_unsupported_numeric_claim():
+    source = NewsItem(
+        title="Anchorage Digital seeks CFTC swap dealer registration",
+        url="https://example.test/anchorage-cftc",
+        source="Example",
+        source_id="example",
+        summary="Anchorage Digital seeks registration for its crypto options business.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"filing","event_summary":"Anchorage Digital seeks CFTC registration.",'
+                '"significance":"The filing covers a $450 million derivatives portfolio.",'
+                '"entities":["Anchorage Digital","CFTC"],'
+                '"claims":[{"text":"Anchorage Digital seeks registration.",'
+                '"evidence":["source title"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported factual anchor"):
+        analyze_item(source, Provider())
+
+
+def test_prompt_requires_specific_mechanisms_and_next_signals_not_generic_filler():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert "concrete mechanism" in SYSTEM_PROMPT
+    assert "concrete next signal to watch" in SYSTEM_PROMPT
+    assert "do not substitute generic phrases" in SYSTEM_PROMPT.casefold()
+    assert "retain each exact report in" in SYSTEM_PROMPT
+
+
+def test_source_ticker_is_not_expanded_into_an_unsupported_entity_name():
+    from intelligence.llm.enrichment import _normalize_source_anchored_acronym_expansions
+
+    analysis = parse_analysis(
+        '{"event_type":"announcement","event_summary":"Bitmine adds ETH.",'
+        '"significance":"The reported purchase adds exposure to Ethereum.",'
+        '"entities":["ETH (Ethereum)"],'
+        '"claims":[{"text":"Bitmine adds ETH.","evidence":["source title"]}]}',
+        source_url="https://example.test/bitmine-eth",
+    )
+    normalized = _normalize_source_anchored_acronym_expansions(
+        analysis,
+        {"source title": "Bitmine adds 8,573 ETH", "source summary": "Bitmine adds 8,573 ETH."},
+    )
+
+    assert normalized.entities == ["ETH"]
+
+
+def test_metadata_grounding_rejects_unsupported_named_entity_in_significance():
+    source = NewsItem(
+        title="Coinbase reports customer assets in cold storage",
+        url="https://example.test/cold-storage",
+        source="Example",
+        source_id="example",
+        summary="Coinbase reports that customer assets are held in cold storage.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Coinbase reports cold storage.",'
+                '"significance":"Quantum computing creates a new custody threat.",'
+                '"entities":["Coinbase"],'
+                '"claims":[{"text":"Coinbase reports cold storage.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported factual anchor"):
+        analyze_item(source, Provider())

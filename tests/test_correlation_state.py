@@ -20,6 +20,7 @@ def _card(candidate_id, published_at=STAMP, last_seen=STAMP, source_id="sec"):
         "last_seen": last_seen.isoformat(),
         "source_quality": "primary",
         "relevance_score": 42,
+        "incident_amounts": [],
     }
 
 
@@ -181,3 +182,32 @@ def test_legacy_card_shape_loads_and_touch_upgrades_scoring_metadata(tmp_path):
     assert state["cards"]["legacy"]["source_quality"] == "primary"
     assert state["cards"]["legacy"]["relevance_score"] == 37
     assert store._validate(state) == state
+
+
+def test_incident_amounts_round_trip_in_correlation_memory(tmp_path):
+    store = JsonCorrelationState(tmp_path / "correlation.json")
+    state = store.load()
+    JsonCorrelationState.upsert_card(
+        state,
+        candidate_id="binance:incident",
+        source_id="binance-news",
+        published_at=STAMP,
+        high_value_entities=["Binance"],
+        title_tokens=["binance", "hack"],
+        content_hash="incident-hash",
+        last_seen=STAMP,
+        source_quality="high_signal",
+        relevance_score=72,
+        incident_amounts=[6_400_000_000.0],
+    )
+    store.save(state, now=STAMP)
+
+    loaded = store.load()
+    assert loaded["cards"]["binance:incident"]["incident_amounts"] == [6_400_000_000.0]
+
+
+def test_legacy_card_without_incident_amounts_remains_valid():
+    store = JsonCorrelationState()
+    legacy = _card("legacy")
+    legacy.pop("incident_amounts")
+    assert store._validate({"schema_version": 1, "cards": {"legacy": legacy}})
