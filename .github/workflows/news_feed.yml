@@ -19,7 +19,7 @@ on:
       dry_run:
         description: "Dry run: collect and analyze without posting to Discord or saving state"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -227,7 +227,7 @@ jobs:
           # Push-triggered runs are diagnostics only; scheduled/manual runs perform enrichment.
           # Scheduled and manual runs keep full intelligence enrichment enabled.
           INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}
-          # Scheduled runs publish fresh, validated intelligence. Manual runs publish only when dry_run is unchecked.
+          # Scheduled runs publish fresh, validated intelligence. Manual runs publish by default; select dry_run for diagnostics.
           INTELLIGENCE_PUBLISH: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && 'true' || 'false' }}
           INTELLIGENCE_TEST_ONLY: "false"
           # Analyze a wider candidate set so clustering can connect related developments beyond the top five.
