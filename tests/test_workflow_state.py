@@ -56,7 +56,7 @@ def test_state_restore_follows_tests_and_precedes_execution_without_dependency_c
     assert "requirements-dev.txt" not in contents
     assert "cache: pip" not in contents
 
-def test_workflow_skips_full_enrichment_on_push_but_keeps_scheduled_shadow_mode():
+def test_workflow_skips_full_enrichment_on_push_but_keeps_scheduled_live_mode():
     contents = WORKFLOW.read_text(encoding="utf-8")
     run = _step_block(contents, "run: python main.py")
     assert "INTELLIGENCE_ENABLED: ${{ github.event_name != 'push' }}" in run
