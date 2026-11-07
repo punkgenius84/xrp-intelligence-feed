@@ -104,12 +104,12 @@ def test_secondary_crypto_news_discovery_probes_are_restricted_and_selectively_e
         "theblock-google-news-discovery": "theblock.co",
         "blockworks-google-news-discovery": "blockworks.co",
         "dlnews-google-news-discovery": "dlnews.com",
+        "reuters-google-news-discovery": "reuters.com",
     }
+    enabled_media_sources = set(expected)
     for source_id, host in expected.items():
         source = by_id[source_id]
-        assert source["enabled"] is (
-            source_id in {"theblock-google-news-discovery", "coindesk-google-news-discovery"}
-        )
+        assert source["enabled"] is (source_id in enabled_media_sources)
         assert source["authority_tier"] == 2
         assert source["publisher_host"] == host
         assert validate_google_news_source(source) == source
@@ -276,3 +276,27 @@ def test_secondary_google_news_candidate_preserves_tier_two_source_quality():
     candidate = result.candidates[0]
     assert candidate.authority_tier == 2
     assert classify_source_quality(candidate) == "high_signal"
+
+def test_clarity_act_discovery_sources_are_restricted_to_official_legislative_publishers():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote_plus
+
+    configured = load_discovery_sources()
+    by_id = {item["source_id"]: item for item in configured}
+    expected = {
+        "lummis-clarity-google-news-discovery": ("lummis.senate.gov", "Senator Cynthia Lummis"),
+        "senate-banking-clarity-google-news-discovery": ("banking.senate.gov", "U.S. Senate Committee on Banking, Housing, and Urban Affairs"),
+        "senate-agriculture-clarity-google-news-discovery": ("agriculture.senate.gov", "U.S. Senate Committee on Agriculture, Nutrition, and Forestry"),
+        "house-financial-services-clarity-google-news-discovery": ("financialservices.house.gov", "U.S. House Committee on Financial Services"),
+    }
+    for source_id, (host, publisher) in expected.items():
+        source = by_id[source_id]
+        assert source["enabled"] is True
+        assert source["authority_tier"] == 1
+        assert source["publisher_host"] == host
+        assert source["publisher_name"] == publisher
+        assert validate_google_news_source(source) == source
+        query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+        assert query.startswith(f"site:{host} ")
+        assert "CLARITY Act" in query
+        assert "digital asset market structure" in query
