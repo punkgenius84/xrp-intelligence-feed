@@ -138,7 +138,10 @@ def _classify(item, combined: str) -> list[str]:
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "market structure", "crypto market structure", "digital asset market structure",
         "digital commodity", "digital commodities", "crypto legislation",
-    )) or bool(entities & crypto_ecosystem_entities)
+    )) or bool(entities & {
+        "Binance", "Kraken", "Uniswap", "Aave", "CoinDCX",
+        "MEXC Global", "Bitget", "OKX",
+    })
     legislative_topic = any(_contains(combined, phrase) for phrase in (
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "crypto market structure", "digital asset market structure",
