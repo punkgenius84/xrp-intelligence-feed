@@ -130,12 +130,15 @@ def reconsider_newly_qualified(
                 continue
         reconsidered.append(item)
 
-    return sorted(
-        reconsidered,
-        key=lambda item: (
-            -item.relevance_score,
-            -(item.published_at or item.collected_at).timestamp(),
-            item.title.casefold(),
-        ),
-    )
+    def rank(item: NewsItem) -> tuple[int, float, str]:
+        stamp = item.published_at or item.collected_at
+        if stamp is None:
+            timestamp = 0.0
+        else:
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            timestamp = stamp.timestamp()
+        return (-item.relevance_score, -timestamp, item.title.casefold())
+
+    return sorted(reconsidered, key=rank)
 
