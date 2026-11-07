@@ -663,7 +663,7 @@ def test_secondary_government_action_against_crypto_exchange_clears_gate():
 
 def test_exploratory_partnership_talks_are_early_relevance_signals():
     item = NewsItem(
-        title="Ripple in talks with a major Asian bank over potential stablecoin partnership",
+        title="Ripple in talks with Standard Chartered over potential stablecoin partnership",
         summary="The discussions may explore custody, tokenized deposits, and cross-border payment infrastructure; no agreement has been announced.",
         url="https://example.test/potential-partnership-talks",
         source="The Block",
