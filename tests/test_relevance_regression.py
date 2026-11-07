@@ -582,3 +582,62 @@ def test_election_shift_with_crypto_market_structure_context_is_relevant_policy_
 
     assert "legislative_digital_asset_action" in item.relevance_categories
     assert score >= 30, f"election-driven crypto policy coverage should clear gate: {score}, {reasons}"
+
+def test_secondary_payment_provider_crypto_transfer_halt_clears_relevance_gate():
+    item = NewsItem(
+        title="Nubank and Mercado Pago halt crypto transfers after provider disruption",
+        summary="Both financial platforms temporarily suspended cryptocurrency transfers while their external service provider investigates an outage.",
+        url="https://example.test/crypto-transfer-disruption",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Nubank", "Mercado Pago"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert score >= 30, f"material crypto payment disruption should clear gate: {score}, {reasons}"
+
+
+def test_secondary_government_crypto_policy_shift_clears_relevance_gate():
+    item = NewsItem(
+        title="Trump administration moves closer to allowing crypto in 401(k) retirement plans",
+        summary="The administration's policy change could expand access to digital assets in retirement accounts.",
+        url="https://example.test/crypto-retirement-policy",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Trump administration" in item.detected_entities
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material government crypto policy should clear gate: {score}, {reasons}"
+
+
+def test_secondary_tokenized_stock_rejection_by_crypto_exchange_clears_gate():
+    item = NewsItem(
+        title="Apple and Meta reject OKX tokenized stock plans",
+        summary="The proposal involved tokenized equities and digital-asset trading infrastructure.",
+        url="https://example.test/tokenized-stock-plan",
+        source="CoinDesk",
+        source_id="coindesk-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "OKX" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"material tokenized-equity development should clear gate: {score}, {reasons}"
