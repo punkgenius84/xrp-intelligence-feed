@@ -14,7 +14,7 @@ def test_main_catches_pipeline_value_error_like_registry_errors(monkeypatch):
         lambda: SimpleNamespace(dry_run=False),
     )
 
-    def fail():
+    def fail(*args, **kwargs):
         raise ValueError("bad discovery configuration")
 
     monkeypatch.setattr(main, "run_pipeline", fail)
@@ -30,7 +30,7 @@ def test_main_keeps_discovery_registry_errors_labeled_as_discovery_configuration
         lambda: SimpleNamespace(dry_run=False),
     )
 
-    def fail():
+    def fail(*args, **kwargs):
         raise main.DiscoveryRegistryError("bad discovery registry")
 
     monkeypatch.setattr(main, "run_pipeline", fail)
