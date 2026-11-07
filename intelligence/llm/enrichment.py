@@ -49,7 +49,12 @@ _GROUNDING_STOPWORDS = {
     "the", "this", "that", "these", "those", "both", "source", "sources",
     "report", "reports", "reported", "according", "after", "before", "during",
     "under", "from", "into", "with", "for", "and", "but", "new", "first",
-    "second", "third",
+    "second", "third", "it", "its", "they", "their", "them", "we", "our",
+    "could", "may", "might", "would", "should", "will", "can", "also",
+    "however", "because", "while", "which", "what", "when", "where", "who",
+    "how", "one", "two", "each", "some", "many", "more", "less", "such",
+    "other", "another", "if", "not", "only", "rather", "than", "without",
+    "through", "across", "following", "amid", "during", "over", "under",
 }
 
 

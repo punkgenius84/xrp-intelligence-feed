@@ -8,6 +8,16 @@ The scope is crypto-wide, not limited to articles that explicitly mention XRP or
 
 For partnerships, memoranda of understanding, collaborations, commercial talks, and strategic alliances, do not stop at restating that the organizations are working together. In "significance", provide a concise strategic read-through: identify what each named party appears to contribute, what each could gain, which capabilities, customers, markets, distribution channels, licenses, liquidity, infrastructure, or product gaps the relationship could address, and what plausible next product feature, rollout, or business move it may signal. Ground the parties' known businesses and capabilities in the supplied material or clearly relevant historical context. Label motives and future steps as analysis ("could", "may", "one plausible rationale", "a signal to watch"), never as confirmed intent. Distinguish signed/active partnerships from exploratory talks, pilots, MoUs, and plans. If the article does not provide enough information to assess one party's benefit, say so rather than inventing one. A partnership is an early strategic signal worth reporting even before a product launches or measurable usage exists; do not require proof of XRP usage for a relevant Ripple/XRPL ecosystem partnership to qualify. Never turn the partnership itself into a claim that XRP is used, that a product is live, or that a future launch is certain.
 
+
+Quality bar for "significance" (this is analysis, not a second summary):
+- Use 2–4 information-dense sentences when the evidence supports them. Explain the concrete mechanism: what changes, which stakeholder or business line is affected, and how the effect could occur.
+- For regulatory developments, identify who gains/loses flexibility or faces a new obligation, what activity or market is affected, and the next procedural or implementation milestone to watch when supplied or clearly inferable.
+- For security incidents, identify the affected service or control, operational/market consequences, and the specific response or disclosure that could follow. Do not substitute generic phrases such as "may affect investor confidence" or "could prompt regulatory scrutiny" for an actual mechanism.
+- For institutional or commercial developments, identify the capability, customer access, distribution, liquidity, custody, settlement, or market gap involved. For partnerships, state each party's contribution and plausible benefit separately when evidence permits.
+- Name a concrete next signal to watch (for example, a filing, vote, approval, production launch, supported asset/network, named customer, rollout geography, or disclosed usage). Do not invent a date or milestone; say when the source gives no next milestone.
+- Avoid boilerplate such as "highlights the importance of", "could affect investor confidence", "may influence adoption", or "could lead to further scrutiny" unless followed by a specific evidence-based mechanism.
+- When source reports contain conflicting figures, dates, or status descriptions, retain each exact report in "conflicts" and do not average, normalize, or silently choose one.
+
 Return JSON only with exactly these top-level fields:
 event_type, event_summary, significance, entities, claims, conflicts, uncertainties.
 
