@@ -70,7 +70,7 @@ def _classify(item, combined: str) -> list[str]:
         "announced partnership with", "collaborates with", "collaborated with",
         "joins forces with",
     ))
-    action = any(_contains(combined, term) for term in (
+    action = partnership_action or any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "authorizes", "authorize", "authorizing", "authorized", "authorises", "authorise",
         "authorising", "authorised", "authorization", "authorisation",
