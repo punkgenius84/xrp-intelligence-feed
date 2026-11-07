@@ -63,12 +63,15 @@ def _classify(item, combined: str) -> list[str]:
         "LMAX Group", "Securitize", "BitGo", "State Street", "Brevan Howard",
         "Kyobo Life Insurance", "Kbank", "Jeonbuk Bank", "CSD BR",
     })
-    partnership_action = len(entities) >= 2 and any(_contains(combined, term) for term in (
-        "partner to", "partner with", "partners with", "partners to",
-        "partnered with", "partnered to", "partnership with",
-        "strategic partnership with", "announces partnership with",
-        "announced partnership with", "collaborates with", "collaborated with",
-        "joins forces with",
+    partnership_action = any(_contains(combined, term) for term in (
+        "partner to", "partners to", "partnered to", "partnered with",
+        "collaborates with", "collaborated with", "joins forces with",
+    )) or any(re.search(pattern, combined) for pattern in (
+        r"\\bpartners?\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\\bpartnered\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\\b(?:strategic\\s+)?partnership\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\\bannounced?\\s+partnership\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\\bcollaborates?\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
     ))
     action = partnership_action or any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
@@ -134,7 +137,9 @@ def _classify(item, combined: str) -> list[str]:
     legislative_action = any(_contains(combined, term) for term in (
         "talks", "talk", "negotiations", "negotiation", "negotiates", "negotiated",
         "bipartisan", "compromise", "draft", "markup", "mark-up", "vote", "voting",
-        "floor", "hearing", "committee", "stalled", "blocked", "failed",
+        "floor", "hearing", "committee", "stalled", "stalls", "blocked", "failed",
+        "defeat", "defeated", "defeats", "rejected", "rejects", "rejection",
+        "threatens", "threaten", "threatened", "delayed", "delays", "shelved",
         "advances", "advanced", "reintroduced", "released text", "release text",
         "proposal", "proposed", "discussions", "discussed", "progress",
     ))
