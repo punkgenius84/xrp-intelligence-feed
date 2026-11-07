@@ -234,10 +234,13 @@ def _validate_metadata_anchors(
         text for label, text in evidence_text.items()
         if not label.endswith("publisher")
     )
-    for field_name, value in (
+    fields = [
         ("event_summary", analysis.event_summary),
         ("significance", analysis.significance),
-    ):
+        *[(f"conflicts[{index}]", value) for index, value in enumerate(analysis.conflicts)],
+        *[(f"uncertainties[{index}]", value) for index, value in enumerate(analysis.uncertainties)],
+    ]
+    for field_name, value in fields:
         unsupported = [
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(source_text, anchor)
