@@ -186,6 +186,25 @@
     ],
     "CSD BR": [
       "CSD BR"
+    ],
+    "Nubank": [
+      "Nubank",
+      "Nu Holdings"
+    ],
+    "Mercado Pago": [
+      "Mercado Pago",
+      "MercadoPago"
+    ],
+    "MEXC Global": [
+      "MEXC Global",
+      "MEXC"
+    ],
+    "Bitget": [
+      "Bitget"
+    ],
+    "OKX": [
+      "OKX",
+      "OKEx"
     ]
   },
   "regulators": {
@@ -255,7 +274,9 @@
     ],
     "Treasury": [
       "Treasury Department",
-      "U.S. Treasury"
+      "U.S. Treasury",
+      "US Treasury",
+      "Treasury"
     ],
     "DOJ": [
       "DOJ",
@@ -265,6 +286,10 @@
     "Government of Canada": [
       "Government of Canada",
       "Canada Gazette"
+    ],
+    "Trump administration": [
+      "Trump administration",
+      "Trump White House"
     ]
   },
   "finance": {
@@ -279,7 +304,11 @@
       "tokenized",
       "tokenised",
       "real world assets",
-      "RWA"
+      "RWA",
+      "tokenized stock",
+      "tokenized stocks",
+      "tokenised stock",
+      "tokenised stocks"
     ]
   }
 }
