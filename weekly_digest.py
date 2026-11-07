@@ -4,6 +4,7 @@ from discord.digest import format_weekly_digest
 from discord.publisher import settings_from_env
 from discord.webhook import DiscordError, DiscordWebhook
 from storage.delivery_history import JsonDeliveryHistory, DeliveryHistoryError
+from storage.intelligence_state import JsonIntelligenceState, IntelligenceStateError
 
 
 def main() -> None:
@@ -19,7 +20,13 @@ def main() -> None:
     except DeliveryHistoryError as exc:
         raise SystemExit(f"Weekly digest refused: {exc}") from exc
 
-    message = format_weekly_digest(history)
+    try:
+        intelligence_state = JsonIntelligenceState().load()
+    except IntelligenceStateError as exc:
+        raise SystemExit(f"Weekly digest refused: {exc}") from exc
+
+    intelligence_events = list(intelligence_state.get("events", {}).values())
+    message = format_weekly_digest(history, intelligence_events=intelligence_events)
     print(message)
 
     try:

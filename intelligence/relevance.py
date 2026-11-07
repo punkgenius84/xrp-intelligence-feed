@@ -54,9 +54,34 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
-    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
-    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund", "BlackRock"})
-    action = any(_contains(combined, term) for term in (
+    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada", "Trump administration"})
+    institutional = bool(entities & {
+        "Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS",
+        "J.P. Morgan", "BNY", "International Monetary Fund", "BlackRock",
+        "Standard Chartered", "Meritz Securities", "DriveWealth", "Cross River",
+        "Franklin Templeton", "Fidelity", "Goldman Sachs", "SoFi", "Robinhood",
+        "LMAX Group", "Securitize", "BitGo", "State Street", "Brevan Howard",
+        "Kyobo Life Insurance", "Kbank", "Jeonbuk Bank", "CSD BR",
+        "Nubank", "Mercado Pago",
+    })
+    partnership_action = any(_contains(combined, term) for term in (
+        "partner to", "partners to", "partnered to", "partnered with",
+        "collaborates with", "collaborated with", "joins forces with",
+        "talks to partner", "talks about a partnership", "talks over a partnership",
+        "discussing a partnership", "exploring a partnership",
+    )) or any(re.search(pattern, combined) for pattern in (
+        r"\bpartners?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bpartnered\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:strategic\s+)?partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bannounced?\s+partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bcollaborates?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:in\s+)?talks\s+(?:with|to)\s+[A-Z][A-Za-z0-9&.-]+(?:\s+[A-Z][A-Za-z0-9&.-]+){0,3}\s+(?:over|about|on|for)\s+(?:a\s+)?(?:potential\s+|possible\s+|strategic\s+)?partnership",
+        r"\b(?:discuss(?:es|ed|ing)?|explor(?:es|ed|ing)|consider(?:s|ed|ing))\s+(?:a\s+)?(?:potential\s+|possible\s+|strategic\s+)?partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:potential|possible)\s+partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:plans?|planned|planning)\s+to\s+partner\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:talks|discussions|negotiations)\s+(?:to\s+)?partner\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+    ))
+    action = partnership_action or any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "authorizes", "authorize", "authorizing", "authorized", "authorises", "authorise",
         "authorising", "authorised", "authorization", "authorisation",
@@ -72,6 +97,10 @@ def _classify(item, combined: str) -> list[str]:
         "repeals", "repeal", "repealing", "repealed",
         "suspends", "suspend", "suspending", "suspended",
         "halts", "halt", "halting", "halted",
+        "walks back", "walk back", "walked back",
+        "moves closer", "moving closer", "move closer",
+        "cuts off", "cut off", "rejects", "rejected", "reject",
+        "blocks", "block", "blocked", "bans", "ban", "banned",
         "stays", "stay", "staying", "stayed",
         "reinstates", "reinstate", "reinstating", "reinstated",
         "enacts", "enact", "enacting", "enacted",
@@ -86,17 +115,22 @@ def _classify(item, combined: str) -> list[str]:
         "join", "targets 2030", "network buildout", "buildout target",
         "enforcement", "rulemaking", "proposed rule", "final rule", "guidance",
         "settlement", "licenses", "licensing", "sanctions", "charges",
-        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partner", "partners", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
+        "launch", "launches", "launched", "launching", "expansion", "expands", "expanded", "expanding", "partnered", "joins", "joined", "join", "joining", "introduces", "introduced", "introducing", "opens", "opened", "opening", "targets", "targeted", "target",
         "collaborate", "collaboration", "connect", "connects", "connected", "connecting", "integrate", "integration",
         "roll out", "rolls out", "rolled out", "unveil", "unveils", "unveiled", "deploy", "deploys", "deployed",
         "go live", "goes live", "went live",
         "designation", "designations", "designates", "removal", "removals", "delisting",
-        "announcement", "announcements", "partnership", "partnerships",
+        "announcement", "announcements",
         "agreement", "agreements", "integration", "integrations", "issuance", "issuances",
         "progresses", "progressed", "progressing", "MVP implementation", "minimum viable product",
         "pilot", "pilots", "pilot program", "proof of concept", "proof-of-concept",
         "proposal", "proposals", "public hearing", "public comment", "request for comment", "requests comment",
     ))
+    crypto_ecosystem_entities = {
+        "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
+        "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
+        "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
+    }
     digital_asset_topic = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
         "CBDC", "central bank digital currency", "central bank digital currencies",
@@ -106,7 +140,39 @@ def _classify(item, combined: str) -> list[str]:
         "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
         "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA",
+        "crypto exchange", "crypto transfers", "tokenized stock", "tokenized stocks",
+        "tokenised stock", "tokenised stocks",
+        "CLARITY Act", "Digital Asset Market Clarity Act",
+        "market structure", "crypto market structure", "digital asset market structure",
+        "digital commodity", "digital commodities", "crypto legislation",
+    )) or bool(entities & {
+        "Binance", "Kraken", "Uniswap", "Aave", "CoinDCX",
+        "MEXC Global", "Bitget", "OKX",
+    })
+    legislative_topic = any(_contains(combined, phrase) for phrase in (
+        "CLARITY Act", "Digital Asset Market Clarity Act",
+        "crypto market structure", "digital asset market structure",
+        "market structure legislation", "market structure bill",
+        "digital asset bill", "crypto bill", "Digital Commodity Intermediaries Act",
+        "Responsible Financial Innovation Act", "FIT21",
     ))
+    legislative_action = any(_contains(combined, term) for term in (
+        "talks", "talk", "negotiations", "negotiation", "negotiates", "negotiated",
+        "bipartisan", "compromise", "draft", "markup", "mark-up", "vote", "voting",
+        "floor", "hearing", "committee", "stalled", "stalls", "blocked", "failed",
+        "defeat", "defeated", "defeats", "rejected", "rejects", "rejection",
+        "threatens", "threaten", "threatened", "delayed", "delays", "shelved",
+        "advances", "advanced", "reintroduced", "released text", "release text",
+        "proposal", "proposed", "discussions", "discussed", "progress",
+        "election", "elections", "midterm", "midterms", "congressional",
+        "congress", "senate", "house majority", "democratic sweep",
+        "republican sweep", "party control", "control of congress",
+        "control of the senate", "election results", "election outcome",
+        "political shift", "political control",
+    ))
+    if legislative_topic and legislative_action:
+        categories.append("legislative_digital_asset_action")
+
     payment_topic = any(_contains(combined, term) for term in (
         "payment", "payments", "cross-border settlement", "settlement",
     ))
@@ -127,14 +193,17 @@ def _classify(item, combined: str) -> list[str]:
         # link when the source only describes conventional payments.
         categories.append("institutional_payment_action")
 
+    partnership_context = any(_contains(combined, term) for term in (
+        "partner", "partnership", "collaboration", "integrat", "custody",
+        "payments", "tokenization", "tokenisation", "settlement",
+        "infrastructure", "prime brokerage", "reserve", "stablecoin",
+    ))
+    if direct and institutional and action and digital_asset_topic and partnership_context:
+        categories.append("direct_ripple_institutional_action")
+
     # Broader ecosystem coverage is entity- and action-gated. A crypto company
     # name alone is not enough: require a concrete action plus digital-asset,
     # payment, protocol, custody, reserve, sanctions, or investigative context.
-    crypto_ecosystem_entities = {
-        "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
-        "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
-        "Coinbase", "Chainlink", "CoinDCX",
-    }
     crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
     ecosystem_context = any(_contains(combined, term) for term in (
         "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
@@ -153,8 +222,11 @@ def _classify(item, combined: str) -> list[str]:
         "loses", "lost", "hacked", "exploited", "breached", "drained",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
-        "announces", "announced", "partnered", "integrates",
-        "integrated", "upgrades", "upgraded", "mints", "minted", "lists",
+        "announces", "announced", "partnered", "rejects", "rejected", "reject",
+        "blocks", "block", "blocked", "bans", "ban", "banned",
+        "halts", "halted", "suspends", "suspended",
+        "integrates", "integrated", "upgrades", "upgraded",
+        "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
         "issued", "expands", "expanded", "connects", "connected", "adds",
         "added", "opens", "opened", "releases", "released", "rolls out",
@@ -162,7 +234,7 @@ def _classify(item, combined: str) -> list[str]:
         "activates", "activated", "settles", "settled", "adopts", "adopted",
         "deploys", "deployed", "introduces", "introduced",
     )
-    crypto_ecosystem_action = any(
+    crypto_ecosystem_action = partnership_action or any(
         _contains(combined, term) for term in crypto_ecosystem_action_terms
     )
     # Securities language is only a crypto signal when the headline ties the
@@ -222,6 +294,8 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or "xrp_protocol_development" in categories
         or "xrp_ledger_tokenization_development" in categories
         or "crypto_ecosystem_action" in categories
+        or "legislative_digital_asset_action" in categories
+        or "direct_ripple_institutional_action" in categories
     )
 
     score = 0
@@ -259,11 +333,21 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         reasons.append(f"XRP Ledger tokenized fund/share development (+{points})")
         signals.append("topic:xrp_ledger_tokenization_development")
 
-    if "crypto_ecosystem_action" in categories:
+    action_bonus_categories = {
+        "crypto_ecosystem_action",
+        "relevant_regulatory_digital_asset_payments",
+        "government_digital_asset_action",
+        "institutional_digital_asset_payment",
+        "institutional_tokenization_action",
+        "legislative_digital_asset_action",
+        "direct_ripple_institutional_action",
+    }
+    matched_action_categories = action_bonus_categories.intersection(categories)
+    if matched_action_categories:
         points = weights["crypto_ecosystem_action_bonus"]
         score += points
-        reasons.append(f"material crypto ecosystem action (+{points})")
-        signals.append("topic:crypto_ecosystem_action")
+        reasons.append(f"material digital-asset ecosystem, institutional, partnership, or policy action (+{points})")
+        signals.extend(f"topic:{category}" for category in sorted(matched_action_categories))
 
     if topical and item.source_quality == "primary":
         points = weights["primary_source_bonus"]

@@ -75,3 +75,19 @@ def test_read_only_delivery_verification_never_runs_feed_or_publishes():
     workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
     for removed in ("verify_intelligence_test_result:", "VERIFY-INTELLIGENCE-DELIVERY", "publish_intelligence_test:", "POST-ONE-INTELLIGENCE-EVENT", "prepare_quarantined_intelligence_test.py", "verify_intelligence_test_result.py"):
         assert removed not in workflow
+
+def test_manual_production_dispatch_defaults_to_live_publishing():
+    workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
+    input_block = workflow.split("workflow_dispatch:", 1)[1].split("\npermissions:", 1)[0]
+    assert "dry_run:" in input_block
+    assert "default: false" in input_block
+    assert "INTELLIGENCE_PUBLISH:" in workflow
+    assert "DISCORD_DRY_RUN:" in workflow
+    assert "Manual runs publish by default" in workflow
+
+
+def test_scheduled_production_runs_are_explicitly_live():
+    workflow = (WORKFLOW_DIR / "news_feed.yml").read_text(encoding="utf-8")
+    assert "github.event_name == 'schedule'" in workflow
+    assert "INTELLIGENCE_PUBLISH:" in workflow and "github.event_name == 'schedule'" in workflow
+    assert "DISCORD_DRY_RUN:" in workflow and "github.event_name != 'schedule'" in workflow

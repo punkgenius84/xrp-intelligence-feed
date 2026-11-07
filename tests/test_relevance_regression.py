@@ -505,3 +505,177 @@ def test_franklin_templeton_fund_shares_on_xrpl_clear_gate_for_secondary_media()
     assert "xrp_ledger_tokenization_development" in item.relevance_categories
     assert score >= 30, f"material XRPL fund-share tokenization should clear gate: {score}, {reasons}"
     assert any("tokenized fund/share development" in reason for reason in reasons)
+
+def test_secondary_clarity_act_negotiation_coverage_clears_relevance_gate():
+    item = NewsItem(
+        title="Senate CLARITY Act negotiations resume as lawmakers debate digital asset market structure",
+        summary="Bipartisan talks continue over a crypto market structure bill and proposed digital asset legislation.",
+        url="https://example.test/clarity-act-negotiations",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "legislative_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material CLARITY Act coverage should clear gate: {score}, {reasons}"
+
+
+def test_secondary_institutional_partnership_coverage_clears_relevance_gate():
+    item = NewsItem(
+        title="Standard Chartered and Ripple partner to expand RLUSD custody and digital asset settlement",
+        summary="The institutions announced a strategic partnership covering stablecoin custody, payments infrastructure, and settlement.",
+        url="https://example.test/institutional-partnership",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Ripple", "Standard Chartered"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert "direct_ripple_institutional_action" in item.relevance_categories
+    assert score >= 30, f"material institutional partnership should clear gate: {score}, {reasons}"
+
+
+def test_secondary_crypto_institution_partnership_clears_relevance_gate():
+    item = NewsItem(
+        title="Circle and Visa partner to expand USDC stablecoin payments",
+        summary="The partnership connects digital asset settlement with Visa's global payments infrastructure.",
+        url="https://example.test/circle-visa-partnership",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Circle", "Visa"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert score >= 30, f"material crypto-institution partnership should clear gate: {score}, {reasons}"
+
+def test_election_shift_with_crypto_market_structure_context_is_relevant_policy_news():
+    item = NewsItem(
+        title="Will the Democratic sweep cloud crypto market structure?",
+        summary="The U.S. midterm election outcome could reshape the path for the CLARITY Act and digital asset legislation.",
+        url="https://example.test/crypto-market-structure-election",
+        source="CoinDesk",
+        source_id="coindesk-xrpl-technical-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "legislative_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"election-driven crypto policy coverage should clear gate: {score}, {reasons}"
+
+def test_secondary_payment_provider_crypto_transfer_halt_clears_relevance_gate():
+    item = NewsItem(
+        title="Nubank and Mercado Pago halt crypto transfers after provider disruption",
+        summary="Both financial platforms temporarily suspended cryptocurrency transfers while their external service provider investigates an outage.",
+        url="https://example.test/crypto-transfer-disruption",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Nubank", "Mercado Pago"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert score >= 30, f"material crypto payment disruption should clear gate: {score}, {reasons}"
+
+
+def test_secondary_government_crypto_policy_shift_clears_relevance_gate():
+    item = NewsItem(
+        title="Trump administration moves closer to allowing crypto in 401(k) retirement plans",
+        summary="The administration's policy change could expand access to digital assets in retirement accounts.",
+        url="https://example.test/crypto-retirement-policy",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Trump administration" in item.detected_entities
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material government crypto policy should clear gate: {score}, {reasons}"
+
+
+def test_secondary_tokenized_stock_rejection_by_crypto_exchange_clears_gate():
+    item = NewsItem(
+        title="Apple and Meta reject OKX tokenized stock plans",
+        summary="The proposal involved tokenized equities and digital-asset trading infrastructure.",
+        url="https://example.test/tokenized-stock-plan",
+        source="CoinDesk",
+        source_id="coindesk-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "OKX" in item.detected_entities
+    assert "crypto_ecosystem_action" in item.relevance_categories
+    assert score >= 30, f"material tokenized-equity development should clear gate: {score}, {reasons}"
+
+def test_secondary_government_action_against_crypto_exchange_clears_gate():
+    item = NewsItem(
+        title="Treasury cuts off MEXC Global over alleged illicit transactions",
+        summary="The U.S. Treasury took action against the crypto exchange over transactions linked to sanctioned jurisdictions.",
+        url="https://example.test/mexc-treasury-action",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Treasury", "MEXC Global"} <= set(item.detected_entities)
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material crypto exchange enforcement should clear gate: {score}, {reasons}"
+
+def test_exploratory_partnership_talks_are_early_relevance_signals():
+    item = NewsItem(
+        title="Ripple in talks with Standard Chartered over potential stablecoin partnership",
+        summary="The discussions may explore custody, tokenized deposits, and cross-border payment infrastructure; no agreement has been announced.",
+        url="https://example.test/potential-partnership-talks",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "direct_ripple_institutional_action" in item.relevance_categories
+    assert score >= 30, f"credible exploratory partnership talks should clear gate: {score}, {reasons}"
+

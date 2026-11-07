@@ -122,6 +122,89 @@
       "BlackRock",
       "BlackRock, Inc.",
       "iShares"
+    ],
+    "Standard Chartered": [
+      "Standard Chartered",
+      "Standard Chartered Bank"
+    ],
+    "Meritz Securities": [
+      "Meritz Securities",
+      "Meritz"
+    ],
+    "DriveWealth": [
+      "DriveWealth"
+    ],
+    "Cross River": [
+      "Cross River",
+      "Cross River Bank"
+    ],
+    "Franklin Templeton": [
+      "Franklin Templeton"
+    ],
+    "Fidelity": [
+      "Fidelity",
+      "Fidelity Investments"
+    ],
+    "Goldman Sachs": [
+      "Goldman Sachs"
+    ],
+    "SoFi": [
+      "SoFi",
+      "Social Finance"
+    ],
+    "Robinhood": [
+      "Robinhood",
+      "Robinhood Markets"
+    ],
+    "LMAX Group": [
+      "LMAX Group",
+      "LMAX"
+    ],
+    "Securitize": [
+      "Securitize"
+    ],
+    "BitGo": [
+      "BitGo"
+    ],
+    "State Street": [
+      "State Street",
+      "State Street Corporation"
+    ],
+    "Brevan Howard": [
+      "Brevan Howard"
+    ],
+    "Kyobo Life Insurance": [
+      "Kyobo Life Insurance",
+      "Kyobo Life"
+    ],
+    "Kbank": [
+      "Kbank",
+      "K Bank"
+    ],
+    "Jeonbuk Bank": [
+      "Jeonbuk Bank"
+    ],
+    "CSD BR": [
+      "CSD BR"
+    ],
+    "Nubank": [
+      "Nubank",
+      "Nu Holdings"
+    ],
+    "Mercado Pago": [
+      "Mercado Pago",
+      "MercadoPago"
+    ],
+    "MEXC Global": [
+      "MEXC Global",
+      "MEXC"
+    ],
+    "Bitget": [
+      "Bitget"
+    ],
+    "OKX": [
+      "OKX",
+      "OKEx"
     ]
   },
   "regulators": {
@@ -191,7 +274,9 @@
     ],
     "Treasury": [
       "Treasury Department",
-      "U.S. Treasury"
+      "U.S. Treasury",
+      "US Treasury",
+      "Treasury"
     ],
     "DOJ": [
       "DOJ",
@@ -201,6 +286,10 @@
     "Government of Canada": [
       "Government of Canada",
       "Canada Gazette"
+    ],
+    "Trump administration": [
+      "Trump administration",
+      "Trump White House"
     ]
   },
   "finance": {
@@ -215,7 +304,11 @@
       "tokenized",
       "tokenised",
       "real world assets",
-      "RWA"
+      "RWA",
+      "tokenized stock",
+      "tokenized stocks",
+      "tokenised stock",
+      "tokenised stocks"
     ]
   }
 }

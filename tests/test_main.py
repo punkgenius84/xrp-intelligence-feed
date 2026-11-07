@@ -14,7 +14,7 @@ def test_main_catches_pipeline_value_error_like_registry_errors(monkeypatch):
         lambda: SimpleNamespace(dry_run=False),
     )
 
-    def fail():
+    def fail(*args, **kwargs):
         raise ValueError("bad discovery configuration")
 
     monkeypatch.setattr(main, "run_pipeline", fail)
@@ -30,7 +30,7 @@ def test_main_keeps_discovery_registry_errors_labeled_as_discovery_configuration
         lambda: SimpleNamespace(dry_run=False),
     )
 
-    def fail():
+    def fail(*args, **kwargs):
         raise main.DiscoveryRegistryError("bad discovery registry")
 
     monkeypatch.setattr(main, "run_pipeline", fail)
@@ -640,7 +640,7 @@ def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monk
     from storage.correlation_state import JsonCorrelationState
     from storage.database import JsonState
 
-    stamp = datetime(2026, 10, 23, 12, tzinfo=timezone.utc)
+    stamp = datetime(2026, 11, 5, 12, tzinfo=timezone.utc)
     primary = NewsItem(
         title="MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
         url="https://www.mas.gov.sg/news/media-releases/2026/bloom",
@@ -677,8 +677,8 @@ def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monk
         title="Singapore, Malaysia and Thailand central banks expand cross-border stablecoin initiative involving Ripple, Visa and Mastercard - The Block",
         url="https://news.google.com/rss/articles/example",
         source="The Block",
-        published_at=datetime(2026, 10, 24, 10, tzinfo=timezone.utc),
-        collected_at=datetime(2026, 10, 24, 10, tzinfo=timezone.utc),
+        published_at=datetime(2026, 11, 6, 10, tzinfo=timezone.utc),
+        collected_at=datetime(2026, 11, 6, 10, tzinfo=timezone.utc),
         source_id="theblock-google-news-discovery",
         authority_tier=2,
         category="technology",

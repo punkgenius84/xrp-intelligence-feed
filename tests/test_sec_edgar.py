@@ -115,6 +115,11 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "theblock-google-news-discovery",
         "blockworks-google-news-discovery",
         "dlnews-google-news-discovery",
+        "lummis-clarity-google-news-discovery",
+        "senate-banking-clarity-google-news-discovery",
+        "senate-agriculture-clarity-google-news-discovery",
+        "house-financial-services-clarity-google-news-discovery",
+        "reuters-google-news-discovery",
         "sgpc-media-releases-api",
     }
 
