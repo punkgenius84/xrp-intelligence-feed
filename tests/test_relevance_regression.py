@@ -660,3 +660,22 @@ def test_secondary_government_action_against_crypto_exchange_clears_gate():
     assert {"Treasury", "MEXC Global"} <= set(item.detected_entities)
     assert "government_digital_asset_action" in item.relevance_categories
     assert score >= 30, f"material crypto exchange enforcement should clear gate: {score}, {reasons}"
+
+def test_exploratory_partnership_talks_are_early_relevance_signals():
+    item = NewsItem(
+        title="Ripple in talks with a major Asian bank over potential stablecoin partnership",
+        summary="The discussions may explore custody, tokenized deposits, and cross-border payment infrastructure; no agreement has been announced.",
+        url="https://example.test/potential-partnership-talks",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "direct_ripple_institutional_action" in item.relevance_categories
+    assert score >= 30, f"credible exploratory partnership talks should clear gate: {score}, {reasons}"
+
