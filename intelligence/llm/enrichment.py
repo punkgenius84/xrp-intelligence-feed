@@ -200,11 +200,22 @@ def _validate_entities_grounding(
     return analysis
 
 
+def _metadata_anchor_tokens(text: str) -> set[str]:
+    """Extract numeric facts and explicit acronyms without sentence-initial prose words."""
+    return {
+        token.lower().strip(".,:;!?()[]{}")
+        for token in re.findall(
+            r"\\$?\\d+(?:[,.]\\d+)*(?:%|[A-Za-z]+)?|\\b[A-Z]{2,}(?:-[A-Z]{2,})?\\b",
+            text,
+        )
+    }
+
+
 def _validate_metadata_anchors(
     analysis: IntelligenceAnalysis,
     evidence_text: dict[str, str],
 ) -> IntelligenceAnalysis:
-    """Keep names, dates, tickers, and numeric facts in summaries/significance source-grounded."""
+    """Keep numerical facts and acronyms in summaries/significance source-grounded."""
     source_text = " ".join(
         text for label, text in evidence_text.items()
         if not label.endswith("publisher")
@@ -214,7 +225,7 @@ def _validate_metadata_anchors(
         ("significance", analysis.significance),
     ):
         unsupported = [
-            anchor for anchor in sorted(_claim_anchor_tokens(value))
+            anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(source_text, anchor)
         ]
         if unsupported:
