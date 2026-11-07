@@ -549,7 +549,6 @@ def run_pipeline(
         intelligence_events,
         intelligence_failures,
         reconsidered,
-        reconsidered,
     )
 
 
