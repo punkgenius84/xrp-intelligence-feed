@@ -206,17 +206,15 @@ def _validate_entities_grounding(
     evidence_text: dict[str, str],
 ) -> IntelligenceAnalysis:
     """Reject model-added entities that do not appear in supplied article evidence."""
-    source_text = " ".join(
-        text for label, text in evidence_text.items()
-        if not label.endswith("publisher")
-    )
+    source_text = " ".join(evidence_text.values())
     for entity in analysis.entities:
         normalized = " ".join(entity.split())
-        if not normalized or not re.search(
-            r"(?<![a-z0-9])" + re.escape(normalized) + r"(?![a-z0-9])",
+        aliases = _DOMAIN_GROUNDING_ALIASES.get(normalized.casefold(), (normalized,))
+        if not normalized or not any(re.search(
+            r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])",
             source_text,
             flags=re.IGNORECASE,
-        ):
+        ) for alias in aliases):
             raise LLMError(
                 "LLM analysis rejected: entity is not grounded in article title/summary "
                 f"({entity!r})"
@@ -248,6 +246,10 @@ def _validate_metadata_anchors(
         unsupported = [
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(source_text, anchor)
+            and not any(
+                _contains_anchor(source_text, alias)
+                for alias in _DOMAIN_GROUNDING_ALIASES.get(anchor, ())
+            )
         ]
         if unsupported:
             raise LLMError(
@@ -374,15 +376,14 @@ def analyze_item(
         analysis = _normalize_source_anchored_acronym_expansions(
             analysis, evidence_text
         )
+        source_text = f"{item.title}\n{item.summary}"
+        analysis = _validate_event_type(analysis, source_text)
+        analysis = _validate_event_metadata_grounding(
+            analysis, source_text, historical_context,
+        )
         analysis = _validate_claim_grounding(analysis, evidence_text)
         analysis = _validate_entities_grounding(analysis, evidence_text)
-        analysis = _validate_metadata_anchors(analysis, evidence_text)
-        analysis = _validate_event_metadata_grounding(
-            analysis,
-            f"{item.title}\n{item.summary}",
-            historical_context,
-        )
-        return _validate_event_type(analysis, f"{item.title}\n{item.summary}")
+        return _validate_metadata_anchors(analysis, evidence_text)
     except ValueError as exc:
         raise LLMError(f"LLM analysis rejected: {exc}") from exc
 
@@ -429,11 +430,11 @@ def analyze_cluster(
         analysis = _normalize_source_anchored_acronym_expansions(
             analysis, evidence_text
         )
+        source_text = combined_text
+        analysis = _validate_event_type(analysis, source_text)
+        analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
         analysis = _validate_claim_grounding(analysis, evidence_text)
         analysis = _validate_entities_grounding(analysis, evidence_text)
-        analysis = _validate_metadata_anchors(analysis, evidence_text)
-        source_text = combined_text
-        analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
-        return _validate_event_type(analysis, source_text)
+        return _validate_metadata_anchors(analysis, evidence_text)
     except ValueError as exc:
         raise LLMError(f"LLM cluster analysis rejected: {exc}") from exc

@@ -305,6 +305,10 @@ def test_cluster_enrichment_creates_one_event_with_all_evidence():
     second.source_id = "source-b"
     first.source = "Source A"
     second.source = "Source B"
+    first.title = "Ripple and DBS announce institutional payments partnership"
+    second.title = "DBS confirms partnership with Ripple for institutional payments"
+    first.summary = "Ripple and DBS announced an institutional payments partnership."
+    second.summary = "DBS and Ripple announced an institutional payments partnership."
     first.detected_entities = ["Ripple", "DBS"]
     second.detected_entities = ["Ripple", "DBS"]
     first.correlated_candidate_ids = ["b"]
