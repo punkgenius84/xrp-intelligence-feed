@@ -658,3 +658,21 @@ def test_prompt_requires_specific_mechanisms_and_next_signals_not_generic_filler
     assert "concrete next signal to watch" in SYSTEM_PROMPT
     assert "do not substitute generic phrases" in SYSTEM_PROMPT
     assert "retain each exact report in" in SYSTEM_PROMPT
+
+
+def test_source_ticker_is_not_expanded_into_an_unsupported_entity_name():
+    from intelligence.llm.enrichment import _normalize_source_anchored_acronym_expansions
+
+    analysis = parse_analysis(
+        '{"event_type":"announcement","event_summary":"Bitmine adds ETH.",'
+        '"significance":"The reported purchase adds exposure to Ethereum.",'
+        '"entities":["ETH (Ethereum)"],'
+        '"claims":[{"text":"Bitmine adds ETH.","evidence":["source title"]}]}',
+        source_url="https://example.test/bitmine-eth",
+    )
+    normalized = _normalize_source_anchored_acronym_expansions(
+        analysis,
+        {"source title": "Bitmine adds 8,573 ETH", "source summary": "Bitmine adds 8,573 ETH."},
+    )
+
+    assert normalized.entities == ["ETH"]
