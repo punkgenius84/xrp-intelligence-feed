@@ -318,8 +318,8 @@ def run_pipeline(
 
     # Score every currently observed candidate before seen-state filtering so a
     # run with New: 0 can still tell us whether discovery is finding relevant news.
-    # This is diagnostic only: previously seen, duplicate, or stale candidates are
-    # not made fresh or publishable by this audit.
+    # The audit itself is diagnostic; a separate 72-hour threshold-crossing check
+    # below can safely reconsider recent seen items after scoring logic changes.
     _score_observed_relevance(normalized, thresholds["publish_score"])
     fresh, seen = deduplicate(normalized, seen)
     reconsidered = (
@@ -549,6 +549,7 @@ def run_pipeline(
         intelligence_events,
         intelligence_failures,
         reconsidered,
+        reconsidered,
     )
 
 
@@ -657,7 +658,8 @@ def score_feed(result: PipelineResult) -> list:
         read_object("config/thresholds.json", "thresholds")
     )["publish_score"]
     relevant = result.publishable if result.publishable is not None else [
-        item for item in result.fresh if item.relevance_score >= publish_score
+        item for item in [*result.fresh, *result.reconsidered]
+        if item.relevance_score >= publish_score
     ]
 
     collected, fresh = result.collected, result.fresh
@@ -678,14 +680,15 @@ def score_feed(result: PipelineResult) -> list:
         selected_count = len(select_items(processing_items, intelligence_config))
         print(
             "Intelligence eligibility: "
-            f"{len(fresh)} fresh candidates; {eligible_count} meet minimum relevance "
+            f"{len(fresh)} fresh + {len(reconsidered)} reconsidered candidates; "
+            f"{eligible_count} meet minimum relevance "
             f"score {intelligence_config.min_relevance_score}; "
             f"{selected_count} selected (limit {intelligence_config.max_items_per_run})"
         )
         if not processing_items:
-            print("Intelligence note: no fresh candidates were available for enrichment this run.")
+            print("Intelligence note: no new or reconsidered candidates were available for enrichment this run.")
         elif not eligible_count:
-            print("Intelligence note: fresh candidates existed, but none met the configured minimum relevance score.")
+            print("Intelligence note: candidates existed, but none met the configured minimum relevance score.")
 
         below_minimum = sorted(
             (
