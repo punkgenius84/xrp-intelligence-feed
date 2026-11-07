@@ -142,6 +142,11 @@ def _classify(item, combined: str) -> list[str]:
         "threatens", "threaten", "threatened", "delayed", "delays", "shelved",
         "advances", "advanced", "reintroduced", "released text", "release text",
         "proposal", "proposed", "discussions", "discussed", "progress",
+        "election", "elections", "midterm", "midterms", "congressional",
+        "congress", "senate", "house majority", "democratic sweep",
+        "republican sweep", "party control", "control of congress",
+        "control of the senate", "election results", "election outcome",
+        "political shift", "political control",
     ))
     if legislative_topic and legislative_action:
         categories.append("legislative_digital_asset_action")
