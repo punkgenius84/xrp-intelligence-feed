@@ -677,17 +677,22 @@ def score_feed(result: PipelineResult) -> list:
             for item in processing_items
         )
         selected_count = len(select_items(processing_items, intelligence_config))
+        eligibility_label = f"{len(fresh)} fresh candidates"
+        if reconsidered:
+            eligibility_label += f" + {len(reconsidered)} reconsidered candidates"
         print(
-            "Intelligence eligibility: "
-            f"{len(fresh)} fresh + {len(reconsidered)} reconsidered candidates; "
+            f"Intelligence eligibility: {eligibility_label}; "
             f"{eligible_count} meet minimum relevance "
             f"score {intelligence_config.min_relevance_score}; "
             f"{selected_count} selected (limit {intelligence_config.max_items_per_run})"
         )
         if not processing_items:
-            print("Intelligence note: no new or reconsidered candidates were available for enrichment this run.")
+            print("Intelligence note: no fresh candidates were available for enrichment this run.")
         elif not eligible_count:
-            print("Intelligence note: candidates existed, but none met the configured minimum relevance score.")
+            if reconsidered:
+                print("Intelligence note: new or reconsidered candidates existed, but none met the configured minimum relevance score.")
+            else:
+                print("Intelligence note: fresh candidates existed, but none met the configured minimum relevance score.")
 
         below_minimum = sorted(
             (
