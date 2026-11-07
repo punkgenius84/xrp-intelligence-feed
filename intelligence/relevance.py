@@ -93,7 +93,7 @@ def _classify(item, combined: str) -> list[str]:
         "walks back", "walk back", "walked back",
         "moves closer", "moving closer", "move closer",
         "cuts off", "cut off", "rejects", "rejected", "reject",
-        "blocks", "block", "blocked",
+        "blocks", "block", "blocked", "bans", "ban", "banned",
         "stays", "stay", "staying", "stayed",
         "reinstates", "reinstate", "reinstating", "reinstated",
         "enacts", "enact", "enacting", "enacted",
@@ -119,6 +119,11 @@ def _classify(item, combined: str) -> list[str]:
         "pilot", "pilots", "pilot program", "proof of concept", "proof-of-concept",
         "proposal", "proposals", "public hearing", "public comment", "request for comment", "requests comment",
     ))
+    crypto_ecosystem_entities = {
+        "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
+        "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
+        "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
+    }
     digital_asset_topic = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
         "CBDC", "central bank digital currency", "central bank digital currencies",
@@ -133,7 +138,7 @@ def _classify(item, combined: str) -> list[str]:
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "market structure", "crypto market structure", "digital asset market structure",
         "digital commodity", "digital commodities", "crypto legislation",
-    ))
+    )) or bool(entities & crypto_ecosystem_entities)
     legislative_topic = any(_contains(combined, phrase) for phrase in (
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "crypto market structure", "digital asset market structure",
@@ -189,11 +194,6 @@ def _classify(item, combined: str) -> list[str]:
     # Broader ecosystem coverage is entity- and action-gated. A crypto company
     # name alone is not enough: require a concrete action plus digital-asset,
     # payment, protocol, custody, reserve, sanctions, or investigative context.
-    crypto_ecosystem_entities = {
-        "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
-        "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
-        "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
-    }
     crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
     ecosystem_context = any(_contains(combined, term) for term in (
         "crypto", "cryptocurrency", "digital asset", "stablecoin", "USDT", "USDC",
@@ -213,7 +213,8 @@ def _classify(item, combined: str) -> list[str]:
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
         "announces", "announced", "partnered", "rejects", "rejected", "reject",
-        "blocks", "blocked", "halts", "halted", "suspends", "suspended",
+        "blocks", "block", "blocked", "bans", "ban", "banned",
+        "halts", "halted", "suspends", "suspended",
         "integrates", "integrated", "upgrades", "upgraded",
         "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
