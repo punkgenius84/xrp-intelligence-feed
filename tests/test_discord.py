@@ -327,7 +327,7 @@ def test_main_rejects_bad_discord_settings_before_collecting_anything(monkeypatc
     (DiscoveryRegistryError("bad discovery entry"), "Discovery configuration error: bad discovery entry"),
 ])
 def test_main_turns_config_errors_into_clean_exits(monkeypatch, error, message):
-    def boom():
+    def boom(*args, **kwargs):
         raise error
 
     monkeypatch.setattr(main, "run_pipeline", boom)
