@@ -661,32 +661,35 @@ def score_feed(result: PipelineResult) -> list:
     ]
 
     collected, fresh = result.collected, result.fresh
+    reconsidered = result.reconsidered
+    processing_items = [*fresh, *reconsidered]
     buried_signals = result.buried_signals
     print(
-        f"Collected: {len(collected)} | New: {len(fresh)} | Relevant: {len(relevant)} "
-        f"| Buried signals: {len(buried_signals)} | Intelligence events: {len(result.intelligence_events)}"
+        f"Collected: {len(collected)} | New: {len(fresh)} | Reconsidered: {len(reconsidered)} "
+        f"| Relevant: {len(relevant)} | Buried signals: {len(buried_signals)} "
+        f"| Intelligence events: {len(result.intelligence_events)}"
     )
     intelligence_config = load_intelligence_config()
     if intelligence_config.enabled:
         eligible_count = sum(
             item.relevance_score >= intelligence_config.min_relevance_score
-            for item in fresh
+            for item in processing_items
         )
-        selected_count = len(select_items(fresh, intelligence_config))
+        selected_count = len(select_items(processing_items, intelligence_config))
         print(
             "Intelligence eligibility: "
             f"{len(fresh)} fresh candidates; {eligible_count} meet minimum relevance "
             f"score {intelligence_config.min_relevance_score}; "
             f"{selected_count} selected (limit {intelligence_config.max_items_per_run})"
         )
-        if not fresh:
+        if not processing_items:
             print("Intelligence note: no fresh candidates were available for enrichment this run.")
         elif not eligible_count:
             print("Intelligence note: fresh candidates existed, but none met the configured minimum relevance score.")
 
         below_minimum = sorted(
             (
-                item for item in fresh
+                item for item in processing_items
                 if item.relevance_score < intelligence_config.min_relevance_score
             ),
             key=lambda item: (-item.relevance_score, item.title.casefold()),
@@ -706,7 +709,7 @@ def score_feed(result: PipelineResult) -> list:
     # rather than by blindly lowering the publication threshold.
     if not intelligence_config.enabled:
         below_publish = sorted(
-            (item for item in fresh if item.relevance_score < publish_score),
+            (item for item in processing_items if item.relevance_score < publish_score),
             key=lambda item: (-item.relevance_score, item.title.casefold()),
         )
         if below_publish:
