@@ -205,7 +205,7 @@ def _metadata_anchor_tokens(text: str) -> set[str]:
     return {
         token.lower().strip(".,:;!?()[]{}")
         for token in re.findall(
-            r"\\$?\\d+(?:[,.]\\d+)*(?:%|[A-Za-z]+)?|\\b[A-Z]{2,}(?:-[A-Z]{2,})?\\b",
+            r"\$?\d+(?:[,.]\d+)*(?:%|[A-Za-z]+)?|\b[A-Z]{2,}(?:-[A-Z]{2,})?\b",
             text,
         )
     }
