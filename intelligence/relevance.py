@@ -67,12 +67,19 @@ def _classify(item, combined: str) -> list[str]:
     partnership_action = any(_contains(combined, term) for term in (
         "partner to", "partners to", "partnered to", "partnered with",
         "collaborates with", "collaborated with", "joins forces with",
+        "talks to partner", "talks about a partnership", "talks over a partnership",
+        "discussing a partnership", "exploring a partnership",
     )) or any(re.search(pattern, combined) for pattern in (
         r"\bpartners?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
         r"\bpartnered\s+with\s+[A-Z][A-Za-z0-9&.-]+",
         r"\b(?:strategic\s+)?partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
         r"\bannounced?\s+partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
         r"\bcollaborates?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:in\s+)?talks\s+(?:with|to)\s+[A-Z][A-Za-z0-9&.-]+(?:\s+[A-Z][A-Za-z0-9&.-]+){0,3}\s+(?:over|about|on|for)\s+(?:a\s+)?(?:potential\s+|possible\s+|strategic\s+)?partnership",
+        r"\b(?:discuss(?:es|ed|ing)?|explor(?:es|ed|ing)|consider(?:s|ed|ing))\s+(?:a\s+)?(?:potential\s+|possible\s+|strategic\s+)?partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:potential|possible)\s+partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:plans?|planned|planning)\s+to\s+partner\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:talks|discussions|negotiations)\s+(?:to\s+)?partner\s+with\s+[A-Z][A-Za-z0-9&.-]+",
     ))
     action = partnership_action or any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
