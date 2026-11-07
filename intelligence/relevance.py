@@ -55,7 +55,14 @@ def _classify(item, combined: str) -> list[str]:
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
     government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
-    institutional = bool(entities & {"Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS", "J.P. Morgan", "BNY", "International Monetary Fund", "BlackRock"})
+    institutional = bool(entities & {
+        "Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS",
+        "J.P. Morgan", "BNY", "International Monetary Fund", "BlackRock",
+        "Standard Chartered", "Meritz Securities", "DriveWealth", "Cross River",
+        "Franklin Templeton", "Fidelity", "Goldman Sachs", "SoFi", "Robinhood",
+        "LMAX Group", "Securitize", "BitGo", "State Street", "Brevan Howard",
+        "Kyobo Life Insurance", "Kbank", "Jeonbuk Bank", "CSD BR",
+    })
     action = any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
         "authorizes", "authorize", "authorizing", "authorized", "authorises", "authorise",
@@ -106,7 +113,27 @@ def _classify(item, combined: str) -> list[str]:
         "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
         "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA",
+        "CLARITY Act", "Digital Asset Market Clarity Act",
+        "market structure", "crypto market structure", "digital asset market structure",
+        "digital commodity", "digital commodities", "crypto legislation",
     ))
+    legislative_topic = any(_contains(combined, phrase) for phrase in (
+        "CLARITY Act", "Digital Asset Market Clarity Act",
+        "crypto market structure", "digital asset market structure",
+        "market structure legislation", "market structure bill",
+        "digital asset bill", "crypto bill", "Digital Commodity Intermediaries Act",
+        "Responsible Financial Innovation Act", "FIT21",
+    ))
+    legislative_action = any(_contains(combined, term) for term in (
+        "talks", "talk", "negotiations", "negotiation", "negotiates", "negotiated",
+        "bipartisan", "compromise", "draft", "markup", "mark-up", "vote", "voting",
+        "floor", "hearing", "committee", "stalled", "blocked", "failed",
+        "advances", "advanced", "reintroduced", "released text", "release text",
+        "proposal", "proposed", "discussions", "discussed", "progress",
+    ))
+    if legislative_topic and legislative_action:
+        categories.append("legislative_digital_asset_action")
+
     payment_topic = any(_contains(combined, term) for term in (
         "payment", "payments", "cross-border settlement", "settlement",
     ))
@@ -126,6 +153,14 @@ def _classify(item, combined: str) -> list[str]:
         # Preserve payment-network relevance without implying a digital-asset
         # link when the source only describes conventional payments.
         categories.append("institutional_payment_action")
+
+    partnership_context = any(_contains(combined, term) for term in (
+        "partner", "partnership", "collaboration", "integrat", "custody",
+        "payments", "tokenization", "tokenisation", "settlement",
+        "infrastructure", "prime brokerage", "reserve", "stablecoin",
+    ))
+    if direct and action and digital_asset_topic and partnership_context:
+        categories.append("direct_ripple_institutional_action")
 
     # Broader ecosystem coverage is entity- and action-gated. A crypto company
     # name alone is not enough: require a concrete action plus digital-asset,
@@ -153,8 +188,10 @@ def _classify(item, combined: str) -> list[str]:
         "loses", "lost", "hacked", "exploited", "breached", "drained",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
-        "announces", "announced", "partnered", "integrates",
-        "integrated", "upgrades", "upgraded", "mints", "minted", "lists",
+        "announces", "announced", "partner", "partners", "partnered",
+        "partnership", "partnerships", "collaboration", "collaborates",
+        "joins", "joined", "integrates", "integrated", "upgrades", "upgraded",
+        "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
         "issued", "expands", "expanded", "connects", "connected", "adds",
         "added", "opens", "opened", "releases", "released", "rolls out",
@@ -222,6 +259,8 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or "xrp_protocol_development" in categories
         or "xrp_ledger_tokenization_development" in categories
         or "crypto_ecosystem_action" in categories
+        or "legislative_digital_asset_action" in categories
+        or "direct_ripple_institutional_action" in categories
     )
 
     score = 0
@@ -259,11 +298,19 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         reasons.append(f"XRP Ledger tokenized fund/share development (+{points})")
         signals.append("topic:xrp_ledger_tokenization_development")
 
-    if "crypto_ecosystem_action" in categories:
+    action_bonus_categories = {
+        "crypto_ecosystem_action",
+        "institutional_digital_asset_payment",
+        "institutional_tokenization_action",
+        "legislative_digital_asset_action",
+        "direct_ripple_institutional_action",
+    }
+    matched_action_categories = action_bonus_categories.intersection(categories)
+    if matched_action_categories:
         points = weights["crypto_ecosystem_action_bonus"]
         score += points
-        reasons.append(f"material crypto ecosystem action (+{points})")
-        signals.append("topic:crypto_ecosystem_action")
+        reasons.append(f"material digital-asset partnership, institutional, or policy action (+{points})")
+        signals.extend(f"topic:{category}" for category in sorted(matched_action_categories))
 
     if topical and item.source_quality == "primary":
         points = weights["primary_source_bonus"]
