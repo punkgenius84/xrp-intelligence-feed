@@ -336,7 +336,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     if matched_action_categories:
         points = weights["crypto_ecosystem_action_bonus"]
         score += points
-        reasons.append(f"material digital-asset partnership, institutional, or policy action (+{points})")
+        reasons.append(f"material digital-asset ecosystem, institutional, partnership, or policy action (+{points})")
         signals.extend(f"topic:{category}" for category in sorted(matched_action_categories))
 
     if topical and item.source_quality == "primary":
