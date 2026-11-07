@@ -54,7 +54,7 @@ def _classify(item, combined: str) -> list[str]:
         categories.append("ripple_payments_network")
 
     regulatory = bool(entities & {"SEC", "CFTC", "Federal Reserve", "OCC", "FDIC", "Treasury", "OFAC", "FinCEN", "BIS", "ECB", "Bank of Canada", "Bank of England", "Monetary Authority of Singapore", "Bank Negara Malaysia", "Bank of Thailand", "Department of Finance Canada"})
-    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada"})
+    government = bool(entities & {"White House", "DOJ", "Treasury", "Government of Canada", "Trump administration"})
     institutional = bool(entities & {
         "Citi", "Circle", "Coinbase", "Mastercard", "Swift", "Visa", "DBS",
         "J.P. Morgan", "BNY", "International Monetary Fund", "BlackRock",
@@ -62,6 +62,7 @@ def _classify(item, combined: str) -> list[str]:
         "Franklin Templeton", "Fidelity", "Goldman Sachs", "SoFi", "Robinhood",
         "LMAX Group", "Securitize", "BitGo", "State Street", "Brevan Howard",
         "Kyobo Life Insurance", "Kbank", "Jeonbuk Bank", "CSD BR",
+        "Nubank", "Mercado Pago",
     })
     partnership_action = any(_contains(combined, term) for term in (
         "partner to", "partners to", "partnered to", "partnered with",
@@ -89,6 +90,10 @@ def _classify(item, combined: str) -> list[str]:
         "repeals", "repeal", "repealing", "repealed",
         "suspends", "suspend", "suspending", "suspended",
         "halts", "halt", "halting", "halted",
+        "walks back", "walk back", "walked back",
+        "moves closer", "moving closer", "move closer",
+        "cuts off", "cut off", "rejects", "rejected", "reject",
+        "blocks", "block", "blocked",
         "stays", "stay", "staying", "stayed",
         "reinstates", "reinstate", "reinstating", "reinstated",
         "enacts", "enact", "enacting", "enacted",
@@ -123,6 +128,8 @@ def _classify(item, combined: str) -> list[str]:
         "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
         "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA",
+        "crypto exchange", "crypto transfers", "tokenized stock", "tokenized stocks",
+        "tokenised stock", "tokenised stocks",
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "market structure", "crypto market structure", "digital asset market structure",
         "digital commodity", "digital commodities", "crypto legislation",
@@ -185,7 +192,7 @@ def _classify(item, combined: str) -> list[str]:
     crypto_ecosystem_entities = {
         "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
         "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
-        "Coinbase", "Chainlink", "CoinDCX",
+        "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
     }
     crypto_ecosystem_entity = bool(entities & crypto_ecosystem_entities)
     ecosystem_context = any(_contains(combined, term) for term in (
@@ -205,7 +212,8 @@ def _classify(item, combined: str) -> list[str]:
         "loses", "lost", "hacked", "exploited", "breached", "drained",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged",
         "charges", "alleges", "allegation", "launches", "launched", "launch",
-        "announces", "announced", "partnered",
+        "announces", "announced", "partnered", "rejects", "rejected", "reject",
+        "blocks", "blocked", "halts", "halted", "suspends", "suspended",
         "integrates", "integrated", "upgrades", "upgraded",
         "mints", "minted", "lists",
         "listed", "puts", "put", "places", "placed", "tokenizes", "tokenises", "issues",
@@ -316,6 +324,8 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
 
     action_bonus_categories = {
         "crypto_ecosystem_action",
+        "relevant_regulatory_digital_asset_payments",
+        "government_digital_asset_action",
         "institutional_digital_asset_payment",
         "institutional_tokenization_action",
         "legislative_digital_asset_action",
