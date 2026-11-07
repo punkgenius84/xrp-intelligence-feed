@@ -55,6 +55,10 @@ _GROUNDING_STOPWORDS = {
     "how", "one", "two", "each", "some", "many", "more", "less", "such",
     "other", "another", "if", "not", "only", "rather", "than", "without",
     "through", "across", "following", "amid", "during", "over", "under",
+    "potentially", "potential", "relevant", "independent", "plausible", "possible",
+    "likely", "important", "significant", "significance", "development",
+    "disclosure", "filing", "reporting", "further", "broader", "overall",
+    "current", "unclear", "unknown", "clear", "supported", "based",
 }
 
 
@@ -121,6 +125,12 @@ def _normalize_source_anchored_acronym_expansions(
             )
             for pattern in patterns:
                 result = pattern.sub(keep_value, result)
+            result = re.sub(
+                r"\b" + re.escape(remove_value) + r"\b",
+                keep_value,
+                result,
+                flags=re.IGNORECASE,
+            )
         return result
 
     claims = [
@@ -215,16 +225,9 @@ def _validate_entities_grounding(
 
 
 def _metadata_anchor_tokens(text: str) -> set[str]:
-    """Extract numeric facts and explicit acronyms without sentence-initial prose words."""
-    text = re.sub(r"\\b(?:source|article)\\s*[-#]?\\s*\\d+\\b", "", text, flags=re.IGNORECASE)
-    return {
-        token.lower().strip(".,:;!?()[]{}")
-        for token in re.findall(
-            r"\$?\d+(?:[,.]\d+)*(?:%|[A-Za-z]+)?|\b[A-Z]{2,}(?:-[A-Z]{2,})?\b",
-            text,
-        )
-    }
-
+    """Extract high-signal factual anchors while ignoring structural source labels."""
+    text = re.sub(r"\b(?:source|article)\s*[-#]?\s*\d+\b", "", text, flags=re.IGNORECASE)
+    return _claim_anchor_tokens(text)
 
 def _validate_metadata_anchors(
     analysis: IntelligenceAnalysis,

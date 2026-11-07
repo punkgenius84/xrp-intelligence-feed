@@ -676,3 +676,27 @@ def test_source_ticker_is_not_expanded_into_an_unsupported_entity_name():
     )
 
     assert normalized.entities == ["ETH"]
+
+
+def test_metadata_grounding_rejects_unsupported_named_entity_in_significance():
+    source = NewsItem(
+        title="Coinbase reports customer assets in cold storage",
+        url="https://example.test/cold-storage",
+        source="Example",
+        source_id="example",
+        summary="Coinbase reports that customer assets are held in cold storage.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement","event_summary":"Coinbase reports cold storage.",'
+                '"significance":"Quantum computing creates a new custody threat.",'
+                '"entities":["Coinbase"],'
+                '"claims":[{"text":"Coinbase reports cold storage.","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    with pytest.raises(LLMError, match="unsupported factual anchor"):
+        analyze_item(source, Provider())
