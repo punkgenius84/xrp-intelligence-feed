@@ -58,7 +58,7 @@ def test_unreadable_state_fails_closed(monkeypatch, tmp_path):
 
 
 def test_main_reports_state_error_and_stops(monkeypatch):
-    def fail_pipeline():
+    def fail_pipeline(*args, **kwargs):
         raise StateFileError("Deduplication state is malformed")
 
     monkeypatch.setattr(main, "run_pipeline", fail_pipeline)
