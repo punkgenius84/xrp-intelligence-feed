@@ -640,7 +640,7 @@ def test_run_pipeline_applies_cross_run_duplicate_gate_without_outbox_state(monk
     from storage.correlation_state import JsonCorrelationState
     from storage.database import JsonState
 
-    stamp = datetime(2026, 10, 23, 12, tzinfo=timezone.utc)
+    stamp = datetime(2026, 11, 5, 12, tzinfo=timezone.utc)
     primary = NewsItem(
         title="MAS, Bank Negara Malaysia and Bank of Thailand partner to advance cross-border settlement in digital money through BLOOM",
         url="https://www.mas.gov.sg/news/media-releases/2026/bloom",
