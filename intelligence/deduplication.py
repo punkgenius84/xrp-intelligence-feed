@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import re
 import unicodedata
@@ -51,3 +51,91 @@ def deduplicate(items: list[NewsItem], seen: set[str] | None = None) -> tuple[li
         seen.add(item.fingerprint)
         seen.add(event_key)
     return fresh, seen
+
+def reconsider_newly_qualified(
+    items: list[NewsItem],
+    fresh: list[NewsItem],
+    cards: dict[str, dict],
+    *,
+    publish_score: int,
+    max_age_days: int = 14,
+    now: datetime | None = None,
+    retention_hours: int = 72,
+) -> list[NewsItem]:
+    """Revisit recent seen items only when updated scoring moves them across the publish gate.
+
+    This is deliberately narrower than a backlog replay: the candidate must have a
+    recent correlation card, must not already be fresh in this run, and must have
+    moved from below the configured threshold to at/above it. Delivery history and
+    the durable outbox remain the final duplicate-safety controls.
+    """
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    recent_cutoff = current - timedelta(hours=retention_hours)
+    age_cutoff = (
+        current - timedelta(days=max_age_days)
+        if max_age_days > 0 else None
+    )
+    fresh_ids = {
+        value
+        for item in fresh
+        for value in (
+            getattr(item, "candidate_id", ""),
+            getattr(item, "fingerprint", ""),
+        )
+        if value
+    }
+    fresh_events = {
+        getattr(item, "event_fingerprint", "")
+        for item in fresh
+        if getattr(item, "event_fingerprint", "")
+    }
+
+    reconsidered: list[NewsItem] = []
+    for item in items:
+        candidate_id = (
+            getattr(item, "candidate_id", "")
+            or getattr(item, "fingerprint", "")
+        )
+        event_key = getattr(item, "event_fingerprint", "")
+        if not candidate_id or candidate_id in fresh_ids or event_key in fresh_events:
+            continue
+        card = cards.get(candidate_id)
+        if not isinstance(card, dict):
+            continue
+        previous_score = card.get("relevance_score", 0)
+        if type(previous_score) is not int or previous_score >= publish_score:
+            continue
+        if item.relevance_score < publish_score:
+            continue
+        last_seen_raw = card.get("last_seen")
+        if not isinstance(last_seen_raw, str):
+            continue
+        try:
+            last_seen = datetime.fromisoformat(last_seen_raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        if last_seen.astimezone(timezone.utc) < recent_cutoff:
+            continue
+
+        published = item.published_at or item.collected_at
+        if published is not None:
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+            if age_cutoff is not None and published.astimezone(timezone.utc) < age_cutoff:
+                continue
+        reconsidered.append(item)
+
+    return sorted(
+        reconsidered,
+        key=lambda item: (
+            -item.relevance_score,
+            -(item.published_at or item.collected_at).timestamp(),
+            item.title.casefold(),
+        ),
+    )
+
