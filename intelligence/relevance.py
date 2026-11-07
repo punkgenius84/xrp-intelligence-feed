@@ -67,11 +67,11 @@ def _classify(item, combined: str) -> list[str]:
         "partner to", "partners to", "partnered to", "partnered with",
         "collaborates with", "collaborated with", "joins forces with",
     )) or any(re.search(pattern, combined) for pattern in (
-        r"\\bpartners?\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
-        r"\\bpartnered\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
-        r"\\b(?:strategic\\s+)?partnership\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
-        r"\\bannounced?\\s+partnership\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
-        r"\\bcollaborates?\\s+with\\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bpartners?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bpartnered\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\b(?:strategic\s+)?partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bannounced?\s+partnership\s+with\s+[A-Z][A-Za-z0-9&.-]+",
+        r"\bcollaborates?\s+with\s+[A-Z][A-Za-z0-9&.-]+",
     ))
     action = partnership_action or any(_contains(combined, term) for term in (
         "approves", "approved", "adopts", "adopted", "announces", "announced",
