@@ -52,7 +52,7 @@ def _incident_amounts(title: str) -> list[float]:
     """Extract explicit million/billion amounts for matching incident follow-ups."""
     values = []
     for match in re.finditer(
-        r"\\$?\\s*(\\d+(?:\\.\\d+)?)\\s*(billion|bn|million|m)\\b",
+        r"\$?\s*(\d+(?:\.\d+)?)\s*(billion|bn|million|m)\b",
         title,
         flags=re.IGNORECASE,
     ):

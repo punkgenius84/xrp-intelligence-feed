@@ -655,6 +655,6 @@ def test_prompt_requires_specific_mechanisms_and_next_signals_not_generic_filler
     from intelligence.llm.prompts import SYSTEM_PROMPT
 
     assert "concrete mechanism" in SYSTEM_PROMPT
-    assert "specific next signal to watch" in SYSTEM_PROMPT
+    assert "concrete next signal to watch" in SYSTEM_PROMPT
     assert "do not substitute generic phrases" in SYSTEM_PROMPT
     assert "retain each exact report in" in SYSTEM_PROMPT
