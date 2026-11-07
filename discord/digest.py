@@ -76,7 +76,7 @@ def format_weekly_digest(
     lines = [
         "**XRP & Crypto Intelligence — Weekly Digest**",
         f"{start.strftime('%Y-%m-%d')} → {current.strftime('%Y-%m-%d')}",
-        f"**News-feed posts:** {len(weekly)} · **Validated intelligence developments:** {len(strategic)}",
+        f"**Posted items:** {len(weekly)} · **Validated intelligence developments:** {len(strategic)}",
     ]
 
     if strategic:
