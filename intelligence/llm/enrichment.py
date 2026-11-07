@@ -236,6 +236,10 @@ def _validate_metadata_anchors(
         text for label, text in evidence_text.items()
         if not label.endswith("publisher")
     )
+    publisher_text = " ".join(
+        text for label, text in evidence_text.items()
+        if label.endswith("publisher")
+    )
     fields = [
         ("event_summary", analysis.event_summary),
         ("significance", analysis.significance),
@@ -246,6 +250,10 @@ def _validate_metadata_anchors(
         unsupported = [
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(source_text, anchor)
+            and not (
+                not re.search(r"\\d", anchor)
+                and _contains_anchor(publisher_text, anchor)
+            )
             and not any(
                 _contains_anchor(source_text, alias)
                 for alias in _DOMAIN_GROUNDING_ALIASES.get(anchor, ())
