@@ -81,3 +81,77 @@ def test_empty_weekly_digest_is_explicit():
     message = format_weekly_digest([], end=end)
     assert "Posted items:** 0" in message
     assert "No publishable items were posted" in message
+
+def test_weekly_digest_includes_strategic_readthrough_for_partnerships():
+    end = datetime(2026, 11, 8, 17, tzinfo=timezone.utc)
+    events = [
+        {
+            "event_id": "evt-partnership",
+            "event_type": "partnership",
+            "summary": "Ripple and a major bank agreed to explore tokenized settlement services.",
+            "significance": (
+                "Strategic read-through: the bank could gain tokenization infrastructure and "
+                "a new institutional distribution channel, while Ripple could gain access to "
+                "bank clients. This may signal a future product rollout; no XRP usage or launch "
+                "is confirmed."
+            ),
+            "status": "active",
+            "evidence": [
+                {
+                    "published_at": "2026-11-06T12:00:00+00:00",
+                    "title": "Bank and Ripple announce tokenization partnership",
+                    "url": "https://example.com/partnership",
+                }
+            ],
+        }
+    ]
+
+    message = format_weekly_digest([], end=end, intelligence_events=events)
+
+    assert "Validated intelligence developments:** 1" in message
+    assert "Strategic signals & partnership read-through" in message
+    assert "Strategic read-through:" in message
+    assert "bank could gain tokenization infrastructure" in message
+    assert "https://example.com/partnership" in message
+    assert "no XRP usage or launch is confirmed" in message
+
+
+def test_weekly_digest_excludes_stale_or_out_of_window_intelligence():
+    end = datetime(2026, 11, 8, 17, tzinfo=timezone.utc)
+    events = [
+        {
+            "event_id": "evt-old",
+            "event_type": "partnership",
+            "summary": "Old partnership",
+            "significance": "Old significance",
+            "status": "active",
+            "evidence": [
+                {
+                    "published_at": "2026-10-20T12:00:00+00:00",
+                    "title": "Old partnership",
+                    "url": "https://example.com/old",
+                }
+            ],
+        },
+        {
+            "event_id": "evt-superseded",
+            "event_type": "partnership",
+            "summary": "Superseded partnership",
+            "significance": "Superseded significance",
+            "status": "superseded",
+            "evidence": [
+                {
+                    "published_at": "2026-11-06T12:00:00+00:00",
+                    "title": "Superseded partnership",
+                    "url": "https://example.com/superseded",
+                }
+            ],
+        },
+    ]
+
+    message = format_weekly_digest([], end=end, intelligence_events=events)
+
+    assert "Validated intelligence developments:** 0" in message
+    assert "Old partnership" not in message
+    assert "Superseded partnership" not in message
+
