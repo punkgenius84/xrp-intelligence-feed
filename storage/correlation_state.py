@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -73,7 +74,7 @@ class JsonCorrelationState:
                 not isinstance(candidate_id, str)
                 or not candidate_id
                 or not isinstance(card, dict)
-                or set(card) not in {
+                or frozenset(card) not in {
                     frozenset(_CARD_FIELDS),
                     frozenset(_CARD_FIELDS | _CARD_METADATA_FIELDS),
                     frozenset(_CARD_FIELDS | _CARD_INCIDENT_FIELDS),
@@ -94,7 +95,7 @@ class JsonCorrelationState:
                 or (("source_quality" in card) != ("relevance_score" in card))
                 or ("incident_amounts" in card and (
                     not isinstance(card["incident_amounts"], list)
-                    or any(type(amount) not in {int, float} or amount <= 0 for amount in card["incident_amounts"])
+                    or any(type(amount) not in {int, float} or not math.isfinite(amount) or amount <= 0 for amount in card["incident_amounts"])
                 ))
             ):
                 raise CorrelationStateError("Correlation state contains an invalid card")
