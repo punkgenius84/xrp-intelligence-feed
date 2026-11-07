@@ -641,3 +641,22 @@ def test_secondary_tokenized_stock_rejection_by_crypto_exchange_clears_gate():
     assert "OKX" in item.detected_entities
     assert "crypto_ecosystem_action" in item.relevance_categories
     assert score >= 30, f"material tokenized-equity development should clear gate: {score}, {reasons}"
+
+def test_secondary_government_action_against_crypto_exchange_clears_gate():
+    item = NewsItem(
+        title="Treasury cuts off MEXC Global over alleged illicit transactions",
+        summary="The U.S. Treasury took action against the crypto exchange over transactions linked to sanctioned jurisdictions.",
+        url="https://example.test/mexc-treasury-action",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Treasury", "MEXC Global"} <= set(item.detected_entities)
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material crypto exchange enforcement should clear gate: {score}, {reasons}"
