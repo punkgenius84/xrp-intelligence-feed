@@ -370,9 +370,9 @@ def test_no_save_state_reads_but_never_writes(tmp_path):
 WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "news_feed.yml"
 
 
-def test_workflow_defaults_manual_runs_to_dry_run_and_skips_state_save_when_dry():
+def test_workflow_defaults_manual_runs_to_live_publish_and_keeps_dry_run_opt_in():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "dry_run:" in text and "default: true" in text
+    assert "dry_run:" in text and "default: false" in text
     assert "DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}" in text
     assert "state/outbox.json" in text
     assert "publish_intelligence_test:" not in text
