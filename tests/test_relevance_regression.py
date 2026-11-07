@@ -505,3 +505,62 @@ def test_franklin_templeton_fund_shares_on_xrpl_clear_gate_for_secondary_media()
     assert "xrp_ledger_tokenization_development" in item.relevance_categories
     assert score >= 30, f"material XRPL fund-share tokenization should clear gate: {score}, {reasons}"
     assert any("tokenized fund/share development" in reason for reason in reasons)
+
+def test_secondary_clarity_act_negotiation_coverage_clears_relevance_gate():
+    item = NewsItem(
+        title="Senate CLARITY Act negotiations resume as lawmakers debate digital asset market structure",
+        summary="Bipartisan talks continue over a crypto market structure bill and proposed digital asset legislation.",
+        url="https://example.test/clarity-act-negotiations",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "legislative_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"material CLARITY Act coverage should clear gate: {score}, {reasons}"
+
+
+def test_secondary_institutional_partnership_coverage_clears_relevance_gate():
+    item = NewsItem(
+        title="Standard Chartered and Ripple partner to expand RLUSD custody and digital asset settlement",
+        summary="The institutions announced a strategic partnership covering stablecoin custody, payments infrastructure, and settlement.",
+        url="https://example.test/institutional-partnership",
+        source="Reuters",
+        source_id="reuters-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Ripple", "Standard Chartered"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert "direct_ripple_institutional_action" in item.relevance_categories
+    assert score >= 30, f"material institutional partnership should clear gate: {score}, {reasons}"
+
+
+def test_secondary_crypto_institution_partnership_clears_relevance_gate():
+    item = NewsItem(
+        title="Circle and Visa partner to expand USDC stablecoin payments",
+        summary="The partnership connects digital asset settlement with Visa's global payments infrastructure.",
+        url="https://example.test/circle-visa-partnership",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert {"Circle", "Visa"} <= set(item.detected_entities)
+    assert "institutional_digital_asset_payment" in item.relevance_categories
+    assert score >= 30, f"material crypto-institution partnership should clear gate: {score}, {reasons}"
