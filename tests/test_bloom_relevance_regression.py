@@ -191,6 +191,7 @@ def test_only_runner_validated_google_news_sources_are_enabled():
         "bot-google-news-english-discovery",
         "bot-google-news-thai-stablecoin-hearing",
         "coinbase-google-news-discovery",
+        "coinbase-investor-google-news-discovery",
         "swift-google-news-discovery",
         "imf-google-news-discovery",
     }
@@ -210,8 +211,10 @@ def test_only_runner_validated_google_news_sources_are_enabled():
     assert sources["swift-press-releases"]["enabled"] is False
     # IMF has a validated CBDC cross-border payment report that clears the gate.
     assert sources["imf-google-news-discovery"]["enabled"] is True
-    # Coinbase discovery is intentionally paused until the user revisits it.
-    assert sources["coinbase-google-news-discovery"]["enabled"] is False
+    # Coinbase's domain-restricted official discovery is now enabled after the
+    # runner returned 11 candidates, including the RLUSD Coinbase listing.
+    assert sources["coinbase-google-news-discovery"]["enabled"] is True
+    assert sources["coinbase-investor-google-news-discovery"]["enabled"] is True
     # Google News RSS returns up to 100 entries by default; avoid self-inflicted
     # truncation/partial health on every run while retaining a hard upper bound.
     assert all(sources[source_id]["max_items"] == 100 for source_id in expected)
