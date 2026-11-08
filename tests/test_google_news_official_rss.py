@@ -300,3 +300,50 @@ def test_clarity_act_discovery_sources_are_restricted_to_official_legislative_pu
         assert query.startswith(f"site:{host} ")
         assert "CLARITY Act" in query
         assert "digital asset market structure" in query
+
+
+def test_coinbase_google_news_fallback_is_enabled_and_covers_company_developments():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote_plus
+
+    configured = load_discovery_sources()
+    sources = {item["source_id"]: item for item in configured}
+    for source_id, host in (
+        ("coinbase-google-news-discovery", "coinbase.com"),
+        ("coinbase-investor-google-news-discovery", "investor.coinbase.com"),
+    ):
+        source = sources[source_id]
+        assert source["enabled"] is True
+        assert source["publisher_host"] == host
+        assert validate_google_news_source(source) == source
+        query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+        assert query.startswith(f"site:{host} ")
+        assert "partnership" in query
+        assert "payments" in query or "stablecoin" in query
+
+
+def test_imf_google_news_fallback_covers_macro_and_digital_asset_topics():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote_plus
+
+    source = next(item for item in load_discovery_sources() if item["source_id"] == "imf-google-news-discovery")
+    assert source["enabled"] is True
+    assert source["publisher_host"] == "imf.org"
+    assert validate_google_news_source(source) == source
+    query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+    assert query.startswith("site:imf.org ")
+    assert "financial stability" in query
+    assert "Project Sunbird" in query
+    assert "payment systems" in query
+
+
+def test_swift_google_news_fallback_includes_network_and_payment_system_signals():
+    from discovery.dispatch import load_discovery_sources
+    from urllib.parse import unquote_plus
+
+    source = next(item for item in load_discovery_sources() if item["source_id"] == "swift-google-news-discovery")
+    assert source["enabled"] is True
+    query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
+    assert "shared ledger" in query
+    assert "Swift network" in query
+    assert "payment systems" in query
