@@ -1,0 +1,50 @@
+name: Coinbase Official Source Runner Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/coinbase_official_source_probe.yml"
+      - "scripts/probe_coinbase_*.py"
+      - "discovery/institutional_press.py"
+      - "discovery/http.py"
+      - "config/discovery_sources.json"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/coinbase_official_source_probe.yml"
+      - "scripts/probe_coinbase_*.py"
+      - "discovery/institutional_press.py"
+      - "discovery/http.py"
+      - "config/discovery_sources.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coinbase-official-source-runner-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Probe Coinbase RSS and official blog index routes
+        run: |
+          python scripts/probe_coinbase_feed.py
+          python scripts/probe_coinbase_blog_rss.py
+          python scripts/probe_coinbase_landing_index.py
+          python scripts/probe_coinbase_product_index.py
+      - name: Probe Coinbase investor relations and official article metadata
+        run: |
+          python scripts/probe_coinbase_investor_news.py
+          python scripts/probe_coinbase_official_sitemap.py
+          python scripts/probe_coinbase_article_metadata.py
