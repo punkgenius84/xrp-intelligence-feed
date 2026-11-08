@@ -308,16 +308,16 @@ def test_coinbase_google_news_fallback_is_enabled_and_covers_company_development
 
     configured = load_discovery_sources()
     sources = {item["source_id"]: item for item in configured}
-    for source_id, host in (
-        ("coinbase-google-news-discovery", "coinbase.com"),
-        ("coinbase-investor-google-news-discovery", "investor.coinbase.com"),
+    for source_id, host, site_prefix in (
+        ("coinbase-google-news-discovery", "coinbase.com", "site:coinbase.com/blog "),
+        ("coinbase-investor-google-news-discovery", "investor.coinbase.com", "site:investor.coinbase.com "),
     ):
         source = sources[source_id]
         assert source["enabled"] is True
         assert source["publisher_host"] == host
         assert validate_google_news_source(source) == source
         query = unquote_plus(source["source_url"].split("q=", 1)[1].split("&", 1)[0])
-        assert query.startswith(f"site:{host} ")
+        assert query.startswith(site_prefix)
         assert "partnership" in query
         assert "payments" in query or "stablecoin" in query
 
