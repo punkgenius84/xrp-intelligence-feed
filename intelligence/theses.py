@@ -152,11 +152,32 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
             if isinstance(item, dict) and item.get("source_quality") == "primary"
             and _clean(item.get("source_id"))
         }
+        source_evidence_by_url: dict[str, dict[str, str]] = {}
+        for event in events.values():
+            for item in event.get("evidence", []):
+                if not isinstance(item, dict):
+                    continue
+                url = _clean(item.get("url"))
+                if not url.startswith("https://"):
+                    continue
+                source_evidence_by_url[url] = {
+                    "source_id": _clean(item.get("source_id")),
+                    "title": _clean(item.get("title"))[:240],
+                    "url": url,
+                    "published_at": _clean(item.get("published_at")),
+                    "source_quality": _clean(item.get("source_quality")),
+                }
+        source_evidence = sorted(
+            source_evidence_by_url.values(),
+            key=lambda item: (item["published_at"], item["url"]),
+            reverse=True,
+        )[:12]
         # Transparent heuristic, not a probability: evidence breadth and source
         # quality determine a bounded evidence-strength score.
         score = min(90, 35 + min(len(events), 5) * 7 + min(len(source_ids), 5) * 4
                     + min(len(primary_sources), 3) * 3 - negative_count * 8)
         record = {
+            "schema_version": THESIS_SCHEMA_VERSION,
             "thesis_id": thesis_id,
             "theme": bucket["theme"],
             "entity": bucket["entity"],
@@ -170,6 +191,7 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
             "strength_label": "high" if score >= 70 else "moderate" if score >= 50 else "early",
             "event_ids": event_ids[-MAX_EVENTS_PER_THESIS:],
             "source_ids": source_ids,
+            "source_evidence": source_evidence,
             "independent_event_count": len(events),
             "independent_source_count": len(source_ids),
             "primary_source_count": len(primary_sources),
@@ -179,8 +201,15 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
             "updated_at": updated_at,
             "revision": int(previous.get("revision", 0)) + (1 if any(
                 previous.get(key) != value for key, value in {
-                    "status": status, "event_ids": event_ids[-MAX_EVENTS_PER_THESIS:],
-                    "source_ids": source_ids, "evidence_strength": max(0, min(100, score)),
+                    "status": status,
+                    "event_ids": event_ids[-MAX_EVENTS_PER_THESIS:],
+                    "source_ids": source_ids,
+                    "source_evidence": source_evidence,
+                    "negative_event_ids": sorted(bucket["negative_events"]),
+                    "evidence_strength": max(0, min(100, score)),
+                    "primary_source_count": len(primary_sources),
+                    "mechanism": bucket["spec"]["mechanism"],
+                    "watch_for": list(bucket["spec"]["watch"]),
                 }.items()
             ) else 0),
         }
