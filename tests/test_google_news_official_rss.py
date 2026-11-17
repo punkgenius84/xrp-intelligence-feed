@@ -199,14 +199,6 @@ def test_preserves_google_clickthrough_and_publisher_attribution_without_claimin
     assert candidate.provenance == [MAS_URL, LINK]
 
 
-@pytest.mark.parametrize("bad_link", [
-    "https://evil.example/rss/articles/CBMiQ0",
-    "http://news.google.com/rss/articles/CBMiQ0",
-    "https://news.google.com.evil.example/rss/articles/CBMiQ0",
-    "https://user@news.google.com/rss/articles/CBMiQ0",
-    "https://news.google.com/other/CBMiQ0",
-])
-
 def test_uses_verified_direct_publisher_article_link_from_rss_description():
     direct = "https://www.mas.gov.sg/news/media-releases/2026/cross-border-settlement"
     http = FakeHttp(rss(item(description=f'<a href="{direct}">Read release</a>')))
@@ -233,6 +225,13 @@ def test_rejects_untrusted_direct_publisher_link_and_keeps_google_fallback(hosti
     assert candidate.source_native_metadata["article_url_status"] == "google_news_clickthrough_unverified"
 
 
+@pytest.mark.parametrize("bad_link", [
+    "https://evil.example/rss/articles/CBMiQ0",
+    "http://news.google.com/rss/articles/CBMiQ0",
+    "https://news.google.com.evil.example/rss/articles/CBMiQ0",
+    "https://user@news.google.com/rss/articles/CBMiQ0",
+    "https://news.google.com/other/CBMiQ0",
+])
 def test_rejects_non_google_or_non_article_links(bad_link):
     result = run(FakeHttp(rss(item(link=bad_link))))
     assert result.status == "failed"
