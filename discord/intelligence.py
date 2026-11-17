@@ -83,7 +83,21 @@ def format_intelligence_event(
         lines.append("**Sources:**")
         for evidence in event.evidence[:MAX_EVIDENCE]:
             label = _clean(evidence.title, 130) or _clean(evidence.source, 80)
-            lines.append(f"• [{label}]({evidence.url.strip()})")
+            quality = str(evidence.source_quality or "").strip().casefold()
+            if quality == "primary":
+                source_kind = "Primary source"
+            elif quality == "secondary":
+                source_kind = "Independent reporting"
+            else:
+                source_kind = "Source"
+            published = str(evidence.published_at or "").strip()[:10]
+            metadata = f"{source_kind} · {label}"
+            if published:
+                metadata += f" · {published}"
+            lines.append(f"• {metadata}")
+            url = str(evidence.url or "").strip()
+            if url.startswith("https://") and not any(char.isspace() for char in url):
+                lines.append(f"  {url}")
 
     if superseded_by:
         lines.append("**Updated by:** " + _clean(", ".join(superseded_by[:3]), 140))
