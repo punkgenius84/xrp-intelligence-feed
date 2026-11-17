@@ -70,3 +70,19 @@ def test_blackrock_generic_market_commentary_does_not_qualify_by_name_alone():
     assert "BlackRock" in item.detected_entities
     assert "institutional_tokenization_action" not in item.relevance_categories
     assert item.relevance_score < 30
+
+
+def test_person_named_ada_does_not_trigger_cardano_entity():
+    item = make_item(
+        "DOJ charges Honduran consul Ada Evila Serrano Nuñez",
+        "The indictment describes alleged bribery and money laundering.",
+    )
+    assert "Cardano" not in item.detected_entities
+
+
+def test_uppercase_ada_ticker_is_still_detected():
+    item = make_item(
+        "Cardano ADA ecosystem development receives regulatory attention",
+        "The report explicitly identifies ADA as the digital asset.",
+    )
+    assert "Cardano" in item.detected_entities

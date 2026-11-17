@@ -96,3 +96,17 @@ def test_partnership_uses_strategic_read_through_label():
     message = format_intelligence_event(event)
     assert "**Strategic read-through:**" in message
     assert "**Why it matters:**" not in message
+
+
+def test_format_normalizes_legacy_list_significance_without_python_repr():
+    event = replace(
+        make_event(),
+        significance=[
+            "A new filing expands the institution's regulatory path.",
+            "Together with prior infrastructure steps, this may indicate a bank-like strategy.",
+        ],
+    )
+    message = format_intelligence_event(event)
+    assert "A new filing expands the institution's regulatory path." in message
+    assert "bank-like strategy." in message
+    assert "['" not in message

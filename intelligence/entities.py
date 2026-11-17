@@ -9,8 +9,12 @@ def _matches(text: str, alias: str) -> bool:
     if not alias:
         return False
     escaped = re.escape(alias)
+    # ADA is also a common personal name; keep this one ticker case-sensitive
+    # so "Ada Serrano" is not misclassified as Cardano. Other aliases retain
+    # the existing case-insensitive behavior.
+    flags = 0 if alias == "ADA" else re.IGNORECASE
     # Word boundaries stop XRP/Ripple/SEC from matching inside unrelated words.
-    return re.search(r"(?<!\w)" + escaped + r"(?!\w)", text, flags=re.IGNORECASE) is not None
+    return re.search(r"(?<!\w)" + escaped + r"(?!\w)", text, flags=flags) is not None
 
 
 def detect_entities(item, config_path: str | Path = "config/entities.json") -> list[str]:
