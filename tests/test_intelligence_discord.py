@@ -110,3 +110,11 @@ def test_format_normalizes_legacy_list_significance_without_python_repr():
     assert "A new filing expands the institution's regulatory path." in message
     assert "bank-like strategy." in message
     assert "['" not in message
+
+
+
+def test_secondary_evidence_is_labeled_as_reporting_not_primary():
+    event = make_event()
+    event.evidence[1] = replace(event.evidence[1], source_quality="secondary")
+    message = format_intelligence_event(event)
+    assert "Independent reporting · Company response" in message
