@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 import re
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlsplit
@@ -90,6 +91,44 @@ def _google_link(value: object) -> str | None:
         return None
     return value.strip()
 
+
+class _PublisherArticleLinkParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs):
+        if tag.casefold() == 'a':
+            href = dict(attrs).get('href')
+            if isinstance(href, str) and href.strip():
+                self.links.append(href.strip())
+
+
+def _publisher_article_url(entry: Any, publisher_host: str) -> str | None:
+    fields = [entry.get('summary', '')]
+    content = entry.get('content', [])
+    if isinstance(content, list):
+        fields.extend(value.get('value', '') for value in content if isinstance(value, dict))
+    elif isinstance(content, str):
+        fields.append(content)
+    parser = _PublisherArticleLinkParser()
+    for field in fields:
+        if isinstance(field, str) and field.strip():
+            parser.feed(field)
+    expected_host = publisher_host.casefold().rstrip('.')
+    for value in parser.links:
+        try:
+            parts = urlsplit(value)
+            host = (parts.hostname or '').casefold().rstrip('.')
+            port = parts.port
+        except ValueError:
+            continue
+        if (parts.scheme == 'https' and host
+                and (host == expected_host or host.endswith('.' + expected_host))
+                and port in (None, 443) and parts.username is None and parts.password is None
+                and not parts.fragment):
+            return value
+    return None
 
 def _published(entry: Any) -> datetime:
     # FeedParserDict aliases updated -> published and updated_parsed ->
@@ -204,9 +243,11 @@ class GoogleNewsOfficialRSSDiscovery:
                     summary += f" Search context (not article text): {context_hint}."
                 if summary_text:
                     summary += f" {summary_text}"
+                direct_url = _publisher_article_url(entry, self.source['publisher_host'])
+                article_url = direct_url or link
                 candidate = DiscoveryCandidate(
                     title=title,
-                    url=link,
+                    url=article_url,
                     source=self.source["publisher_name"],
                     published_at=published,
                     summary=summary,
@@ -228,7 +269,7 @@ class GoogleNewsOfficialRSSDiscovery:
                     source_native_metadata={
                         "publisher_attribution": attributed_name,
                         "publisher_href": attributed_url[:500],
-                        "article_url_status": "google_news_clickthrough_unverified",
+                        "article_url_status": "publisher_article_url_verified" if direct_url else "google_news_clickthrough_unverified",
                         "query_publisher_host": self.source["publisher_host"],
                         **({"query_context_hint": context_hint[:200]} if context_hint else {}),
                     },
