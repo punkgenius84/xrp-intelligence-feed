@@ -700,3 +700,37 @@ def test_metadata_grounding_rejects_unsupported_named_entity_in_significance():
 
     with pytest.raises(LLMError, match="unsupported factual anchor"):
         analyze_item(source, Provider())
+
+
+def test_parse_analysis_normalizes_list_valued_significance_without_python_repr():
+    analysis = parse_analysis(
+        '{"event_type":"announcement","event_summary":"A filing was made.",'
+        '"significance":["The filing seeks a banking charter.",'
+        '"Together with the master-account request, this may indicate a bank-like operating strategy."],'
+        '"claims":[{"text":"The source reports a filing.","evidence":["source title"]}]}',
+        source_url="https://example.test",
+    )
+    assert analysis.significance == (
+        "The filing seeks a banking charter. Together with the master-account request, "
+        "this may indicate a bank-like operating strategy."
+    )
+    assert "['" not in analysis.significance
+
+
+def test_parse_analysis_rejects_object_valued_significance():
+    with pytest.raises(ValueError, match="significance must be a string"):
+        parse_analysis(
+            '{"event_type":"announcement","event_summary":"x",'
+            '"significance":{"why":"not prose"},'
+            '"claims":[{"text":"Claim","evidence":["source title"]}]}',
+            source_url="https://example.test",
+        )
+
+
+def test_prompt_explicitly_requires_cautious_cross_story_strategic_connections():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert "STRATEGIC CONNECTION ANALYSIS" in SYSTEM_PROMPT
+    assert "banking-charter application plus a request for Federal Reserve master-account access" in SYSTEM_PROMPT
+    assert "Syndicated copies do not count as independent corroboration." in SYSTEM_PROMPT
+    assert "plausible alternative explanation" in SYSTEM_PROMPT
