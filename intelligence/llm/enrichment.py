@@ -358,7 +358,7 @@ def _generate_validated_analysis(
 ) -> IntelligenceAnalysis:
     """Retry one invalid model response; never retry provider availability failures."""
     correction = (
-        "\\n\\nCORRECTION REQUIRED: Your previous response did not pass validation. "
+        "\n\nCORRECTION REQUIRED: Your previous response did not pass validation. "
         "Return one complete JSON object matching the required schema. Use only the "
         "supplied untrusted source material; do not add entities or facts. Every claim "
         "must use exact allowed evidence labels and literal source-supported details. "
