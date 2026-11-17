@@ -160,8 +160,8 @@ def _clean(value: object) -> str:
 class GoogleNewsOfficialRSSDiscovery:
     """Bounded discovery via Google News RSS, restricted to a named official publisher.
 
-    The Google News URL is deliberately retained as the lead/click-through URL.
-    source.href is recorded as metadata only; it is not treated as a canonical article URL.
+    The Google News URL is retained as the discovery lead. A publisher-host-verified
+    article URL is preferred for the candidate primary URL; source.href remains metadata only.
     """
 
     discovery_method = METHOD
@@ -260,9 +260,9 @@ class GoogleNewsOfficialRSSDiscovery:
                     discovery_method=METHOD,
                     source_url=self.source["source_url"],
                     document_type="Google News RSS discovery",
-                    primary_url=link,
+                    primary_url=article_url,
                     discovery_lead_url=link,
-                    provenance=[self.source["source_url"], link],
+                    provenance=[self.source["source_url"], link] + ([direct_url] if direct_url else []),
                     collected_at=fetched_at,
                     first_seen_at=fetched_at,
                     last_seen_at=fetched_at,
