@@ -734,3 +734,24 @@ def test_prompt_explicitly_requires_cautious_cross_story_strategic_connections()
     assert "banking-charter application plus a request for Federal Reserve master-account access" in SYSTEM_PROMPT
     assert "Syndicated copies do not count as independent corroboration." in SYSTEM_PROMPT
     assert "plausible alternative explanation" in SYSTEM_PROMPT
+
+
+
+def test_mas_entity_expansion_is_normalized_to_source_acronym():
+    from intelligence.llm.enrichment import _normalize_source_anchored_acronym_expansions
+
+    analysis = parse_analysis(
+        '{"event_type":"announcement","event_summary":"MAS reports progress.",'
+        '"significance":"The update concerns MAS.",'
+        '"entities":["MAS (Monetary Authority of Singapore)"],'
+        '"claims":[{"text":"MAS reports progress.","evidence":["source title"]}]}',
+        source_url="https://example.test/mas",
+    )
+    normalized = _normalize_source_anchored_acronym_expansions(
+        analysis,
+        {
+            "source title": "MAS and Deutsche Bundesbank advance cross-border settlement connectivity",
+            "source summary": "MAS announced the next phase of the project.",
+        },
+    )
+    assert normalized.entities == ["MAS"]

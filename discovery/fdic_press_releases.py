@@ -182,18 +182,11 @@ def _parse_page(content: bytes, diagnostics: dict[str, object] | None = None) ->
         raise ValueError("FDIC Press Releases HTML ended inside an article link")
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
-    if parser._saw_main and len(parser.items) <= 1:
-        main_ids = {item["native_id"] for item in parser.items}
-        outside_ids = {
-            item["native_id"] for item in parser._all_items
-            if item["native_id"] not in main_ids
-        }
-        if outside_ids:
-            raise ValueError(
-                "FDIC main region contains at most one recognized release while "
-                f"{len(outside_ids)} additional official release route(s) exist outside it; "
-                "refusing to treat the main region as a complete listing"
-            )
+    # When a semantic <main> exists, it is the authoritative listing region.
+    # The FDIC page also places related-release links outside <main>; those
+    # links can outnumber the single remaining result on a deep pagination page.
+    # An empty main region still fails closed below unless it has an explicit
+    # semantic empty state, so sidebar links cannot masquerade as a listing.
     for item in parser.listing_items():
         if item["native_id"] not in seen:
             seen.add(item["native_id"])

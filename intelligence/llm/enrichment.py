@@ -82,6 +82,7 @@ def _claim_anchor_tokens(text: str) -> set[str]:
 # the acronym. Keep the source's exact naming rather than accepting an invented
 # legal-name expansion as a factual anchor.
 _KNOWN_ACRONYM_EXPANSIONS = {
+    "mas": ("monetary authority of singapore",),
     "bny": ("the bank of new york mellon",),
     "eth": ("ethereum",),
     "btc": ("bitcoin",),
