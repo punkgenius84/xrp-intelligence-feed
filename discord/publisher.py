@@ -94,7 +94,10 @@ def format_message(item: Any) -> str:
         if entities:
             metadata += f" · {entities}"
     lines.append(f"*{metadata}*")
-    # Plain URLs are more robust in Discord clients and copied transcripts than\n    # nested Markdown links, which can be rendered with duplicated link text.\n    url = str(item.url or "").strip()\n    if url.startswith("https://") and not any(char.isspace() for char in url):\n        lines.append(f"Source: {url}")
+    # Plain URLs avoid Discord clients rendering Markdown link text twice.
+    url = str(item.url or "").strip()
+    if url.startswith("https://") and not any(char.isspace() for char in url):
+        lines.append(f"Source: {url}")
     return "\n".join(lines)
 
 
