@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 from types import SimpleNamespace
 
 import json
@@ -354,6 +355,68 @@ def test_intelligence_delivery_history_prevents_reposting_same_event_across_runs
     ) == 0
     assert len(sent) == 1
     assert JsonIntelligenceDeliveryHistory(history_path).load() == {"evt-repeat"}
+
+
+def test_intelligence_delivery_suppresses_same_publisher_headline_with_new_event_id(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    history = JsonIntelligenceDeliveryHistory(history_path)
+    monkeypatch.setattr(main, "JsonIntelligenceDeliveryHistory", lambda: history)
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    first = event(event_id="evt-mas-first")
+    first.evidence = [replace(
+        first.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
+    second = event(event_id="evt-mas-new-id")
+    second.evidence = [replace(
+        second.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
+
+    assert main.publish_intelligence_events(
+        [first], settings, publish_enabled=True, outbox_store=store
+    ) == 1
+    assert main.publish_intelligence_events(
+        [second], settings, publish_enabled=True, outbox_store=store
+    ) == 0
+    assert len(sent) == 1
+    assert store.load() == []
+
+
+def test_intelligence_delivery_allows_changed_followup_headline(tmp_path):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    history = JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json")
+    original = event(event_id="evt-original")
+    original.evidence = [replace(
+        original.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
+    history.record_events([original])
+
+    followup = event(event_id="evt-followup")
+    followup.evidence = [replace(
+        followup.evidence[0],
+        title="MAS launches expanded cross-border digital asset settlement pilot with new banks",
+    )]
+    assert history.has_duplicate_event(followup) is False
 
 
 def test_stale_queued_intelligence_events_are_quarantined_before_publication(tmp_path, monkeypatch, capsys):

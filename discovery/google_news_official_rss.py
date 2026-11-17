@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 import re
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlsplit
@@ -91,6 +92,44 @@ def _google_link(value: object) -> str | None:
     return value.strip()
 
 
+class _PublisherArticleLinkParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs):
+        if tag.casefold() == 'a':
+            href = dict(attrs).get('href')
+            if isinstance(href, str) and href.strip():
+                self.links.append(href.strip())
+
+
+def _publisher_article_url(entry: Any, publisher_host: str) -> str | None:
+    fields = [entry.get('summary', '')]
+    content = entry.get('content', [])
+    if isinstance(content, list):
+        fields.extend(value.get('value', '') for value in content if isinstance(value, dict))
+    elif isinstance(content, str):
+        fields.append(content)
+    parser = _PublisherArticleLinkParser()
+    for field in fields:
+        if isinstance(field, str) and field.strip():
+            parser.feed(field)
+    expected_host = publisher_host.casefold().rstrip('.')
+    for value in parser.links:
+        try:
+            parts = urlsplit(value)
+            host = (parts.hostname or '').casefold().rstrip('.')
+            port = parts.port
+        except ValueError:
+            continue
+        if (parts.scheme == 'https' and host
+                and (host == expected_host or host.endswith('.' + expected_host))
+                and port in (None, 443) and parts.username is None and parts.password is None
+                and not parts.fragment):
+            return value
+    return None
+
 def _published(entry: Any) -> datetime:
     # FeedParserDict aliases updated -> published and updated_parsed ->
     # published_parsed on lookup when the published fields are absent. Inspect
@@ -121,8 +160,8 @@ def _clean(value: object) -> str:
 class GoogleNewsOfficialRSSDiscovery:
     """Bounded discovery via Google News RSS, restricted to a named official publisher.
 
-    The Google News URL is deliberately retained as the lead/click-through URL.
-    source.href is recorded as metadata only; it is not treated as a canonical article URL.
+    The Google News URL is retained as the discovery lead. A publisher-host-verified
+    article URL is preferred for the candidate primary URL; source.href remains metadata only.
     """
 
     discovery_method = METHOD
@@ -204,9 +243,11 @@ class GoogleNewsOfficialRSSDiscovery:
                     summary += f" Search context (not article text): {context_hint}."
                 if summary_text:
                     summary += f" {summary_text}"
+                direct_url = _publisher_article_url(entry, self.source['publisher_host'])
+                article_url = direct_url or link
                 candidate = DiscoveryCandidate(
                     title=title,
-                    url=link,
+                    url=article_url,
                     source=self.source["publisher_name"],
                     published_at=published,
                     summary=summary,
@@ -219,16 +260,16 @@ class GoogleNewsOfficialRSSDiscovery:
                     discovery_method=METHOD,
                     source_url=self.source["source_url"],
                     document_type="Google News RSS discovery",
-                    primary_url=link,
+                    primary_url=article_url,
                     discovery_lead_url=link,
-                    provenance=[self.source["source_url"], link],
+                    provenance=[self.source["source_url"], link] + ([direct_url] if direct_url else []),
                     collected_at=fetched_at,
                     first_seen_at=fetched_at,
                     last_seen_at=fetched_at,
                     source_native_metadata={
                         "publisher_attribution": attributed_name,
                         "publisher_href": attributed_url[:500],
-                        "article_url_status": "google_news_clickthrough_unverified",
+                        "article_url_status": "publisher_article_url_verified" if direct_url else "google_news_clickthrough_unverified",
                         "query_publisher_host": self.source["publisher_host"],
                         **({"query_context_hint": context_hint[:200]} if context_hint else {}),
                     },

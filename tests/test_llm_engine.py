@@ -169,13 +169,56 @@ def test_llm_analysis_rejects_malformed_provider_json():
         analyze_item(item(), FakeProvider())
 
 
-def test_provider_failures_remain_explicit():
+def test_provider_failures_remain_explicit_and_are_not_retried():
     class FakeProvider:
+        calls = 0
+
         def generate(self, **kwargs):
+            self.calls += 1
             raise LLMUnavailable("offline")
 
+    provider = FakeProvider()
     with pytest.raises(LLMUnavailable, match="offline"):
-        analyze_item(item(), FakeProvider())
+        analyze_item(item(), provider)
+    assert provider.calls == 1
+
+
+def test_invalid_model_output_gets_one_strict_repair_attempt():
+    class FakeProvider:
+        calls = 0
+
+        def generate(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return LLMResponse("not json", model="test-model")
+            assert "CORRECTION REQUIRED" in kwargs["user"]
+            return LLMResponse(
+                '{"event_type":"partnership","event_summary":"Ripple announced a payments partnership.",'
+                '"significance":"The announcement describes a payments partnership.",'
+                '"entities":["Ripple"],"claims":[{"text":"Ripple announced a payments partnership.",'
+                '"evidence":["source title"]}]}',
+                model="test-model",
+            )
+
+    provider = FakeProvider()
+    result = analyze_item(item(), provider)
+    assert provider.calls == 2
+    assert result.event_type == "partnership"
+    assert result.entities == ["Ripple"]
+
+
+def test_second_invalid_model_response_is_still_rejected():
+    class FakeProvider:
+        calls = 0
+
+        def generate(self, **kwargs):
+            self.calls += 1
+            return LLMResponse("not json", model="test-model")
+
+    provider = FakeProvider()
+    with pytest.raises(LLMError, match="LLM output is not valid JSON"):
+        analyze_item(item(), provider)
+    assert provider.calls == 2
 
 
 def test_evidence_bundle_is_deterministic_and_deduplicated():

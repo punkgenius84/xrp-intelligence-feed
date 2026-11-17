@@ -40,7 +40,7 @@ from storage.outbox import JsonOutboxState, OutboxError, publication_key
 from storage.discovery_state import DiscoveryStateError, JsonDiscoveryState
 from storage.intelligence_state import IntelligenceStateError, JsonIntelligenceState
 from storage.intelligence_outbox import IntelligenceOutboxError, JsonIntelligenceOutboxState
-from storage.intelligence_delivery_history import IntelligenceDeliveryHistoryError, JsonIntelligenceDeliveryHistory
+from storage.intelligence_delivery_history import (IntelligenceDeliveryHistoryError, JsonIntelligenceDeliveryHistory, event_signature_keys)
 from storage.intelligence_quarantine import IntelligenceQuarantineError, JsonIntelligenceQuarantineState
 from storage.delivery_history import DeliveryHistoryError, JsonDeliveryHistory
 
@@ -866,6 +866,32 @@ def publish_intelligence_events(
     if not pending:
         return 0
 
+    # Suppress the same publisher headline even when discovery generated a new
+    # event ID. Exact normalized-title fingerprints are deliberately conservative:
+    # changed headlines remain eligible as legitimate follow-up developments.
+    seen_signatures: set[str] = set()
+    duplicate_keys: set[str] = set()
+    unique_pending = []
+    for item in pending:
+        signatures = event_signature_keys(item.event)
+        if signatures and (
+            history.has_duplicate_event(item.event)
+            or bool(signatures & seen_signatures)
+        ):
+            duplicate_keys.add(item.key)
+            continue
+        unique_pending.append(item)
+        seen_signatures.update(signatures)
+    if duplicate_keys:
+        queue.remove(duplicate_keys)
+        out(
+            f"Intelligence: suppressed {len(duplicate_keys)} duplicate event(s) "
+            "by exact evidence-title fingerprint within the 72-hour window"
+        )
+    pending = unique_pending
+    if not pending:
+        return 0
+
     # The outbox may contain events generated during a long shadow-mode period.
     # When publication is explicitly enabled, discard only events whose newest
     # evidence is outside the configured freshness window. Unknown dates are held.
@@ -987,6 +1013,7 @@ def publish_intelligence_events(
     hook = DiscordWebhook(discord_settings.webhook_url)
     posted_keys: set[str] = set()
     posted_event_ids: set[str] = set()
+    posted_events: list = []
     for item in selected:
         try:
             hook.send(format_intelligence_event(item.event))
@@ -995,12 +1022,13 @@ def publish_intelligence_events(
             continue
         posted_keys.add(item.key)
         posted_event_ids.add(item.event.event_id)
+        posted_events.append(item.event)
 
     if posted_event_ids:
         # Record success before removing the outbox entry. If the outbox write
         # fails after this point, the next run can reconcile against this ledger.
         try:
-            history.record(posted_event_ids)
+            history.record_events(posted_events)
         except IntelligenceDeliveryHistoryError as exc:
             out(f"::error::Intelligence delivery history could not be saved: {exc}")
             raise SystemExit(
