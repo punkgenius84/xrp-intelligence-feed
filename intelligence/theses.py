@@ -32,7 +32,7 @@ _THEMES = {
                   "reserve, redemption, and regulatory disclosures"),
     },
     "institutional_custody": {
-        "terms": ("digital asset custody", "crypto custody", "custody services", "custodian", "staking services"),
+        "terms": ("digital asset custody", "crypto custody", "custody service", "custody services", "custody operation", "custody operations", "custodian", "staking services"),
         "mechanism": "Institutional custody and servicing capabilities reduce operational barriers for banks, funds, and corporates to hold or use digital assets.",
         "watch": ("regulatory authorization", "named institutional clients", "assets under custody and live service availability"),
     },
