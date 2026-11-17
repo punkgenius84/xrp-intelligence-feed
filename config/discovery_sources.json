@@ -765,6 +765,45 @@
       "max_items": 100,
       "publisher_host": "reuters.com",
       "publisher_name": "Reuters"
+    },
+    {
+      "source_id": "reuters-financial-infrastructure-discovery",
+      "name": "Reuters (financial infrastructure and operational disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Areuters.com%20(%22bank%20outage%22%20OR%20%22banking%20outage%22%20OR%20%22payment%20outage%22%20OR%20Fedwire%20OR%20%22National%20Settlement%20Service%22%20OR%20%22payment%20system%20disruption%22%20OR%20%22financial%20infrastructure%20outage%22%20OR%20%22bank%20transaction%20delays%22%20OR%20%22banking%20partner%20outage%22%20OR%20%22crypto%20exchange%20withdrawals%22%20OR%20%22exchange%20withdrawal%20halt%22%20OR%20%22crypto%20security%20incident%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "reuters.com",
+      "publisher_name": "Reuters"
+    },
+    {
+      "source_id": "coindesk-security-disruption-discovery",
+      "name": "CoinDesk (crypto security and exchange disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com%20(%22withdrawals%20suspended%22%20OR%20%22withdrawals%20halted%22%20OR%20%22withdrawal%20freeze%22%20OR%20%22security%20incident%22%20OR%20%22API%20key%20leak%22%20OR%20%22exchange%20hack%22%20OR%20%22exchange%20exploit%22%20OR%20%22protocol%20exploit%22%20OR%20%22funds%20drained%22%20OR%20%22banking%20partner%20outage%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coindesk.com",
+      "publisher_name": "CoinDesk"
+    },
+    {
+      "source_id": "cointelegraph-security-disruption-discovery",
+      "name": "Cointelegraph (crypto security and exchange disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acointelegraph.com%20(%22withdrawals%20suspended%22%20OR%20%22withdrawals%20halted%22%20OR%20%22withdrawal%20freeze%22%20OR%20%22security%20incident%22%20OR%20%22API%20key%20leak%22%20OR%20%22exchange%20hack%22%20OR%20%22exchange%20exploit%22%20OR%20%22protocol%20exploit%22%20OR%20%22funds%20drained%22%20OR%20%22banking%20partner%20outage%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "cointelegraph.com",
+      "publisher_name": "Cointelegraph"
     }
   ]
 }
