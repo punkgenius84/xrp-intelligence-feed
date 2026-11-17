@@ -10,7 +10,7 @@ import requests
 
 MAX_CONTENT_LENGTH = 2_000
 _MAX_RATE_LIMIT_WAIT = 30.0
-_WEBHOOK_ENV_VAR = "DISCORD_INTELLIGENCE_DISCORD_WEBHOOK"
+_WEBHOOK_ENV_VAR = "DISCORD_WEBHOOK_URL"
 
 _WEBHOOK_URL = re.compile(
     r"^https://(?:(?:canary|ptb)\.)?"
