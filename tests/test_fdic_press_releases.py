@@ -89,13 +89,23 @@ def test_listing_ignores_stale_related_release_outside_main_region():
 
 
 
-def test_single_main_release_does_not_hide_other_official_routes_outside_main():
+def test_single_main_release_ignores_unrelated_official_routes_outside_main():
     html = b"""<html><body>
       <aside><a href="/news/press-releases/2026/related-release">Related release</a></aside>
       <main><a href="/news/press-releases/2026/saved-boundary">Saved boundary</a></main>
-      <section><a href="/news/press-releases/2026/newer-release">Newer release</a></section>
+      <section><a href="/news/press-releases/2026/newer-release">Related release</a></section>
     </body></html>"""
-    with pytest.raises(ValueError, match="main region contains at most one.*additional official release route"):
+    rows, complete = _parse_page(html)
+    assert complete is True
+    assert [row["native_id"] for row in rows] == ["2026/saved-boundary"]
+
+
+def test_empty_main_region_does_not_accept_sidebar_articles_as_listing():
+    html = b"""<html><body>
+      <aside><a href="/news/press-releases/2026/related-release">Related release</a></aside>
+      <main><h1>Press Releases</h1></main>
+    </body></html>"""
+    with pytest.raises(ValueError, match="no recognizable Press Releases listing"):
         _parse_page(html)
 
 
