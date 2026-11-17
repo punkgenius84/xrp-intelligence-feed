@@ -32,7 +32,7 @@ _THEMES = {
                   "reserve, redemption, and regulatory disclosures"),
     },
     "institutional_custody": {
-        "terms": ("digital asset custody", "crypto custody", "custody service", "custody services", "custody operation", "custody operations", "custodian", "staking services"),
+        "terms": ("digital asset custody", "crypto custody", "custody approval", "custody service", "custody services", "custody operation", "custody operations", "custodian", "staking services"),
         "mechanism": "Institutional custody and servicing capabilities reduce operational barriers for banks, funds, and corporates to hold or use digital assets.",
         "watch": ("regulatory authorization", "named institutional clients", "assets under custody and live service availability"),
     },
@@ -139,7 +139,7 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
         event_ids = sorted(events)
         previous = theses.get(thesis_id, {})
         negative_count = len(bucket["negative_events"])
-        if negative_count and negative_count >= len(events) / 2:
+        if negative_count and negative_count > len(events) / 2:
             status = "weakened"
         elif negative_count:
             status = "mixed"
