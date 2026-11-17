@@ -69,7 +69,8 @@
     "withdrawal freeze",
     "security incident",
     "API key leak",
-    "Fedwire"
+    "Fedwire",
+    "transactions"
   ],
   "context": [
     "ODL",
