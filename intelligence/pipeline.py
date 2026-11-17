@@ -116,6 +116,7 @@ def enrich_clusters(
     provider: LLMProvider,
     config: IntelligenceRuntimeConfig,
     historical_events: dict | None = None,
+    historical_theses: dict | None = None,
 ) -> tuple[list[IntelligenceEvent], list[str]]:
     events: list[IntelligenceEvent] = []
     failures: list[str] = []
