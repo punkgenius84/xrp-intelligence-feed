@@ -51,7 +51,7 @@ _THEMES = {
 }
 
 _NEGATIVE = re.compile(
-    r"\b(rejected|denied|withdrawn|withdrew|terminated|cancelled|canceled|suspended|halted|revoked|failed)\b",
+    r"\b(rejected|denied|withdrawn|withdrew|terminated|terminates|cancelled|canceled|suspended|suspends|suspend|halted|halts|revoked|revokes|failed|fails)\b",
     re.IGNORECASE,
 )
 
