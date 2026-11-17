@@ -42,6 +42,20 @@ def _strings(value: Any, *, max_items: int = 12, max_length: int = 500) -> list[
     return result
 
 
+def _analysis_text(value: Any, field_name: str, *, max_length: int = 1000) -> str:
+    """Normalize model prose without ever exposing Python container reprs."""
+    if isinstance(value, str):
+        return value.strip()[:max_length]
+    if isinstance(value, list):
+        parts = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        if len(parts) != len(value):
+            raise ValueError(f"LLM {field_name} list must contain only non-empty strings")
+        return " ".join(parts)[:max_length]
+    if value is None:
+        return ""
+    raise ValueError(f"LLM {field_name} must be a string or a list of strings")
+
+
 def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_evidence: set[str] | None = None) -> IntelligenceAnalysis:
     """Parse and strictly bound LLM JSON. Unrecognized fields are ignored."""
     import json
@@ -99,8 +113,8 @@ def parse_analysis(raw: str, *, source_url: str, model: str = "", allowed_eviden
 
     return IntelligenceAnalysis(
         event_type=event_type,
-        event_summary=str(value.get("event_summary") or "").strip()[:1000],
-        significance=str(value.get("significance") or "").strip()[:1000],
+        event_summary=_analysis_text(value.get("event_summary", ""), "event_summary"),
+        significance=_analysis_text(value.get("significance", ""), "significance"),
         entities=_strings(value.get("entities"), max_items=20, max_length=120),
         claims=claims,
         conflicts=_strings(value.get("conflicts"), max_items=12, max_length=500),
