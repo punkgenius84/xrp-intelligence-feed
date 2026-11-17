@@ -15,6 +15,7 @@ from ..historical_context import (
 from .base import LLMError, LLMProvider
 from .prompts import SYSTEM_PROMPT, build_cluster_user_prompt, build_user_prompt
 from .schemas import IntelligenceAnalysis, parse_analysis
+from ..theses import format_thesis_context
 
 
 _ACQUISITION_TERMS = (
@@ -348,6 +349,7 @@ def analyze_item(
     item: NewsItem,
     provider: LLMProvider,
     historical_events: dict | None = None,
+    historical_theses: dict | None = None,
 ) -> IntelligenceAnalysis:
     try:
         context_records = select_historical_context(item.title, item.summary)
@@ -358,6 +360,7 @@ def analyze_item(
             part for part in (
                 format_historical_context(context_records),
                 format_prior_event_context(prior_records),
+                format_thesis_context(item.title, item.summary, historical_theses),
             ) if part
         )
         response = provider.generate(
@@ -400,6 +403,7 @@ def analyze_cluster(
     cluster: EventCluster,
     provider: LLMProvider,
     historical_events: dict | None = None,
+    historical_theses: dict | None = None,
 ) -> IntelligenceAnalysis:
     primary = cluster.primary
     try:
@@ -417,6 +421,7 @@ def analyze_cluster(
             part for part in (
                 format_historical_context(context_records),
                 format_prior_event_context(prior_records),
+                format_thesis_context("\n".join(item.title for item in cluster.members), combined_text, historical_theses),
             ) if part
         )
         response = provider.generate(

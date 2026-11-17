@@ -143,6 +143,11 @@ class JsonIntelligenceState:
         record["superseded_by"] = superseded_by
         state["events"][event_id] = record
 
+        # Refresh durable strategic theses from the complete validated event history.
+        # This is deterministic and only opens a thesis after independent evidence exists.
+        from intelligence.theses import update_theses
+        update_theses(state, updated_at)
+
     @staticmethod
     def mark_superseded(
         state: dict[str, Any],

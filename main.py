@@ -26,6 +26,7 @@ from intelligence.configuration import load_intelligence_config
 from intelligence.llm.ollama import OllamaProvider
 from intelligence.pipeline import enrich_clusters, select_items, restore_failed_items_for_retry
 from intelligence.events import event_to_dict
+from intelligence.theses import update_theses
 
 from intelligence.buried_signals import detect_buried_signals
 from intelligence.entities import detect_entities
@@ -222,6 +223,8 @@ def run_pipeline(
         )
         if stale_ids:
             print(f"Intelligence lifecycle: marked {len(stale_ids)} event(s) stale")
+        # Backfill and reconcile durable thesis records from existing event history.
+        update_theses(intelligence_state_value, datetime.now().astimezone().isoformat())
 
     correlation_store = correlation_state or JsonCorrelationState()
     correlation_state_value = correlation_store.load()
@@ -432,6 +435,11 @@ def run_pipeline(
             intelligence_config,
             historical_events=(
                 intelligence_state_value.get("events", {})
+                if isinstance(intelligence_state_value, dict)
+                else {}
+            ),
+            historical_theses=(
+                intelligence_state_value.get("theses", {})
                 if isinstance(intelligence_state_value, dict)
                 else {}
             ),

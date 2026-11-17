@@ -81,12 +81,13 @@ def enrich_items(
     provider: LLMProvider,
     config: IntelligenceRuntimeConfig,
     historical_events: dict | None = None,
+    historical_theses: dict | None = None,
 ) -> tuple[list[IntelligenceEvent], list[str]]:
     events: list[IntelligenceEvent] = []
     failures: list[str] = []
     for item in select_items(items, config):
         try:
-            analysis = analyze_item(item, provider, historical_events)
+            analysis = analyze_item(item, provider, historical_events, historical_theses)
             events.append(
                 event_from_analysis(
                     event_id_for(item),
@@ -115,6 +116,7 @@ def enrich_clusters(
     provider: LLMProvider,
     config: IntelligenceRuntimeConfig,
     historical_events: dict | None = None,
+    historical_theses: dict | None = None,
 ) -> tuple[list[IntelligenceEvent], list[str]]:
     events: list[IntelligenceEvent] = []
     failures: list[str] = []
@@ -122,7 +124,7 @@ def enrich_clusters(
 
     for cluster in cluster_related_items(selected):
         try:
-            analysis = analyze_cluster(cluster, provider, historical_events)
+            analysis = analyze_cluster(cluster, provider, historical_events, historical_theses)
             member_ids = [
                 item.candidate_id or item.fingerprint
                 for item in cluster.members
