@@ -765,6 +765,97 @@
       "max_items": 100,
       "publisher_host": "reuters.com",
       "publisher_name": "Reuters"
+    },
+    {
+      "source_id": "reuters-financial-infrastructure-discovery",
+      "name": "Reuters (financial infrastructure and operational disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Areuters.com%20(%22bank%20outage%22%20OR%20%22banking%20outage%22%20OR%20%22payment%20outage%22%20OR%20Fedwire%20OR%20%22National%20Settlement%20Service%22%20OR%20%22payment%20system%20disruption%22%20OR%20%22financial%20infrastructure%20outage%22%20OR%20%22bank%20transaction%20delays%22%20OR%20%22banking%20partner%20outage%22%20OR%20%22crypto%20exchange%20withdrawals%22%20OR%20%22exchange%20withdrawal%20halt%22%20OR%20%22crypto%20security%20incident%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "reuters.com",
+      "publisher_name": "Reuters"
+    },
+    {
+      "source_id": "coindesk-security-disruption-discovery",
+      "name": "CoinDesk (crypto security and exchange disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com%20(%22withdrawals%20suspended%22%20OR%20%22withdrawals%20halted%22%20OR%20%22withdrawal%20freeze%22%20OR%20%22security%20incident%22%20OR%20%22API%20key%20leak%22%20OR%20%22exchange%20hack%22%20OR%20%22exchange%20exploit%22%20OR%20%22protocol%20exploit%22%20OR%20%22funds%20drained%22%20OR%20%22banking%20partner%20outage%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coindesk.com",
+      "publisher_name": "CoinDesk"
+    },
+    {
+      "source_id": "cointelegraph-security-disruption-discovery",
+      "name": "Cointelegraph (crypto security and exchange disruption discovery)",
+      "authority_tier": 2,
+      "category": "technology",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acointelegraph.com%20(%22withdrawals%20suspended%22%20OR%20%22withdrawals%20halted%22%20OR%20%22withdrawal%20freeze%22%20OR%20%22security%20incident%22%20OR%20%22API%20key%20leak%22%20OR%20%22exchange%20hack%22%20OR%20%22exchange%20exploit%22%20OR%20%22protocol%20exploit%22%20OR%20%22funds%20drained%22%20OR%20%22banking%20partner%20outage%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "cointelegraph.com",
+      "publisher_name": "Cointelegraph"
+    },
+    {
+      "source_id": "reuters-institutional-radar",
+      "name": "Reuters (Coinbase, SWIFT, IMF and BIS coverage)",
+      "authority_tier": 2,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Areuters.com%20(%22Coinbase%22%20OR%20%22SWIFT%22%20OR%20%22International%20Monetary%20Fund%22%20OR%20%22IMF%22%20OR%20%22Bank%20for%20International%20Settlements%22%20OR%20%22BIS%22)%20(payments%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20settlement%20OR%20cross-border%20OR%20banking%20OR%20digital%20assets%20OR%20blockchain%20OR%20CBDC%20OR%20%22central%20bank%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "reuters.com",
+      "publisher_name": "Reuters"
+    },
+    {
+      "source_id": "coindesk-institutional-radar",
+      "name": "CoinDesk (Coinbase, SWIFT, IMF and BIS coverage)",
+      "authority_tier": 2,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Acoindesk.com%20(%22Coinbase%22%20OR%20%22SWIFT%22%20OR%20%22International%20Monetary%20Fund%22%20OR%20%22IMF%22%20OR%20%22Bank%20for%20International%20Settlements%22%20OR%20%22BIS%22)%20(payments%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20settlement%20OR%20cross-border%20OR%20banking%20OR%20digital%20assets%20OR%20blockchain%20OR%20CBDC%20OR%20%22central%20bank%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "coindesk.com",
+      "publisher_name": "CoinDesk"
+    },
+    {
+      "source_id": "theblock-institutional-radar",
+      "name": "The Block (Coinbase, SWIFT, IMF and BIS coverage)",
+      "authority_tier": 2,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Atheblock.co%20(%22Coinbase%22%20OR%20%22SWIFT%22%20OR%20%22International%20Monetary%20Fund%22%20OR%20%22IMF%22%20OR%20%22Bank%20for%20International%20Settlements%22%20OR%20%22BIS%22)%20(payments%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20settlement%20OR%20cross-border%20OR%20banking%20OR%20digital%20assets%20OR%20blockchain%20OR%20CBDC%20OR%20%22central%20bank%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "theblock.co",
+      "publisher_name": "The Block"
+    },
+    {
+      "source_id": "blockworks-institutional-radar",
+      "name": "Blockworks (Coinbase, SWIFT, IMF and BIS coverage)",
+      "authority_tier": 2,
+      "category": "institutional",
+      "discovery_method": "google_news_official_rss",
+      "source_url": "https://news.google.com/rss/search?q=site%3Ablockworks.co%20(%22Coinbase%22%20OR%20%22SWIFT%22%20OR%20%22International%20Monetary%20Fund%22%20OR%20%22IMF%22%20OR%20%22Bank%20for%20International%20Settlements%22%20OR%20%22BIS%22)%20(payments%20OR%20stablecoin%20OR%20tokenization%20OR%20tokenisation%20OR%20settlement%20OR%20cross-border%20OR%20banking%20OR%20digital%20assets%20OR%20blockchain%20OR%20CBDC%20OR%20%22central%20bank%22)%20when%3A30d&hl=en-US&gl=US&ceid=US%3Aen",
+      "enabled": true,
+      "lookback_days": 30,
+      "max_items": 100,
+      "publisher_host": "blockworks.co",
+      "publisher_name": "Blockworks"
     }
   ]
 }

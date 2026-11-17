@@ -2,19 +2,6 @@ name: SWIFT Official Listing Runner Probe
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/swift_official_listing_probe.yml"
-      - "scripts/probe_swift_press_index.py"
-      - "discovery/institutional_press.py"
-      - "discovery/http.py"
-      - "config/discovery_sources.json"
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/swift_official_listing_probe.yml"
-      - "scripts/probe_swift_press_index.py"
 
 permissions:
   contents: read

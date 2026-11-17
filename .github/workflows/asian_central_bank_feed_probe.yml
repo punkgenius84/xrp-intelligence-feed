@@ -2,42 +2,6 @@ name: Google News and Official Publisher Probe
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/asian_central_bank_feed_probe.yml"
-      - "scripts/probe_asian_central_bank_feeds.py"
-      - "tests/test_asian_central_bank_feed_probe.py"
-      - "discovery/sgpc_api.py"
-      - "tests/test_sgpc_api.py"
-      - "config/discovery_sources.json"
-      - "config/entities.json"
-      - "config/keywords.json"
-      - "config/thresholds.json"
-      - "discovery/dispatch.py"
-      - "discovery/google_news_official_rss.py"
-      - "discovery/http.py"
-      - "intelligence/entities.py"
-      - "intelligence/relevance.py"
-      - "intelligence/source_quality.py"
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/asian_central_bank_feed_probe.yml"
-      - "scripts/probe_asian_central_bank_feeds.py"
-      - "tests/test_asian_central_bank_feed_probe.py"
-      - "discovery/sgpc_api.py"
-      - "tests/test_sgpc_api.py"
-      - "config/discovery_sources.json"
-      - "config/entities.json"
-      - "config/keywords.json"
-      - "config/thresholds.json"
-      - "discovery/dispatch.py"
-      - "discovery/google_news_official_rss.py"
-      - "discovery/http.py"
-      - "intelligence/entities.py"
-      - "intelligence/relevance.py"
-      - "intelligence/source_quality.py"
 
 permissions:
   contents: read

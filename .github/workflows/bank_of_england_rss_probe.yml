@@ -2,18 +2,6 @@ name: Bank of England Official RSS Runner Probe
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/bank_of_england_rss_probe.yml"
-      - "scripts/probe_bank_of_england_rss.py"
-      - "discovery/http.py"
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/bank_of_england_rss_probe.yml"
-      - "scripts/probe_bank_of_england_rss.py"
-      - "discovery/http.py"
 
 permissions:
   contents: read

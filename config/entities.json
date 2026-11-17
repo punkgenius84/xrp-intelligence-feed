@@ -205,6 +205,28 @@
     "OKX": [
       "OKX",
       "OKEx"
+    ],
+    "Bank of America": [
+      "Bank of America",
+      "BofA"
+    ],
+    "Wells Fargo": [
+      "Wells Fargo"
+    ],
+    "U.S. Bank": [
+      "U.S. Bank",
+      "US Bank"
+    ],
+    "Zelle": [
+      "Zelle",
+      "Early Warning Services"
+    ],
+    "Lighter": [
+      "Lighter"
+    ],
+    "Kava": [
+      "Kava",
+      "Kava Protocol"
     ]
   },
   "regulators": {
@@ -266,6 +288,10 @@
       "Department of Finance",
       "Finance Canada",
       "Finance, Dept. of"
+    ],
+    "IMF": [
+      "IMF",
+      "International Monetary Fund"
     ]
   },
   "government": {
@@ -309,6 +335,12 @@
       "tokenized stocks",
       "tokenised stock",
       "tokenised stocks"
+    ],
+    "Fedwire": [
+      "Fedwire",
+      "Fedwire Funds Service",
+      "Fedwire Securities Service",
+      "National Settlement Service"
     ]
   }
 }

@@ -122,6 +122,13 @@ def test_config_is_small_explicit_and_has_no_invented_issuer_ids():
         "house-financial-services-clarity-google-news-discovery",
         "reuters-google-news-discovery",
         "sgpc-media-releases-api",
+        "reuters-financial-infrastructure-discovery",
+        "coindesk-security-disruption-discovery",
+        "cointelegraph-security-disruption-discovery",
+        "reuters-institutional-radar",
+        "coindesk-institutional-radar",
+        "theblock-institutional-radar",
+        "blockworks-institutional-radar",
     }
 
 

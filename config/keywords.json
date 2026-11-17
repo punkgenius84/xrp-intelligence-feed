@@ -58,7 +58,19 @@
     "MEXC Global",
     "MEXC",
     "Bitget",
-    "OKX"
+    "OKX",
+    "outage",
+    "outages",
+    "disruption",
+    "disruptions",
+    "transaction delays",
+    "payment delays",
+    "withdrawals",
+    "withdrawal freeze",
+    "security incident",
+    "API key leak",
+    "Fedwire",
+    "transactions"
   ],
   "context": [
     "ODL",

@@ -130,6 +130,7 @@ def _classify(item, combined: str) -> list[str]:
         "Bitcoin", "Ethereum", "Solana", "Cardano", "Avalanche", "Polygon",
         "Tether", "Circle", "Binance", "Kraken", "Uniswap", "Aave",
         "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
+        "Lighter", "Kava",
     }
     digital_asset_topic = any(_contains(combined, term) for term in (
         "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
@@ -249,6 +250,25 @@ def _classify(item, combined: str) -> list[str]:
             and (ecosystem_context or security_token_context)):
         categories.append("crypto_ecosystem_action")
 
+    # Material incidents affecting tracked financial infrastructure or crypto
+    # venues qualify independently of partnership/tokenization announcement logic.
+    disruption_terms = (
+        "outage", "outages", "disruption", "disruptions", "transaction delays",
+        "payment delays", "withdrawals suspended", "withdrawals halted",
+        "withdrawal halt", "withdrawal freeze", "halted withdrawals",
+        "paused withdrawals", "delayed withdrawals", "service interruption",
+        "degraded performance", "funds drained", "security incident",
+        "api key leak", "cyberattack", "cyber attack", "exploit", "hacked",
+    )
+    disruption = any(_contains(combined, term) for term in disruption_terms)
+    operational_entities = entities & {
+        "J.P. Morgan", "BNY", "Citi", "Bank of America", "Wells Fargo",
+        "U.S. Bank", "Zelle", "Fedwire", "Federal Reserve", "Coinbase",
+        "Binance", "Kraken", "OKX", "Bitget", "MEXC Global", "Lighter", "Kava",
+    }
+    if disruption and operational_entities:
+        categories.append("financial_infrastructure_disruption")
+
     broad_tokenization = any(_contains(combined, term) for term in (
         "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA"))
@@ -296,6 +316,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or "crypto_ecosystem_action" in categories
         or "legislative_digital_asset_action" in categories
         or "direct_ripple_institutional_action" in categories
+        or "financial_infrastructure_disruption" in categories
     )
 
     score = 0
@@ -341,12 +362,13 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         "institutional_tokenization_action",
         "legislative_digital_asset_action",
         "direct_ripple_institutional_action",
+        "financial_infrastructure_disruption",
     }
     matched_action_categories = action_bonus_categories.intersection(categories)
     if matched_action_categories:
         points = weights["crypto_ecosystem_action_bonus"]
         score += points
-        reasons.append(f"material digital-asset ecosystem, institutional, partnership, or policy action (+{points})")
+        reasons.append(f"material digital-asset, institutional, policy, or infrastructure action (+{points})")
         signals.extend(f"topic:{category}" for category in sorted(matched_action_categories))
 
     if topical and item.source_quality == "primary":
