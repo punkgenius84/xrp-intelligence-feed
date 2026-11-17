@@ -34,7 +34,7 @@ def _parse_stamp(value: object) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def _event_signatures(event: object) -> set[str]:
+def event_signature_keys(event: object) -> set[str]:
     """Create conservative exact-title fingerprints; never fuzzy-match follow-up headlines."""
     signatures: set[str] = set()
     for evidence in getattr(event, "evidence", []) or []:
@@ -117,7 +117,7 @@ class JsonIntelligenceDeliveryHistory:
         }
 
     def has_duplicate_event(self, event: object, *, now: datetime | None = None) -> bool:
-        signatures = _event_signatures(event)
+        signatures = event_signature_keys(event)
         if not signatures:
             return False
         current = now or datetime.now(timezone.utc)
