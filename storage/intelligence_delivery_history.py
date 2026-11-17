@@ -140,7 +140,7 @@ class JsonIntelligenceDeliveryHistory:
             event_id = getattr(event, "event_id", None)
             if isinstance(event_id, str) and event_id.strip():
                 event_ids.add(event_id)
-            fingerprints.update(_event_signatures(event))
+            fingerprints.update(event_signature_keys(event))
         self._write(event_ids, fingerprints, posted_at=posted_at)
 
     def _write(self, event_ids: set[str], fingerprints: set[str], *, posted_at: datetime | None) -> None:
