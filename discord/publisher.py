@@ -94,7 +94,10 @@ def format_message(item: Any) -> str:
         if entities:
             metadata += f" · {entities}"
     lines.append(f"*{metadata}*")
-    lines.append(f"[Read source]({item.url.strip()})")
+    # Plain URLs avoid Discord clients rendering Markdown link text twice.
+    url = str(item.url or "").strip()
+    if url.startswith("https://") and not any(char.isspace() for char in url):
+        lines.append(f"Source: {url}")
     return "\n".join(lines)
 
 

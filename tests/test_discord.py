@@ -184,7 +184,7 @@ def test_message_uses_compact_headline_summary_metadata_and_source_link():
     assert lines[0] == "**FinCEN issues digital asset guidance**"
     assert lines[1] == "FinCEN published guidance for financial institutions."
     assert lines[2] == "*FinCEN · 2026-09-27 · FinCEN, XRP*"
-    assert lines[3] == "[Read source](https://www.fincen.gov/news/news-releases/x)"
+    assert lines[3] == "Source: https://www.fincen.gov/news/news-releases/x"
     assert len(lines) == 4
     assert "Why this fired" not in "\\n".join(lines)
     assert "**Score:**" not in "\\n".join(lines)
@@ -385,3 +385,9 @@ def test_workflow_takes_webhook_from_secrets_only():
     assert "DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_INTELLIGENCE_DISCORD_WEBHOOK }}" in text
     assert "discord.com/api/webhooks" not in text
     assert "schedule:" in text
+
+
+def test_message_uses_plain_source_url_without_markdown_link_wrapping():
+    message = format_message(item(url="https://example.test/story"))
+    assert "Source: https://example.test/story" in message
+    assert "[Read source](" not in message

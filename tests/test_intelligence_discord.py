@@ -50,8 +50,10 @@ def test_format_uses_compact_labels_and_clickable_source_titles():
     assert "**Conflicting reports:**" in message
     assert "Source A says planned; Source B says launched." in message
     assert "**Sources:**" in message
-    assert "[Formal action](https://example.test/source-1)" in message
-    assert "[Company response](https://example.test/source-2)" in message
+    assert "Primary source · Formal action · 2026-10-01" in message
+    assert "Primary source · Company response · 2026-10-01" in message
+    assert "https://example.test/source-1" in message
+    assert "https://example.test/source-2" in message
     assert "**Independent members:**" not in message
 
 
@@ -110,3 +112,11 @@ def test_format_normalizes_legacy_list_significance_without_python_repr():
     assert "A new filing expands the institution's regulatory path." in message
     assert "bank-like strategy." in message
     assert "['" not in message
+
+
+
+def test_secondary_evidence_is_labeled_as_reporting_not_primary():
+    event = make_event()
+    event.evidence[1] = replace(event.evidence[1], source_quality="secondary")
+    message = format_intelligence_event(event)
+    assert "Independent reporting · Company response" in message
