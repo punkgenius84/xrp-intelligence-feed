@@ -1,4 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+
+import main
 
 import pytest
 
@@ -68,3 +71,42 @@ def test_partial_does_not_increment_hard_failure_streak():
     health = state["sources"]["federal-register"]["health"]
     assert health["consecutive_failures"] == 0
     assert health["consecutive_empty"] == 2
+
+
+def test_persistently_unhealthy_source_emits_warning_after_24_hours(capsys):
+    now = datetime(2026, 9, 25, 12, tzinfo=timezone.utc)
+    started = (now - timedelta(hours=25)).isoformat()
+    result = SimpleNamespace(
+        discovery_results=[SimpleNamespace(source_id="sec-edgar")],
+        health={"sec-edgar": {
+            "last_status": "failed",
+            "status_started_at": started,
+            "last_attempt": started,
+            "last_error": "HTTP timeout",
+        }},
+    )
+
+    main.print_source_health_warnings(result, now=now)
+
+    output = capsys.readouterr().out
+    assert "Source health — sec-edgar is failing" in output
+    assert "25.0h" in output
+    assert "HTTP timeout" in output
+
+
+def test_recent_source_failure_does_not_emit_persistent_health_warning(capsys):
+    now = datetime(2026, 9, 25, 12, tzinfo=timezone.utc)
+    started = (now - timedelta(hours=2)).isoformat()
+    result = SimpleNamespace(
+        discovery_results=[SimpleNamespace(source_id="ripple")],
+        health={"ripple": {
+            "last_status": "empty",
+            "status_started_at": started,
+            "last_attempt": started,
+            "last_error": "",
+        }},
+    )
+
+    main.print_source_health_warnings(result, now=now)
+
+    assert capsys.readouterr().out == ""
