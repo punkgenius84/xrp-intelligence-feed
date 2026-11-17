@@ -226,3 +226,65 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
         )[:MAX_THESES]
         state["theses"] = dict(ordered)
     return sorted(changed, key=lambda item: item["thesis_id"])
+
+
+def format_thesis_context(
+    title: str,
+    summary: str,
+    theses: dict[str, Any] | None,
+    *,
+    max_records: int = 3,
+) -> str:
+    """Format entity-matched theses as historical inference, never current evidence."""
+    if max_records <= 0 or not isinstance(theses, dict):
+        return ""
+    current_text = f"{title}\n{summary}"
+    matches = []
+    for record in theses.values():
+        if not isinstance(record, dict):
+            continue
+        entity = _clean(record.get("entity"))
+        if not entity or not re.search(
+            r"(?<![A-Za-z0-9_])" + re.escape(entity) + r"(?![A-Za-z0-9_])",
+            current_text,
+            flags=re.IGNORECASE,
+        ):
+            continue
+        if not record.get("event_ids") or not record.get("source_ids"):
+            continue
+        matches.append(record)
+    matches.sort(
+        key=lambda item: (
+            {"weakened": 0, "mixed": 1, "supported": 2}.get(item.get("status"), 0),
+            item.get("updated_at", ""),
+        ),
+        reverse=True,
+    )
+    if not matches:
+        return ""
+    lines = [
+        "PERSISTENT STRATEGIC THESIS HISTORY (prior inference; not current-event evidence):"
+    ]
+    for record in matches[:max_records]:
+        links = [
+            f"[{item.get('published_at', '')}] {item.get('title', '')} ({item.get('url', '')})"
+            for item in record.get("source_evidence", [])
+            if isinstance(item, dict) and _clean(item.get("url")).startswith("https://")
+        ]
+        lines.append(
+            f"- {record.get('entity')} | theme={record.get('theme')} | "
+            f"status={record.get('status')} | evidence strength={record.get('strength_label')} "
+            f"(heuristic, not probability) | events={record.get('independent_event_count')} "
+            f"| distinct sources={record.get('independent_source_count')}. "
+            f"Prior thesis: {record.get('statement', '')} "
+            f"Mechanism: {record.get('mechanism', '')} "
+            f"Negative event IDs: {', '.join(record.get('negative_event_ids', [])) or 'none recorded'}. "
+            f"Sources: {'; '.join(links)}"
+        )
+    lines.append(
+        "Treat these records as prior analytical hypotheses, not verified current facts. "
+        "Use them to assess continuity, change, alternatives, and future confirming or weakening "
+        "signals. Do not claim a prior status remains current. Current factual claims must be "
+        "supported by the supplied current source evidence."
+    )
+    return "\n".join(lines)
