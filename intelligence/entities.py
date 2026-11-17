@@ -9,9 +9,10 @@ def _matches(text: str, alias: str) -> bool:
     if not alias:
         return False
     escaped = re.escape(alias)
-    # Short uppercase ticker symbols are case-sensitive. In particular, ADA
-    # must not match a person's ordinary name "Ada" in unrelated reporting.
-    flags = 0 if len(alias) <= 5 and alias.isupper() and alias.isalpha() else re.IGNORECASE
+    # ADA is also a common personal name; keep this one ticker case-sensitive
+    # so "Ada Serrano" is not misclassified as Cardano. Other aliases retain
+    # the existing case-insensitive behavior.
+    flags = 0 if alias == "ADA" else re.IGNORECASE
     # Word boundaries stop XRP/Ripple/SEC from matching inside unrelated words.
     return re.search(r"(?<!\w)" + escaped + r"(?!\w)", text, flags=flags) is not None
 
