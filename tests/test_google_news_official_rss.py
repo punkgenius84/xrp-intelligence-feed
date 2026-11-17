@@ -53,10 +53,11 @@ def rss(*items):
 def item(title="MAS announces cross-border settlement initiative",
          link=LINK, date="Fri, 23 Oct 2026 09:00:00 GMT",
          publisher="Monetary Authority of Singapore",
-         href="https://www.mas.gov.sg/"):
+         href="https://www.mas.gov.sg/",
+         description="Official publisher discovery result."):
     return (f"<item><title>{title}</title><link>{link}</link><pubDate>{date}</pubDate>"
             f"<source url=\"{href}\">{publisher}</source>"
-            "<description>Official publisher discovery result.</description></item>")
+            f"<description><![CDATA[{description}]]></description></item>")
 
 
 class FakeHttp:
@@ -205,6 +206,33 @@ def test_preserves_google_clickthrough_and_publisher_attribution_without_claimin
     "https://user@news.google.com/rss/articles/CBMiQ0",
     "https://news.google.com/other/CBMiQ0",
 ])
+
+def test_uses_verified_direct_publisher_article_link_from_rss_description():
+    direct = "https://www.mas.gov.sg/news/media-releases/2026/cross-border-settlement"
+    http = FakeHttp(rss(item(description=f'<a href="{direct}">Read release</a>')))
+    candidate = run(http).candidates[0]
+    assert candidate.url == direct
+    assert candidate.primary_url == direct
+    assert candidate.discovery_lead_url == LINK
+    assert candidate.source_native_metadata["article_url_status"] == "publisher_article_url_verified"
+    assert candidate.provenance == [MAS_URL, LINK, direct]
+
+
+@pytest.mark.parametrize("hostile", [
+    "https://mas.gov.sg.evil.example/article",
+    "https://evilmas.gov.sg/article",
+    "http://www.mas.gov.sg/article",
+    "https://user@www.mas.gov.sg/article",
+    "https://www.mas.gov.sg:444/article",
+])
+def test_rejects_untrusted_direct_publisher_link_and_keeps_google_fallback(hostile):
+    http = FakeHttp(rss(item(description=f'<a href="{hostile}">Read release</a>')))
+    candidate = run(http).candidates[0]
+    assert candidate.url == LINK
+    assert candidate.primary_url == LINK
+    assert candidate.source_native_metadata["article_url_status"] == "google_news_clickthrough_unverified"
+
+
 def test_rejects_non_google_or_non_article_links(bad_link):
     result = run(FakeHttp(rss(item(link=bad_link))))
     assert result.status == "failed"
