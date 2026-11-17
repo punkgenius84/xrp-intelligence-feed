@@ -139,6 +139,14 @@ def test_missing_webhook_raises_clear_error():
         DiscordWebhook("", session=FakeSession()).send("hello")
 
 
+def test_webhook_default_environment_name_matches_publisher_configuration(monkeypatch):
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
+    monkeypatch.delenv("DISCORD_INTELLIGENCE_DISCORD_WEBHOOK", raising=False)
+    session = FakeSession(FakeResponse(204))
+    DiscordWebhook(session=session).send("hello")
+    assert session.calls[0][0] == URL
+
+
 # ---- settings ----------------------------------------------------------------------------
 
 def test_settings_defaults_when_nothing_is_set():
@@ -370,9 +378,9 @@ def test_no_save_state_reads_but_never_writes(tmp_path):
 WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "news_feed.yml"
 
 
-def test_workflow_defaults_manual_runs_to_live_publish_and_keeps_dry_run_opt_in():
+def test_workflow_defaults_manual_runs_to_dry_run_and_requires_explicit_publish():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "dry_run:" in text and "default: false" in text
+    assert "dry_run:" in text and "default: true" in text
     assert "DISCORD_DRY_RUN: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.dry_run) }}" in text
     assert "state/outbox.json" in text
     assert "publish_intelligence_test:" not in text

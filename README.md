@@ -20,8 +20,8 @@ For a manual run:
 
 1. Open the repository's **Actions** tab.
 2. Select **XRP Intelligence Feed** and choose **Run workflow**.
-3. Leave **Dry run** checked to collect and analyze without posting to Discord or saving production state.
-4. Uncheck **Dry run** only when you intend to publish and persist state.
+3. **Dry run is checked by default.** Leave it checked to collect and analyze without posting to Discord or saving production state.
+4. Uncheck **Dry run** only when you deliberately intend to publish and persist state.
 
 Scheduled runs publish automatically. Manual runs default to dry-run mode as a safety measure. Push-triggered diagnostic runs do not publish or update production state.
 

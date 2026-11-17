@@ -15,3 +15,11 @@ state/intelligence.json
 state/intelligence.json.tmp
 state/intelligence_outbox.json
 state/intelligence_outbox.json.tmp
+
+# Operational state is local/cache-backed and must never be committed.
+state/delivery_history.json
+state/delivery_history.json.tmp
+state/intelligence_delivery_history.json
+state/intelligence_delivery_history.json.tmp
+state/intelligence_quarantine.json
+state/intelligence_quarantine.json.tmp
