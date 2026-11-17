@@ -254,7 +254,7 @@
       "category": "institutional",
       "discovery_method": "institutional_press_html",
       "source_url": "https://www.mastercard.com/global/en/news-and-trends/press.html",
-      "enabled": true,
+      "enabled": false,
       "lookback_days": 180,
       "max_items": 50,
       "allowed_hosts": [
@@ -807,7 +807,7 @@
     },
     {
       "source_id": "reuters-institutional-radar",
-      "name": "Reuters (Coinbase, SWIFT, IMF and BIS coverage)",
+      "name": "Reuters (Mastercard, Coinbase, SWIFT, IMF and BIS coverage)",
       "authority_tier": 2,
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
@@ -820,7 +820,7 @@
     },
     {
       "source_id": "coindesk-institutional-radar",
-      "name": "CoinDesk (Coinbase, SWIFT, IMF and BIS coverage)",
+      "name": "CoinDesk (Mastercard, Coinbase, SWIFT, IMF and BIS coverage)",
       "authority_tier": 2,
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
@@ -833,7 +833,7 @@
     },
     {
       "source_id": "theblock-institutional-radar",
-      "name": "The Block (Coinbase, SWIFT, IMF and BIS coverage)",
+      "name": "The Block (Mastercard, Coinbase, SWIFT, IMF and BIS coverage)",
       "authority_tier": 2,
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
@@ -846,7 +846,7 @@
     },
     {
       "source_id": "blockworks-institutional-radar",
-      "name": "Blockworks (Coinbase, SWIFT, IMF and BIS coverage)",
+      "name": "Blockworks (Mastercard, Coinbase, SWIFT, IMF and BIS coverage)",
       "authority_tier": 2,
       "category": "institutional",
       "discovery_method": "google_news_official_rss",
