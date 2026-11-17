@@ -2,22 +2,6 @@ name: Coinbase Official Source Runner Probe
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/coinbase_official_source_probe.yml"
-      - "scripts/probe_coinbase_*.py"
-      - "discovery/institutional_press.py"
-      - "discovery/http.py"
-      - "config/discovery_sources.json"
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/coinbase_official_source_probe.yml"
-      - "scripts/probe_coinbase_*.py"
-      - "discovery/institutional_press.py"
-      - "discovery/http.py"
-      - "config/discovery_sources.json"
 
 permissions:
   contents: read
