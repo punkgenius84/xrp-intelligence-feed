@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 from types import SimpleNamespace
 
 import json
@@ -379,13 +380,15 @@ def test_intelligence_delivery_suppresses_same_publisher_headline_with_new_event
 
     monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
     first = event(event_id="evt-mas-first")
-    first.evidence[0].title = (
-        "MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity"
-    )
+    first.evidence = [replace(
+        first.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
     second = event(event_id="evt-mas-new-id")
-    second.evidence[0].title = (
-        "MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity"
-    )
+    second.evidence = [replace(
+        second.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
 
     assert main.publish_intelligence_events(
         [first], settings, publish_enabled=True, outbox_store=store
@@ -402,15 +405,17 @@ def test_intelligence_delivery_allows_changed_followup_headline(tmp_path):
 
     history = JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json")
     original = event(event_id="evt-original")
-    original.evidence[0].title = (
-        "MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity"
-    )
+    original.evidence = [replace(
+        original.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
+    )]
     history.record_events([original])
 
     followup = event(event_id="evt-followup")
-    followup.evidence[0].title = (
-        "MAS launches expanded cross-border digital asset settlement pilot with new banks"
-    )
+    followup.evidence = [replace(
+        followup.evidence[0],
+        title="MAS launches expanded cross-border digital asset settlement pilot with new banks",
+    )]
     assert history.has_duplicate_event(followup) is False
 
 
