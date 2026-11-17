@@ -50,8 +50,10 @@ def test_format_uses_compact_labels_and_clickable_source_titles():
     assert "**Conflicting reports:**" in message
     assert "Source A says planned; Source B says launched." in message
     assert "**Sources:**" in message
-    assert "[Formal action](https://example.test/source-1)" in message
-    assert "[Company response](https://example.test/source-2)" in message
+    assert "Primary source · Formal action · 2026-10-01" in message
+    assert "Primary source · Company response · 2026-10-01" in message
+    assert "https://example.test/source-1" in message
+    assert "https://example.test/source-2" in message
     assert "**Independent members:**" not in message
 
 
