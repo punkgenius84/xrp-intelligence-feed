@@ -139,6 +139,14 @@ def test_missing_webhook_raises_clear_error():
         DiscordWebhook("", session=FakeSession()).send("hello")
 
 
+def test_webhook_default_environment_name_matches_publisher_configuration(monkeypatch):
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", URL)
+    monkeypatch.delenv("DISCORD_INTELLIGENCE_DISCORD_WEBHOOK", raising=False)
+    session = FakeSession(FakeResponse(204))
+    DiscordWebhook(session=session).send("hello")
+    assert session.calls[0][0] == URL
+
+
 # ---- settings ----------------------------------------------------------------------------
 
 def test_settings_defaults_when_nothing_is_set():
