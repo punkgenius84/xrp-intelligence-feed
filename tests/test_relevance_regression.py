@@ -679,3 +679,60 @@ def test_exploratory_partnership_talks_are_early_relevance_signals():
     assert "direct_ripple_institutional_action" in item.relevance_categories
     assert score >= 30, f"credible exploratory partnership talks should clear gate: {score}, {reasons}"
 
+
+
+@pytest.mark.parametrize(
+    ("title", "summary", "expected_entities"),
+    [
+        (
+            "JPMorgan software bug slows transactions, affecting payments involving other banks",
+            "A technical outage delayed transactions and Zelle transfers involving JPMorgan Chase; other banks' own systems remained operational.",
+            {"J.P. Morgan", "Zelle"},
+        ),
+        (
+            "Lighter halts withdrawals after leaked trader API key triggers security incident",
+            "The crypto exchange paused withdrawals after funds were drained in a security incident; the protocol says smart contracts were not compromised.",
+            {"Lighter"},
+        ),
+        (
+            "Fedwire Funds and National Settlement Service report degraded performance",
+            "A Federal Reserve payment infrastructure disruption delayed settlement processing.",
+            {"Federal Reserve", "Fedwire"},
+        ),
+    ],
+)
+def test_material_financial_infrastructure_disruptions_clear_relevance_gate(
+    title, summary, expected_entities
+):
+    item = NewsItem(
+        title=title,
+        summary=summary,
+        url="https://example.test/financial-infrastructure-disruption",
+        source="Reuters",
+        source_id="reuters-financial-infrastructure-discovery",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+    assert expected_entities <= set(item.detected_entities)
+    assert "financial_infrastructure_disruption" in item.relevance_categories
+    assert score >= 30, f"material disruption should clear gate: {score}, {reasons}"
+
+
+def test_generic_bank_website_outage_does_not_clear_relevance_gate():
+    item = NewsItem(
+        title="Regional bank website outage frustrates customers",
+        summary="Customers reported difficulty viewing balances and accessing routine online banking services.",
+        url="https://example.test/generic-bank-outage",
+        source="Local News",
+        source_id="local-news",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+    assert "financial_infrastructure_disruption" not in item.relevance_categories
+    assert score < 30
