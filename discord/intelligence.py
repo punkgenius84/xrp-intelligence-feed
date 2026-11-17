@@ -7,6 +7,7 @@ MAX_CLAIMS = 4
 MAX_EVIDENCE = 4
 MAX_CONFLICTS = 3
 MAX_UNCERTAINTIES = 3
+MAX_SIGNIFICANCE_LENGTH = 700
 
 
 def _clean(value: str, limit: int) -> str:
@@ -33,12 +34,25 @@ def format_intelligence_event(
     superseded_by: list[str] | None = None,
 ) -> str:
     """Render an intelligence event for Discord without adding interpretation."""
+    significance = event.significance
+    if isinstance(significance, list):
+        significance = " ".join(
+            " ".join(value.split()) for value in significance
+            if isinstance(value, str) and value.strip()
+        )
+    if not isinstance(significance, str):
+        significance = ""
+
     lines = [
         f"**{_clean(event.event_type.replace('_', ' ').title(), 70)}**",
         _clean(event.summary, 420),
-        f"**{'Strategic read-through' if event.event_type == 'partnership' else 'Why it matters'}:** {_clean(event.significance, 460)}",
-        f"**Status:** {_clean(status, 32)}",
     ]
+    if significance.strip():
+        lines.append(
+            f"**{'Strategic read-through' if event.event_type == 'partnership' else 'Why it matters'}:** "
+            f"{_clean(significance, MAX_SIGNIFICANCE_LENGTH)}"
+        )
+    lines.append(f"**Status:** {_clean(status, 32)}")
 
     if event.entities:
         entities = sorted({value.strip() for value in event.entities if value.strip()}, key=str.casefold)
