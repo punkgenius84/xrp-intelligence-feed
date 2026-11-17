@@ -73,3 +73,35 @@ def test_inactive_events_do_not_create_or_support_theses():
         "event-2": _event("Tokenized fund goes live", "Example Bank", "publisher-b", status="superseded"),
     }}
     assert update_theses(state, "2026-11-17T12:00:00+00:00") == []
+
+
+def test_thesis_persists_validated_source_links_and_schema_version():
+    state = {"events": {
+        "event-1": _event("Bank seeks Federal Reserve master account", "Example Bank", "publisher-a"),
+        "event-2": _event("Bank applies for national trust bank charter", "Example Bank", "publisher-b"),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    assert thesis["schema_version"] == 1
+    assert {item["url"] for item in thesis["source_evidence"]} == {
+        "https://example.test/publisher-a",
+        "https://example.test/publisher-b",
+    }
+
+
+def test_thesis_context_is_entity_scoped_and_labeled_as_prior_inference():
+    from intelligence.theses import format_thesis_context
+
+    state = {"events": {
+        "event-1": _event("Bank seeks Federal Reserve master account", "Example Bank", "publisher-a"),
+        "event-2": _event("Bank applies for national trust bank charter", "Example Bank", "publisher-b"),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    context = format_thesis_context(
+        "Example Bank expands payments service",
+        "A new operational announcement.",
+        state["theses"],
+    )
+    assert "PERSISTENT STRATEGIC THESIS HISTORY" in context
+    assert "prior inference" in context
+    assert "https://example.test/publisher-a" in context
+    assert format_thesis_context("Different Bank", "Unrelated story", state["theses"]) == ""
