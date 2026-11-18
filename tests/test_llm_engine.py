@@ -4,7 +4,7 @@ import pytest
 
 from intelligence.evidence import build_evidence_bundle
 from intelligence.llm.base import LLMError, LLMResponse, LLMUnavailable
-from intelligence.llm.enrichment import analyze_cluster, analyze_item, _validate_metadata_anchors
+from intelligence.llm.enrichment import analyze_cluster, analyze_item, _validate_metadata_anchors, _metadata_anchor_tokens
 from intelligence.event_clustering import EventCluster
 from intelligence.llm.prompts import build_user_prompt
 from intelligence.llm.schemas import parse_analysis
@@ -838,6 +838,12 @@ def test_prompt_explicitly_separates_reported_facts_from_inference_and_speculati
     assert "put deductions, strategic connections, and speculation in significance" in SYSTEM_PROMPT
     assert "clearly labeled evidence-backed inferences and clearly labeled speculation" in SYSTEM_PROMPT
 
+
+
+def test_metadata_anchor_tokens_ignore_generic_analytical_transition():
+    anchors = _metadata_anchor_tokens("Viewed alongside the Federal Reserve master-account request")
+    assert "viewed" not in anchors
+    assert {"federal", "reserve"} <= anchors
 
 def test_cluster_significance_can_use_supplied_history(monkeypatch):
     import intelligence.llm.enrichment as enrichment
