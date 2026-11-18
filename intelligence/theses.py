@@ -50,8 +50,21 @@ _THEMES = {
     },
 }
 
-_NEGATIVE = re.compile(
-    r"\b(rejected|denied|withdrawn|withdrew|terminated|terminates|cancelled|canceled|suspended|suspends|suspend|halted|halts|revoked|revokes|failed|fails)\b",
+_NEGATIVE_WORDS = (
+    r"reject(?:ed|s)?|deny|denied|withdraw(?:n|s)?|withdrew|"
+    r"terminat(?:e|ed|es)|cancel(?:led|ed|s)?|suspend(?:ed|s)?|"
+    r"halt(?:ed|s)?|revok(?:ed|es)|fail(?:ed|s)?"
+)
+_NEGATIVE = re.compile(rf"\b(?:{_NEGATIVE_WORDS})\b", re.IGNORECASE)
+_NEGATED_NEGATIVE = re.compile(
+    rf"\b(?:not|never|no|did not|does not|has not|have not|was not|were not|is not|are not)\s+"
+    rf"(?:yet\s+)?(?:being\s+|been\s+|be\s+)?(?:{_NEGATIVE_WORDS})\b",
+    re.IGNORECASE,
+)
+_SPECULATIVE_NEGATIVE = re.compile(
+    r"\b(?:may|might|could|would|possibly|potentially|possible|potential|"
+    r"risk(?:s)?(?:\s+of)?|threat(?:s)?(?:\s+of)?|hypothetical|if|unless|"
+    r"expected\s+to|could\s+eventually)\b",
     re.IGNORECASE,
 )
 
@@ -65,6 +78,38 @@ def _event_text(event: dict[str, Any]) -> str:
     parts.extend(_clean(value) for value in event.get("entities", []) if isinstance(value, str))
     parts.extend(_clean(item.get("title")) for item in event.get("evidence", []) if isinstance(item, dict))
     return " ".join(part for part in parts if part)
+
+
+def _has_confirmed_negative(text: str) -> bool:
+    """Recognize a stated negative action, excluding negation and hypothetical risk."""
+    for sentence in re.split(r"(?<=[.!?])\\s+", text):
+        for match in _NEGATIVE.finditer(sentence):
+            prefix = sentence[:match.start()]
+            if _SPECULATIVE_NEGATIVE.search(prefix[-120:]):
+                continue
+            if _NEGATED_NEGATIVE.search(sentence[max(0, match.start() - 80):match.end()]):
+                continue
+            return True
+    return False
+
+
+def _has_reported_negative_evidence(event: dict[str, Any]) -> bool:
+    """Use only evidence-linked reported facts, never significance/risk analysis."""
+    claims = event.get("claims")
+    if isinstance(claims, list) and claims:
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            if _clean(claim.get("claim_type", "reported_fact")).casefold() != "reported_fact":
+                continue
+            evidence_refs = claim.get("evidence")
+            if not isinstance(evidence_refs, list) or not evidence_refs:
+                continue
+            if _has_confirmed_negative(_clean(claim.get("text"))):
+                return True
+        return False
+    # Compatibility for older persisted events created before claim metadata existed.
+    return _has_confirmed_negative(_clean(event.get("summary")))
 
 
 def _event_sources(event: dict[str, Any]) -> set[str]:
@@ -126,7 +171,7 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
                 })
                 bucket["events"][event_id] = event
                 bucket["sources"].update(_event_sources(event))
-                if _NEGATIVE.search(text):
+                if _has_reported_negative_evidence(event):
                     bucket["negative_events"].add(event_id)
 
     changed: list[dict[str, Any]] = []
