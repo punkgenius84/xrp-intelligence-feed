@@ -807,7 +807,7 @@ def test_significance_may_connect_to_supplied_historical_context_but_summary_may
     analysis = IntelligenceAnalysis(
         event_type="partnership",
         event_summary="A payment partnership was announced.",
-        significance="Alongside the earlier Federal Reserve master-account request, this may signal a strategy to obtain direct payment-system access.",
+        significance="A payment partnership viewed with the Federal Reserve master-account request may suggest direct payment-system access.",
         entities=["Example"],
         claims=[Claim(text="The source reports a payment partnership.", evidence=["source summary"])],
     )
@@ -816,7 +816,7 @@ def test_significance_may_connect_to_supplied_historical_context_but_summary_may
         "source title": "Example announces payment partnership",
         "source summary": "The company announced a payment partnership.",
     }
-    history = "Earlier, Example submitted a Federal Reserve master-account request."
+    history = "Example submitted a Federal Reserve master-account request that could provide direct payment-system access."
     result = _validate_metadata_anchors(analysis, evidence, history)
     assert "master-account request" in result.significance
 
