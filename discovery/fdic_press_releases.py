@@ -200,7 +200,9 @@ def _parse_page(content: bytes, diagnostics: dict[str, object] | None = None) ->
     if not rows and parser._route_like_links:
         raise ValueError(
             "FDIC response contains official press-release links with unrecognized routes "
-            f"({parser._route_like_links} link(s)); refusing to treat it as an empty listing"
+            f"({parser._route_like_links} link(s)); "
+            f"sample_paths={parser._unrecognized_route_samples[:5]!r}; "
+            "refusing to treat it as an empty listing"
         )
     if not rows and not parser.no_results:
         raise ValueError(
@@ -304,19 +306,20 @@ class FDICPressReleasesDiscovery:
             diagnostics: dict[str, object] = {}
 
             def report_diagnostics() -> None:
-                if page == 0 and diagnostics:
+                if diagnostics:
                     all_ids = diagnostics.get("all_article_ids", [])
                     main_ids = diagnostics.get("main_article_ids", [])
-                    boundary_id = previous.get("boundary_id") if has_state else None
+                    boundary_id = previous.get("boundary_id") if page == 0 and has_state else None
+                    diagnostics["page"] = page
                     diagnostics["all_first_ids"] = all_ids[:4] if isinstance(all_ids, list) else []
                     diagnostics["main_first_ids"] = main_ids[:4] if isinstance(main_ids, list) else []
                     diagnostics["all_boundary_index"] = (
                         all_ids.index(boundary_id)
-                        if isinstance(all_ids, list) and boundary_id in all_ids else -1
+                        if page == 0 and isinstance(all_ids, list) and boundary_id in all_ids else -1
                     )
                     diagnostics["main_boundary_index"] = (
                         main_ids.index(boundary_id)
-                        if isinstance(main_ids, list) and boundary_id in main_ids else -1
+                        if page == 0 and isinstance(main_ids, list) and boundary_id in main_ids else -1
                     )
                     printable = {
                         key: value for key, value in diagnostics.items()
