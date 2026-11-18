@@ -4,7 +4,7 @@ import pytest
 
 from intelligence.evidence import build_evidence_bundle
 from intelligence.llm.base import LLMError, LLMResponse, LLMUnavailable
-from intelligence.llm.enrichment import analyze_cluster, analyze_item, _validate_metadata_anchors
+from intelligence.llm.enrichment import analyze_cluster, analyze_item, _validate_metadata_anchors, _metadata_anchor_tokens
 from intelligence.event_clustering import EventCluster
 from intelligence.llm.prompts import build_user_prompt
 from intelligence.llm.schemas import parse_analysis
@@ -837,3 +837,62 @@ def test_prompt_explicitly_separates_reported_facts_from_inference_and_speculati
     assert "Do not present an inference or speculation as a reported fact" in SYSTEM_PROMPT
     assert "put deductions, strategic connections, and speculation in significance" in SYSTEM_PROMPT
     assert "clearly labeled evidence-backed inferences and clearly labeled speculation" in SYSTEM_PROMPT
+
+
+
+def test_metadata_anchor_tokens_ignore_generic_analytical_transition():
+    anchors = _metadata_anchor_tokens("Viewed alongside the Federal Reserve master-account request")
+    assert "viewed" not in anchors
+    assert {"federal", "reserve"} <= anchors
+
+def test_cluster_significance_can_use_supplied_history(monkeypatch):
+    import intelligence.llm.enrichment as enrichment
+
+    monkeypatch.setattr(enrichment, "select_historical_context", lambda *_args: ["fixture"])
+    monkeypatch.setattr(
+        enrichment,
+        "format_historical_context",
+        lambda _records: "Example submitted a Federal Reserve master-account request.",
+    )
+    monkeypatch.setattr(enrichment, "select_prior_event_context", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(enrichment, "format_prior_event_context", lambda _records: "")
+    monkeypatch.setattr(enrichment, "format_thesis_context", lambda *_args: "")
+
+    source = item("Example announces a payment partnership")
+    cluster = EventCluster(cluster_id="history-cluster", members=(source,))
+
+    class FakeProvider:
+        def generate(self, **kwargs):
+            assert "Example submitted a Federal Reserve master-account request." in kwargs["user"]
+            return LLMResponse(
+                '{"event_type":"partnership",'
+                '"event_summary":"Example announced a payment partnership.",'
+                '"significance":"Viewed alongside the Federal Reserve master-account request, '
+                'the partnership may suggest a strategy to obtain direct payment-system access.",'
+                '"entities":["Example"],'
+                '"claims":[{"text":"Example announced a payment partnership.",'
+                '"evidence":["source-1 title"]}],"uncertainties":[]}',
+                model="test-model",
+            )
+
+    result = analyze_cluster(cluster, FakeProvider())
+    assert "Federal Reserve master-account request" in result.significance
+
+
+def test_numeric_publisher_anchor_is_not_whitelisted():
+    from intelligence.llm.schemas import Claim, IntelligenceAnalysis
+
+    analysis = IntelligenceAnalysis(
+        event_type="other",
+        event_summary="Example reported a payment update.",
+        significance="Example 24 News says the payment update may matter.",
+        entities=["Example"],
+        claims=[Claim(text="Example reported a payment update.", evidence=["source summary"])],
+    )
+    evidence = {
+        "source publisher": "Example 24 News",
+        "source title": "Example payment update",
+        "source summary": "Example reported a payment update.",
+    }
+    with pytest.raises(LLMError, match="significance.*24"):
+        _validate_metadata_anchors(analysis, evidence)
