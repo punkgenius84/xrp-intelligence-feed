@@ -244,7 +244,7 @@ def _validate_metadata_anchors(
         text for label, text in evidence_text.items()
         if label.endswith("publisher")
     )
-    analysis_context = f"{source_text}\\n{historical_context}"
+    analysis_context = f"{source_text}\n{historical_context}"
     fields = [
         ("event_summary", analysis.event_summary, source_text),
         # Significance is analytical: it may connect the current event to matched,
