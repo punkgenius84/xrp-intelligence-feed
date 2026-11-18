@@ -1,12 +1,19 @@
 from intelligence.theses import update_theses
 
 
-def _event(summary, entity, source_id, *, status="active", source_quality="primary"):
+def _event(summary, entity, source_id, *, status="active", source_quality="primary",
+           claim_type="reported_fact", claim_text=None, significance=""):
     return {
         "status": status,
         "summary": summary,
-        "significance": "",
+        "significance": significance,
         "entities": [entity],
+        "claims": [{
+            "text": claim_text or summary,
+            "claim_type": claim_type,
+            "certainty": "high",
+            "evidence": ["source summary"],
+        }],
         "evidence": [{
             "source_id": source_id,
             "source": source_id,
@@ -105,3 +112,50 @@ def test_thesis_context_is_entity_scoped_and_labeled_as_prior_inference():
     assert "prior inference" in context
     assert "https://example.test/publisher-a" in context
     assert format_thesis_context("Different Bank", "Unrelated story", state["theses"]) == ""
+
+
+
+def test_hypothetical_negative_in_significance_does_not_weaken_a_thesis():
+    state = {"events": {
+        "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
+        "event-2": _event(
+            "Bank launches digital asset custody",
+            "Example Bank",
+            "publisher-b",
+            significance="The service could be suspended if operating costs rise.",
+        ),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    assert thesis["status"] == "supported"
+    assert thesis["negative_event_ids"] == []
+
+
+def test_speculative_claim_is_not_counted_as_confirmed_negative_evidence():
+    state = {"events": {
+        "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
+        "event-2": _event(
+            "Bank launches a custody update",
+            "Example Bank",
+            "publisher-b",
+            claim_type="speculation",
+            claim_text="Bank may suspend custody service.",
+        ),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    assert thesis["status"] == "supported"
+    assert thesis["negative_event_ids"] == []
+
+
+def test_hypothetical_language_inside_claim_is_not_counted_as_negative_evidence():
+    state = {"events": {
+        "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
+        "event-2": _event(
+            "Bank launches a custody update",
+            "Example Bank",
+            "publisher-b",
+            claim_text="The bank could suspend the service if costs rise.",
+        ),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    assert thesis["status"] == "supported"
+    assert thesis["negative_event_ids"] == []
