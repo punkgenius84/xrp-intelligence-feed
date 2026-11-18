@@ -233,8 +233,9 @@ def _metadata_anchor_tokens(text: str) -> set[str]:
 def _validate_metadata_anchors(
     analysis: IntelligenceAnalysis,
     evidence_text: dict[str, str],
+    historical_context: str = "",
 ) -> IntelligenceAnalysis:
-    """Keep numerical facts and acronyms in summaries/significance source-grounded."""
+    """Keep reported metadata source-grounded while allowing analysis to cite supplied history."""
     source_text = " ".join(
         text for label, text in evidence_text.items()
         if not label.endswith("publisher")
@@ -243,22 +244,25 @@ def _validate_metadata_anchors(
         text for label, text in evidence_text.items()
         if label.endswith("publisher")
     )
+    analysis_context = f"{source_text}\n{historical_context}"
     fields = [
-        ("event_summary", analysis.event_summary),
-        ("significance", analysis.significance),
-        *[(f"conflicts[{index}]", value) for index, value in enumerate(analysis.conflicts)],
-        *[(f"uncertainties[{index}]", value) for index, value in enumerate(analysis.uncertainties)],
+        ("event_summary", analysis.event_summary, source_text),
+        # Significance is analytical: it may connect the current event to matched,
+        # application-supplied history, but not to outside knowledge.
+        ("significance", analysis.significance, analysis_context),
+        *[(f"conflicts[{index}]", value, source_text) for index, value in enumerate(analysis.conflicts)],
+        *[(f"uncertainties[{index}]", value, source_text) for index, value in enumerate(analysis.uncertainties)],
     ]
-    for field_name, value in fields:
+    for field_name, value, allowed_text in fields:
         unsupported = [
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
-            if not _contains_anchor(source_text, anchor)
+            if not _contains_anchor(allowed_text, anchor)
             and not (
-                not re.search(r"\d", anchor)
+                not re.search(r"\\d", anchor)
                 and _contains_anchor(publisher_text, anchor)
             )
             and not any(
-                _contains_anchor(source_text, alias)
+                _contains_anchor(allowed_text, alias)
                 for alias in _DOMAIN_GROUNDING_ALIASES.get(anchor, ())
             )
         ]
@@ -429,7 +433,7 @@ def analyze_item(
         analysis = _validate_event_metadata_grounding(analysis, source_text, historical_context)
         analysis = _validate_claim_grounding(analysis, evidence_text)
         analysis = _validate_entities_grounding(analysis, evidence_text)
-        return _validate_metadata_anchors(analysis, evidence_text)
+        return _validate_metadata_anchors(analysis, evidence_text, historical_context)
 
     return _generate_validated_analysis(
         provider, user_prompt,

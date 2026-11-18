@@ -4,7 +4,7 @@ import pytest
 
 from intelligence.evidence import build_evidence_bundle
 from intelligence.llm.base import LLMError, LLMResponse, LLMUnavailable
-from intelligence.llm.enrichment import analyze_cluster, analyze_item
+from intelligence.llm.enrichment import analyze_cluster, analyze_item, _validate_metadata_anchors
 from intelligence.event_clustering import EventCluster
 from intelligence.llm.prompts import build_user_prompt
 from intelligence.llm.schemas import parse_analysis
@@ -798,3 +798,42 @@ def test_mas_entity_expansion_is_normalized_to_source_acronym():
         },
     )
     assert normalized.entities == ["MAS"]
+
+
+
+def test_significance_may_connect_to_supplied_historical_context_but_summary_may_not():
+    from intelligence.llm.schemas import Claim, IntelligenceAnalysis
+
+    analysis = IntelligenceAnalysis(
+        event_type="partnership",
+        event_summary="A payment partnership was announced.",
+        significance="A payment partnership viewed with the Federal Reserve master-account request may suggest direct payment-system access.",
+        entities=["Example"],
+        claims=[Claim(text="The source reports a payment partnership.", evidence=["source summary"])],
+    )
+    evidence = {
+        "source publisher": "Example News",
+        "source title": "Example announces payment partnership",
+        "source summary": "The company announced a payment partnership.",
+    }
+    history = "Example submitted a Federal Reserve master-account request that could provide direct payment-system access."
+    result = _validate_metadata_anchors(analysis, evidence, history)
+    assert "master-account request" in result.significance
+
+    unsupported_summary = IntelligenceAnalysis(
+        event_type="partnership",
+        event_summary="Example received Federal Reserve master-account approval.",
+        significance=analysis.significance,
+        entities=["Example"],
+        claims=analysis.claims,
+    )
+    with pytest.raises(LLMError, match="event_summary.*unsupported factual anchor"):
+        _validate_metadata_anchors(unsupported_summary, evidence, history)
+
+
+def test_prompt_explicitly_separates_reported_facts_from_inference_and_speculation():
+    from intelligence.llm.prompts import SYSTEM_PROMPT
+
+    assert "Do not present an inference or speculation as a reported fact" in SYSTEM_PROMPT
+    assert "put deductions, strategic connections, and speculation in significance" in SYSTEM_PROMPT
+    assert "clearly labeled evidence-backed inferences and clearly labeled speculation" in SYSTEM_PROMPT
