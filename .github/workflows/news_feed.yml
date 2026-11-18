@@ -19,7 +19,7 @@ on:
       dry_run:
         description: "Dry run: collect and analyze without posting to Discord or saving state"
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
