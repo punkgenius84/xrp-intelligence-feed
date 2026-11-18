@@ -82,7 +82,7 @@ def _event_text(event: dict[str, Any]) -> str:
 
 def _has_confirmed_negative(text: str) -> bool:
     """Recognize a stated negative action, excluding negation and hypothetical risk."""
-    for sentence in re.split(r"(?<=[.!?])\\s+", text):
+    for sentence in re.split(r"(?<=[.!?;])\\s+|,\\s+|\\bbut\\b|\\bhowever\\b", text, flags=re.IGNORECASE):
         for match in _NEGATIVE.finditer(sentence):
             prefix = sentence[:match.start()]
             if _SPECULATIVE_NEGATIVE.search(prefix[-120:]):
