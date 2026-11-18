@@ -715,3 +715,75 @@ def test_main_one_event_test_skips_normal_feed_publisher(monkeypatch):
     assert len(calls) == 1
     assert calls[0][0] == "evt-target"
     assert calls[0][1] is settings
+
+
+
+def test_intelligence_delivery_publishes_changed_followup_headline(tmp_path, monkeypatch):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    history = JsonIntelligenceDeliveryHistory(history_path)
+    monkeypatch.setattr(main, "JsonIntelligenceDeliveryHistory", lambda: history)
+    original = event(event_id="evt-original-followup")
+    original.evidence = [replace(
+        original.evidence[0],
+        title="MAS and Deutsche Bundesbank announce cross-border settlement connectivity",
+    )]
+    history.record_events([original])
+
+    followup = event(event_id="evt-material-followup")
+    followup.evidence = [replace(
+        followup.evidence[0],
+        title="MAS launches expanded settlement pilot with additional banking participants",
+    )]
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+
+    assert main.publish_intelligence_events(
+        [followup], settings, publish_enabled=True, outbox_store=store
+    ) == 1
+    assert len(sent) == 1
+    assert "evt-material-followup" in history.load()
+    assert store.load() == []
+
+
+def test_intelligence_queue_health_reports_age_and_warns_without_mutating_queue(tmp_path):
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    queued_at = datetime(2026, 10, 20, 12, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 21, 13, tzinfo=timezone.utc)
+    store.enqueue([event(event_id="evt-old-queue")], queued_at=queued_at)
+    before = store.load()
+    output = []
+
+    main.print_intelligence_queue_health(before, now=now, out=output.append)
+
+    assert any("pending=1" in line and "oldest_age_hours=25.0" in line for line in output)
+    assert any(line.startswith("::warning::Intelligence outbox backlog") for line in output)
+    assert store.load() == before
+
+
+def test_intelligence_queue_health_does_not_warn_for_recent_entries(tmp_path):
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    queued_at = datetime(2026, 10, 21, 8, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 21, 12, tzinfo=timezone.utc)
+    store.enqueue([event(event_id="evt-recent-queue")], queued_at=queued_at)
+    output = []
+
+    main.print_intelligence_queue_health(store.load(), now=now, out=output.append)
+
+    assert any("pending=1" in line and "oldest_age_hours=4.0" in line for line in output)
+    assert not any("::warning::" in line for line in output)

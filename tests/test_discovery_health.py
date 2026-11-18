@@ -110,3 +110,38 @@ def test_recent_source_failure_does_not_emit_persistent_health_warning(capsys):
     main.print_source_health_warnings(result, now=now)
 
     assert capsys.readouterr().out == ""
+
+
+
+def test_relevance_audit_reports_per_source_yield_including_zero_yield_sources(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    items = [
+        SimpleNamespace(
+            source_id="low-yield-source", source="Low yield", relevance_score=0,
+            source_quality="discovery", title="Low-scoring item", score_reasons=[],
+            detected_entities=[], published_at=STAMP, collected_at=STAMP,
+        ),
+        SimpleNamespace(
+            source_id="high-yield-source", source="High yield", relevance_score=0,
+            source_quality="primary", title="High-scoring item", score_reasons=[],
+            detected_entities=["XRP"], published_at=STAMP, collected_at=STAMP,
+        ),
+    ]
+    scores = {"low-yield-source": 18, "high-yield-source": 76}
+    monkeypatch.setattr(main, "detect_entities", lambda item: [])
+    monkeypatch.setattr(main, "classify_source_quality", lambda item: item.source_quality)
+
+    def score(item):
+        item.relevance_score = scores[item.source_id]
+        item.score_reasons = ["fixture relevance reason"]
+        return item.relevance_score, item.score_reasons
+
+    monkeypatch.setattr(main, "score_relevance", score)
+
+    main._score_observed_relevance(items, publish_score=50)
+
+    output = capsys.readouterr().out
+    assert "Relevance audit source yield" in output
+    assert "low-yield-source: observed=1 qualifying=0 best_score=18 primary=0" in output
+    assert "high-yield-source: observed=1 qualifying=1 best_score=76 primary=1" in output

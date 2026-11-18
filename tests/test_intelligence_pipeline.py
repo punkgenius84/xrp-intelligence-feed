@@ -291,7 +291,7 @@ def test_run_pipeline_keeps_intelligence_disabled_by_default(monkeypatch, tmp_pa
     assert result.intelligence_failures == []
 
 
-def test_cluster_enrichment_creates_one_event_with_all_evidence():
+def test_cluster_enrichment_creates_one_event_with_all_evidence(capsys):
     config = load_intelligence_config().__class__(
         enabled=True,
         model="test-model",
@@ -326,6 +326,10 @@ def test_cluster_enrichment_creates_one_event_with_all_evidence():
             )
 
     events, failures = enrich_clusters([first, second], Provider(), config)
+    output = capsys.readouterr().out
+    assert "selected_items=2 clusters=1 provider_timeout_seconds=5" in output
+    assert "Intelligence cluster start: 1/1" in output
+    assert "status=success elapsed_ms=" in output
 
     assert failures == []
     assert len(events) == 1
