@@ -140,7 +140,7 @@ def test_unrecognized_official_routes_do_not_masquerade_as_empty_listing():
       <div class="filter-status">No results found.</div>
     </body></html>"""
     diagnostics = {}
-    with pytest.raises(ValueError, match="unrecognized routes.*1 link"):
+    with pytest.raises(ValueError, match=r"unrecognized routes.*1 link.*2026/10/15/fdic-new-release"):
         _parse_page(html, diagnostics)
     assert diagnostics["unrecognized_route_samples"] == [
         "/news/press-releases/2026/10/15/fdic-new-release"
