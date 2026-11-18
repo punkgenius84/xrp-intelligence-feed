@@ -258,7 +258,7 @@ def _validate_metadata_anchors(
             anchor for anchor in sorted(_metadata_anchor_tokens(value))
             if not _contains_anchor(allowed_text, anchor)
             and not (
-                not re.search(r"\\d", anchor)
+                not re.search(r"\d", anchor)
                 and _contains_anchor(publisher_text, anchor)
             )
             and not any(
@@ -456,12 +456,12 @@ def analyze_cluster(
         "\n".join(item.title for item in cluster.members), combined_text
     )
     prior_records = select_prior_event_context(
-        "\\n".join(item.title for item in cluster.members),
+        "\n".join(item.title for item in cluster.members),
         combined_text,
         historical_events,
         exclude_urls={item.url for item in cluster.members},
     )
-    historical_context = "\\n\\n".join(
+    historical_context = "\n\n".join(
         part for part in (
             format_historical_context(context_records),
             format_prior_event_context(prior_records),
