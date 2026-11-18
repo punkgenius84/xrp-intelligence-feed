@@ -172,6 +172,8 @@ def test_parse_listing_uses_official_route_and_native_year_slug_identity():
     ("https://www.fdic.gov/news/press-releases/2026/example", "2026/example"),
     ("/news/press-releases/2026/example/", "2026/example"),
     ("https://www.fdic.gov:443/news/press-releases/2026/example", "2026/example"),
+    ("https://www.fdic.gov/news/press-releases/2024/pr24007.html", "2024/pr24007.html"),
+    ("/news/press-releases/2024/pr24008.html", "2024/pr24008.html"),
 ])
 def test_article_identity_accepts_only_canonical_official_routes(value, expected):
     assert _article_identity(value)[0] == expected
@@ -185,6 +187,8 @@ def test_article_identity_accepts_only_canonical_official_routes(value, expected
     "https://www.fdic.gov:444/news/press-releases/2026/example",
     "https://www.fdic.gov/news/press-releases/2026/../example",
     "https://www.fdic.gov/news/press-releases/example",
+    "https://www.fdic.gov/news/press-releases/2024/pr2407.html",
+    "https://www.fdic.gov/news/press-releases/2024/pr240007.html",
 ])
 def test_article_identity_rejects_unsafe_or_non_press_release_routes(value):
     assert _article_identity(value) is None
