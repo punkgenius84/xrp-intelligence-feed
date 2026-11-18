@@ -134,7 +134,7 @@ def test_speculative_claim_is_not_counted_as_confirmed_negative_evidence():
     state = {"events": {
         "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
         "event-2": _event(
-            "Bank launches a custody update",
+            "Bank launches a digital asset custody service update",
             "Example Bank",
             "publisher-b",
             claim_type="speculation",
@@ -150,7 +150,7 @@ def test_hypothetical_language_inside_claim_is_not_counted_as_negative_evidence(
     state = {"events": {
         "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
         "event-2": _event(
-            "Bank launches a custody update",
+            "Bank launches a digital asset custody service update",
             "Example Bank",
             "publisher-b",
             claim_text="The bank could suspend the service if costs rise.",
@@ -166,7 +166,7 @@ def test_reported_negative_that_was_explicitly_ruled_out_does_not_weaken_thesis(
     state = {"events": {
         "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
         "event-2": _event(
-            "Bank launches a custody update",
+            "Bank launches a digital asset custody service update",
             "Example Bank",
             "publisher-b",
             claim_text="The bank did not suspend the custody service.",
