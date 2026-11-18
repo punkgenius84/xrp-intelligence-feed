@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import time
 
 from models import NewsItem
 
@@ -122,7 +123,19 @@ def enrich_clusters(
     failures: list[str] = []
     selected = select_items(items, config)
 
-    for cluster in cluster_related_items(selected):
+    clusters = cluster_related_items(selected)
+    print(
+        "Intelligence enrichment: "
+        f"selected_items={len(selected)} clusters={len(clusters)} "
+        f"provider_timeout_seconds={config.timeout_seconds}"
+    )
+    for index, cluster in enumerate(clusters, start=1):
+        started = time.monotonic()
+        identity = cluster.cluster_id
+        print(
+            f"Intelligence cluster start: {index}/{len(clusters)} "
+            f"id={identity} members={len(cluster.members)}"
+        )
         try:
             analysis = analyze_cluster(cluster, provider, historical_events, historical_theses)
             member_ids = [
@@ -142,7 +155,15 @@ def enrich_clusters(
             event.member_ids = member_ids
             event.supersedes = supersedes
             events.append(event)
+            print(
+                f"Intelligence cluster complete: {index}/{len(clusters)} "
+                f"id={identity} status=success elapsed_ms={round((time.monotonic() - started) * 1000)}"
+            )
         except LLMError as exc:
-            identity = cluster.cluster_id
             failures.append(f"{identity}: {exc}")
+            print(
+                f"Intelligence cluster complete: {index}/{len(clusters)} "
+                f"id={identity} status=rejected elapsed_ms={round((time.monotonic() - started) * 1000)} "
+                f"reason={exc}"
+            )
     return events, failures
