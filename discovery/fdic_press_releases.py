@@ -17,7 +17,7 @@ FDIC_URL = "https://www.fdic.gov/news/press-releases"
 FDIC_HOST = "www.fdic.gov"
 _MAX_PAGE_FETCHES = 3
 _MAX_HTTP_ATTEMPTS = 9
-_ROUTE = re.compile(r"^/news/press-releases/(20\d{2})/([a-z0-9]+(?:-[a-z0-9]+)*)/?$")
+_ROUTE = re.compile(r"^/news/press-releases/(20\d{2})/((?:[a-z0-9]+(?:-[a-z0-9]+)*)|(?:pr\d{5}\.html))/?$")
 
 
 def validate_fdic_source(source: object) -> dict[str, Any]:
