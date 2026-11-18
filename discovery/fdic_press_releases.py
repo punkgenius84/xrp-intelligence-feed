@@ -78,6 +78,7 @@ class _FDICListingParser(HTMLParser):
         self._saw_main = False
         self.no_results = False
         self._route_like_links = 0
+        self._unrecognized_route_samples: list[str] = []
         self._anchor_tags = 0
         self._href_anchors = 0
         self._main_tags = 0
@@ -121,6 +122,8 @@ class _FDICListingParser(HTMLParser):
                     and parts.hostname.casefold() == FDIC_HOST
                     and parts.path.startswith("/news/press-releases/")):
                 self._route_like_links += 1
+                if len(self._unrecognized_route_samples) < 5:
+                    self._unrecognized_route_samples.append(parts.path[:180])
 
     def handle_data(self, data: str) -> None:
         if self._anchor is not None:
@@ -176,6 +179,9 @@ def _parse_page(content: bytes, diagnostics: dict[str, object] | None = None) ->
             "all_article_ids": [item["native_id"] for item in parser._all_items],
             "main_article_ids": [item["native_id"] for item in parser.items],
             "route_like_links": parser._route_like_links,
+            "unrecognized_route_samples": [
+                item for item in parser._unrecognized_route_samples[:5]
+            ],
             "semantic_empty_state": parser.no_results,
         })
     if parser._anchor is not None:
