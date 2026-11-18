@@ -149,7 +149,7 @@ def _score_observed_relevance(items, publish_score: int) -> None:
         metrics["primary"] += int(getattr(item, "source_quality", "") == "primary")
 
     print(
-        "Relevance audit source yield (before seen/dedup; not a delivery count):"
+        f"Relevance audit source yield (before seen/dedup; publish threshold={publish_score}; not a delivery count):"
     )
     for source_key, metrics in sorted(
         source_yield.items(),
@@ -701,7 +701,7 @@ def print_intelligence_queue_health(
     if oldest_age >= warning_after.total_seconds():
         out(
             f"::warning::Intelligence outbox backlog: oldest pending event has been queued "
-            f"for {oldest_age / 3600:.1f}h; entries were left unchanged for safe retry/review"
+            f"for {oldest_age / 3600:.1f}h; check delivery status and allow freshness safeguards to run"
         )
 
 
