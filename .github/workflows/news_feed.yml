@@ -17,9 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run: collect and analyze without posting to Discord or saving state"
+        description: "Dry run (checked by default): collect and analyze without posting to Discord or saving state. Uncheck to publish and persist production state."
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
