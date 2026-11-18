@@ -137,22 +137,32 @@ def _score_observed_relevance(items, publish_score: int) -> None:
         f"score>={publish_score}={qualifying}"
     )
 
-    qualifying_by_source: dict[str, int] = {}
+    source_yield: dict[str, dict[str, int]] = {}
     for item in items:
-        if item.relevance_score >= publish_score:
-            source_key = item.source_id or item.source or "unknown-source"
-            qualifying_by_source[source_key] = qualifying_by_source.get(source_key, 0) + 1
-    if qualifying_by_source:
-        source_counts = sorted(
-            qualifying_by_source.items(), key=lambda pair: (-pair[1], pair[0])
-        )
+        source_key = item.source_id or item.source or "unknown-source"
+        metrics = source_yield.setdefault(source_key, {
+            "observed": 0, "qualifying": 0, "best_score": 0, "primary": 0,
+        })
+        metrics["observed"] += 1
+        metrics["qualifying"] += int(item.relevance_score >= publish_score)
+        metrics["best_score"] = max(metrics["best_score"], item.relevance_score)
+        metrics["primary"] += int(getattr(item, "source_quality", "") == "primary")
+
+    print(
+        "Relevance audit source yield (before seen/dedup; not a delivery count):"
+    )
+    for source_key, metrics in sorted(
+        source_yield.items(),
+        key=lambda pair: (
+            -pair[1]["qualifying"], -pair[1]["best_score"],
+            -pair[1]["observed"], pair[0],
+        ),
+    ):
         print(
-            "Relevance audit qualifying candidates by source "
-            "(before seen/dedup; counts may include previously seen items): "
-            + ", ".join(f"{source}={count}" for source, count in source_counts)
+            f"  {source_key}: observed={metrics['observed']} "
+            f"qualifying={metrics['qualifying']} best_score={metrics['best_score']} "
+            f"primary={metrics['primary']}"
         )
-    else:
-        print("Relevance audit qualifying candidates by source: none")
 
     top_items = sorted(
         items,
@@ -648,6 +658,53 @@ def print_source_health_warnings(result: PipelineResult, *, now: datetime | None
             print(f"  Last error: {error}")
 
 
+def print_intelligence_queue_health(
+    pending: list,
+    *,
+    now: datetime | None = None,
+    warning_after: timedelta = timedelta(hours=24),
+    out=print,
+) -> None:
+    """Report durable outbox age without changing, expiring, or quarantining entries."""
+    if not pending:
+        out("Intelligence outbox health: pending=0")
+        return
+
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+
+    queued_at_values = []
+    for item in pending:
+        queued_at = getattr(item, "queued_at", None)
+        if not isinstance(queued_at, datetime):
+            continue
+        if queued_at.tzinfo is None:
+            queued_at = queued_at.replace(tzinfo=timezone.utc)
+        queued_at_values.append(queued_at.astimezone(timezone.utc))
+
+    if not queued_at_values:
+        out(
+            f"::warning::Intelligence outbox has {len(pending)} pending event(s) "
+            "but no valid queued_at timestamps"
+        )
+        return
+
+    oldest_age = max(0.0, (current - min(queued_at_values)).total_seconds())
+    newest_age = max(0.0, (current - max(queued_at_values)).total_seconds())
+    out(
+        f"Intelligence outbox health: pending={len(pending)} "
+        f"oldest_age_hours={oldest_age / 3600:.1f} "
+        f"newest_age_hours={newest_age / 3600:.1f}"
+    )
+    if oldest_age >= warning_after.total_seconds():
+        out(
+            f"::warning::Intelligence outbox backlog: oldest pending event has been queued "
+            f"for {oldest_age / 3600:.1f}h; entries were left unchanged for safe retry/review"
+        )
+
+
 def _print_source_failures(failures: list[str], partial_source_ids: set[str]) -> None:
     """Distinguish recoverable partial-source warnings from complete source failures."""
     for failure in failures:
@@ -891,6 +948,8 @@ def publish_intelligence_events(
     pending = unique_pending
     if not pending:
         return 0
+
+    print_intelligence_queue_health(pending, out=out)
 
     # The outbox may contain events generated during a long shadow-mode period.
     # When publication is explicitly enabled, discard only events whose newest
