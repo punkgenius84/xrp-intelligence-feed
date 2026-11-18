@@ -159,3 +159,19 @@ def test_hypothetical_language_inside_claim_is_not_counted_as_negative_evidence(
     thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
     assert thesis["status"] == "supported"
     assert thesis["negative_event_ids"] == []
+
+
+
+def test_reported_negative_that_was_explicitly_ruled_out_does_not_weaken_thesis():
+    state = {"events": {
+        "event-1": _event("Bank receives custody approval", "Example Bank", "publisher-a"),
+        "event-2": _event(
+            "Bank launches a custody update",
+            "Example Bank",
+            "publisher-b",
+            claim_text="The bank did not suspend the custody service.",
+        ),
+    }}
+    thesis = update_theses(state, "2026-11-17T12:00:00+00:00")[0]
+    assert thesis["status"] == "supported"
+    assert thesis["negative_event_ids"] == []
