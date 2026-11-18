@@ -60,7 +60,7 @@ _GROUNDING_STOPWORDS = {
     "potentially", "potential", "relevant", "independent", "shared", "plausible", "possible",
     "likely", "important", "significant", "significance", "development",
     "disclosure", "filing", "reporting", "further", "broader", "overall",
-    "current", "unclear", "unknown", "clear", "supported", "based",
+    "current", "unclear", "unknown", "clear", "supported", "based", "viewed",
 }
 
 
