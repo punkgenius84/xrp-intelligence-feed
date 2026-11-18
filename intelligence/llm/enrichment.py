@@ -407,7 +407,7 @@ def analyze_item(
     prior_records = select_prior_event_context(
         item.title, item.summary, historical_events, exclude_urls={item.url}
     )
-    historical_context = "\\n\\n".join(
+    historical_context = "\n\n".join(
         part for part in (
             format_historical_context(context_records),
             format_prior_event_context(prior_records),
@@ -425,7 +425,7 @@ def analyze_item(
         "source title": item.title,
         "source summary": item.summary,
     }
-    source_text = f"{item.title}\\n{item.summary}"
+    source_text = f"{item.title}\n{item.summary}"
 
     def validate(analysis: IntelligenceAnalysis) -> IntelligenceAnalysis:
         analysis = _normalize_source_anchored_acronym_expansions(analysis, evidence_text)
@@ -451,9 +451,9 @@ def analyze_cluster(
     historical_theses: dict | None = None,
 ) -> IntelligenceAnalysis:
     primary = cluster.primary
-    combined_text = "\\n".join(f"{item.title}\\n{item.summary}" for item in cluster.members)
+    combined_text = "\n".join(f"{item.title}\n{item.summary}" for item in cluster.members)
     context_records = select_historical_context(
-        "\\n".join(item.title for item in cluster.members), combined_text
+        "\n".join(item.title for item in cluster.members), combined_text
     )
     prior_records = select_prior_event_context(
         "\\n".join(item.title for item in cluster.members),
@@ -465,7 +465,7 @@ def analyze_cluster(
         part for part in (
             format_historical_context(context_records),
             format_prior_event_context(prior_records),
-            format_thesis_context("\\n".join(item.title for item in cluster.members), combined_text, historical_theses),
+            format_thesis_context("\n".join(item.title for item in cluster.members), combined_text, historical_theses),
         ) if part
     )
     user_prompt = build_cluster_user_prompt(cluster.members, historical_context)
@@ -486,7 +486,7 @@ def analyze_cluster(
         analysis = _validate_event_metadata_grounding(analysis, combined_text, historical_context)
         analysis = _validate_claim_grounding(analysis, evidence_text)
         analysis = _validate_entities_grounding(analysis, evidence_text)
-        return _validate_metadata_anchors(analysis, evidence_text)
+        return _validate_metadata_anchors(analysis, evidence_text, historical_context)
 
     return _generate_validated_analysis(
         provider, user_prompt,
