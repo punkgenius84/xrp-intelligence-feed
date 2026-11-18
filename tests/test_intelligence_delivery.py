@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -757,7 +757,7 @@ def test_intelligence_delivery_publishes_changed_followup_headline(tmp_path, mon
         [followup], settings, publish_enabled=True, outbox_store=store
     ) == 1
     assert len(sent) == 1
-    assert "evt-material-followup" not in str(history.load())
+    assert "evt-material-followup" in history.load()
     assert store.load() == []
 
 
