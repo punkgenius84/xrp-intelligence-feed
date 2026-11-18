@@ -149,6 +149,10 @@ def _score_observed_relevance(items, publish_score: int) -> None:
         metrics["primary"] += int(getattr(item, "source_quality", "") == "primary")
 
     print(
+        "Relevance audit qualifying candidates by source "
+        "(detailed observed and zero-yield counts follow):"
+    )
+    print(
         f"Relevance audit source yield (before seen/dedup; publish threshold={publish_score}; not a delivery count):"
     )
     for source_key, metrics in sorted(
