@@ -189,11 +189,11 @@ def _publisher_attribution_matches(claim_text: str, publisher_text: str) -> bool
     return any(
         re.search(pattern, prefix)
         for pattern in (
-            r"\\baccording to\\s*$",
-            r"\\breported by\\s*$",
-            r"\\bpublished by\\s*$",
-            r"\\bissued by\\s*$",
-            r"\\bfrom\\s*$",
+            r"\baccording to\s*$",
+            r"\breported by\s*$",
+            r"\bpublished by\s*$",
+            r"\bissued by\s*$",
+            r"\bfrom\s*$",
         )
     )
 
