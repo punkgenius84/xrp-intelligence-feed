@@ -35,7 +35,13 @@ def _parse_stamp(value: object) -> datetime:
 
 
 def event_signature_keys(event: object) -> set[str]:
-    """Create conservative exact-title fingerprints; never fuzzy-match follow-up headlines."""
+    """Create conservative exact-title and exact-summary fingerprints.
+
+    Publisher-specific suffixes can make the same story's source titles differ
+    across official feeds and aggregators. The normalized event summary supplies
+    a second exact-content key for that case; no fuzzy or similarity matching is
+    used, and short/generic summaries are ignored.
+    """
     signatures: set[str] = set()
     for evidence in getattr(event, "evidence", []) or []:
         title = getattr(evidence, "title", "")
@@ -48,6 +54,16 @@ def event_signature_keys(event: object) -> set[str]:
         if len(words) < 5 or normalized in _GENERIC_TITLES:
             continue
         signatures.add(hashlib.sha256(normalized.encode("utf-8")).hexdigest())
+
+    summary = getattr(event, "summary", "")
+    if isinstance(summary, str):
+        normalized_summary = unicodedata.normalize("NFKC", summary).casefold()
+        normalized_summary = re.sub(r"https?://\S+", " ", normalized_summary)
+        normalized_summary = " ".join(re.findall(r"[\w]+", normalized_summary))
+        if len(normalized_summary.split()) >= 10:
+            summary_key = "event-summary:" + normalized_summary
+            signatures.add(hashlib.sha256(summary_key.encode("utf-8")).hexdigest())
+
     return signatures
 
 

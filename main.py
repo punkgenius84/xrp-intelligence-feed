@@ -947,7 +947,7 @@ def publish_intelligence_events(
         queue.remove(duplicate_keys)
         out(
             f"Intelligence: suppressed {len(duplicate_keys)} duplicate event(s) "
-            "by exact evidence-title fingerprint within the 72-hour window"
+            "by exact evidence-title/event-summary fingerprint within the 72-hour window"
         )
     pending = unique_pending
     if not pending:
