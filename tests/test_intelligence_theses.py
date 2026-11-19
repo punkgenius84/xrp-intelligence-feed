@@ -324,10 +324,10 @@ def test_xrpl_auto_bridging_thesis_requires_a_reported_xrp_routing_claim():
             claim_text="The XRP Ledger DEX added a new liquidity feature.",
         ),
         "event-2": _event(
-            "XRP intermediary routing discussed for XRPL DEX",
+            "XRP auto-bridging considered for XRPL DEX",
             "XRP",
             "publisher-b",
-            claim_text="The article discusses decentralized exchange routing.",
+            claim_text="The article discusses the XRP Ledger decentralized exchange and routing.",
         ),
     }}
     update_theses(state, "2026-11-18T12:00:00+00:00")
@@ -371,10 +371,10 @@ def test_spot_xrp_etf_thesis_requires_explicit_spot_holding_claims():
             claim_text="The ETF offers exposure to XRP price movements.",
         ),
         "event-2": _event(
-            "XRP-linked fund launches",
+            "A futures-based XRP ETF launches",
             "XRP",
             "publisher-b",
-            claim_text="The exchange-traded product tracks XRP.",
+            claim_text="The exchange-traded product tracks XRP price movements.",
         ),
     }}
     update_theses(state, "2026-11-18T12:00:00+00:00")
