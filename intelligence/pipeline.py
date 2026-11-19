@@ -179,9 +179,12 @@ def enrich_clusters(
                 "Intelligence candidate: "
                 f"id={item.candidate_id or item.fingerprint} "
                 f"score={item.relevance_score} "
-                f"categories={','.join(item.relevance_categories) or 'none'} "
+                f"categories={','.join(getattr(item, 'relevance_categories', []) or []) or 'none'} "
+                f"source_id={getattr(item, 'source_id', '')[:120]!r} "
                 f"source={item.source[:100]!r} "
-                f"title={item.title[:280]!r} url={item.url}"
+                f"published_at={getattr(item, 'published_at', None)!r} "
+                f"title={item.title[:280]!r} "
+                f"summary={getattr(item, 'summary', '')[:900]!r} url={item.url}"
             )
         try:
             if len(cluster.members) == 1:
