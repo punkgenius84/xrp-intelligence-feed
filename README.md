@@ -10,7 +10,20 @@ It looks beyond headlines that literally mention XRP. Regulatory decisions, gove
 - **Evidence over hype:** Uses source attribution, publication dates, relevance reasons, and supporting links to show why an item may matter.
 - **Primary-source-first:** Prefers official releases and documents, while clearly distinguishing secondary discovery sources when official sites are unavailable.
 - **Careful relevance filtering:** Applies explicit scoring, freshness, duplicate, and evidence checks before delivery.
+- **Grounded intelligence enrichment:** Uses the language model to organize claims from collected evidence, not to create facts. Generated claims are checked against source evidence and entity, metadata, and event-type constraints.
 - **Free to run:** Uses Python and GitHub Actions, with Discord delivery; no paid data API is required.
+
+## Intelligence enrichment and validation
+
+Eligible candidates can be grouped into related intelligence events and enriched with source-grounded claims.
+
+- **Single-source and multi-source handling:** A one-article event follows the dedicated single-source analysis path. Events with multiple supporting sources use the multi-source path.
+- **Factual-anchor validation:** Important names, identifiers, figures, and other factual anchors in generated claims must be supported by the evidence. Alphanumeric identifiers such as `B2B` are treated as complete tokens rather than being split into misleading fragments.
+- **Targeted correction attempts:** When claim validation identifies an empty or unsupported claim, the model receives focused feedback and can make up to two targeted retries (three generation attempts total). Every attempt is checked by the same validators; retries do not bypass evidence checks. Provider-unavailable errors are not retried.
+- **Conservative institutional relevance:** A bank-charter development can qualify through a narrowly defined category only when the evidence establishes bank-charter context, names an applicable authority (OCC, Federal Reserve, or FDIC), and describes an explicit charter action. Generic bank coverage or an unnamed regulator is not enough by itself.
+- **No automatic promotion of speculation:** A candidate that cannot support its claims remains ineligible or is handled by the existing validation/quarantine safeguards rather than being presented as established fact.
+
+The relevance category for bank-charter actions is intentionally narrow. It does not make ordinary banking news, generic regulatory commentary, or every OCC mention relevant to XRP.
 
 ## Publishing
 
@@ -20,17 +33,19 @@ For a manual run:
 
 1. Open the repository's **Actions** tab.
 2. Select **XRP Intelligence Feed** and choose **Run workflow**.
-3. **Dry run is checked by default.** Leave it checked to collect and analyze without posting to Discord or saving production state.
+3. The current workflow presents **Dry run** as checked by default. Leave it checked to collect and analyze without posting to Discord or saving production state.
 4. Uncheck **Dry run** only when you deliberately intend to publish and persist production state.
 
-Scheduled runs publish automatically. Manual runs default to dry-run mode as a safety measure. Push-triggered diagnostic runs do not publish or update production state.
+Scheduled runs publish automatically. Push-triggered diagnostic runs do not publish or update production state. Manual-run behavior is controlled by the workflow's existing `workflow_dispatch` input; this README documents that behavior but does not configure it.
 
-### Publishing limits
+### Publishing limits and safeguards
 
 - The regular Discord feed can publish up to **8 individually relevant news items per run**. This is a delivery cap, not a relevance threshold; freshness and source/evidence checks still apply.
 - The intelligence stage considers up to **12 fresh candidates per run**, with a minimum relevance score of **30** in GitHub Actions, before grouping related evidence into intelligence events.
-- Intelligence-event publishing is enabled for scheduled production runs. It is not enabled for push diagnostics or manual dry runs.
+- The workflow excludes items older than **14 days** from the regular Discord feed.
+- Intelligence-event publishing is enabled for scheduled production runs. Manual dry runs and push diagnostics do not publish intelligence events.
 - Related developments are grouped only when there is supporting evidence; shared words alone are not proof of a connection.
+- A failed or unsupported model-generated claim does not become valid merely because a retry was attempted.
 
 ## Coverage
 
