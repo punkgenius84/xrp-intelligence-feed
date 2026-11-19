@@ -323,3 +323,23 @@ def test_format_historical_context_includes_topic_priority_and_corroborating_sou
     assert "topic=institutional_custody" in rendered
     assert "priority=5/5" in rendered
     assert "https://ripple.com/ripple-press/ripple-expands-collaboration-with-bny-across-custody-and-tokenized-trade-finance/" in rendered
+
+
+
+def test_context_pack_includes_spot_xrp_etp_market_access_with_product_caveats():
+    records = load_historical_context()
+    etp = [record for record in records if record["id"] == "xrp-spot-etf-market-access-2025"]
+    assert len(etp) == 1
+    assert "Bitwise ETF" in etp[0]["relationship"]
+    assert "Grayscale XRP Trust ETF" in etp[0]["relationship"]
+    assert "exact structure" in etp[0]["relationship"]
+    assert "futures-based" in etp[0]["status"]
+    assert len(etp[0]["related_source_urls"]) == 2
+
+
+def test_spot_xrp_etf_record_is_selected_for_product_specific_news():
+    records = select_historical_context(
+        "Bitwise spot XRP ETF starts trading and Grayscale GXRP trust lists",
+        "Franklin Templeton launched its XRPZ exchange-traded product.",
+    )
+    assert any(record["id"] == "xrp-spot-etf-market-access-2025" for record in records)
