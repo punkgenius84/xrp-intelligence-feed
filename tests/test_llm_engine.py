@@ -209,7 +209,7 @@ def test_invalid_model_output_gets_one_strict_repair_attempt():
     assert result.entities == ["Ripple"]
 
 
-def test_second_invalid_model_response_is_still_rejected():
+def test_second_identical_invalid_model_response_is_rejected_and_audited(capsys):
     class FakeProvider:
         calls = 0
 
@@ -220,7 +220,11 @@ def test_second_invalid_model_response_is_still_rejected():
     provider = FakeProvider()
     with pytest.raises(LLMError, match="LLM output is not valid JSON"):
         analyze_item(item(), provider)
-    assert provider.calls == 3
+    output = capsys.readouterr().out
+    assert provider.calls == 2
+    assert "Intelligence validation attempt rejected:" in output
+    assert "attempt=1/3" in output and "attempt=2/3" in output
+    assert "unparsed_output='not json'" in output
 
 
 def test_evidence_bundle_is_deterministic_and_deduplicated():

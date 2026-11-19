@@ -512,6 +512,7 @@ def _generate_validated_analysis(
 ) -> IntelligenceAnalysis:
     """Retry invalid model output twice; provider failures and failed evidence checks stay fail-closed."""
     validation_error = ""
+    previous_normalized_error = ""
     attempt_audits: list[str] = []
     for attempt in range(3):
         prompt = (
@@ -539,15 +540,27 @@ def _generate_validated_analysis(
             raise
         except (LLMError, ValueError) as exc:
             validation_error = str(exc)
+            normalized_error = " ".join(validation_error.casefold().split())
+            repeated_error = bool(
+                previous_normalized_error and normalized_error == previous_normalized_error
+            )
             attempt_audits.append(
                 f"attempt_{attempt + 1}: validation={validation_error[:360]!r}; "
                 f"model_output={response_audit}"
             )
-            if attempt == 2:
+            print(
+                "Intelligence validation attempt rejected: "
+                f"source={source_url[:500]!r} attempt={attempt + 1}/3 "
+                f"validation={validation_error[:360]!r} model_output={response_audit}"
+            )
+            if attempt == 2 or repeated_error:
                 audit = " || ".join(attempt_audits)[:2600]
                 raise LLMError(
-                    f"{error_prefix}: {exc}; model_attempt_audit=[{audit}]"
+                    f"{error_prefix}: {exc}; attempts={attempt + 1}; "
+                    f"repeated_validation_error={str(repeated_error).lower()}; "
+                    f"model_attempt_audit=[{audit}]"
                 ) from exc
+            previous_normalized_error = normalized_error
     raise AssertionError("unreachable")
 
 

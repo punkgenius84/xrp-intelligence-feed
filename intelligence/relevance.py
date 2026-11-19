@@ -134,18 +134,26 @@ def _classify(item, combined: str) -> list[str]:
         "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
         "Lighter", "Kava",
     }
+    # Generic "digital asset(s)" phrasing in the body is not sufficient by itself:
+    # it can appear as incidental boilerplate in conventional securities notices.
+    # Require a concrete asset, mechanism, service, or a headline that is explicitly
+    # about digital assets. Keep the digital-commodity trust-share exception below.
     digital_asset_topic = any(_contains(combined, term) for term in (
-        "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
+        "cryptocurrency", "cryptocurrencies", "crypto asset", "crypto assets",
         "CBDC", "central bank digital currency", "central bank digital currencies",
         "crypto", "stablecoin", "stablecoins", "payment stablecoin",
-        "virtual currency", "digital money", "digital asset service provider",
+        "virtual currency", "virtual asset", "digital money",
+        "digital asset service provider", "digital asset custody",
+        "digital assets custody", "digital asset payment", "digital asset payments",
+        "digital asset settlement", "digital asset infrastructure",
+        "digital asset exchange", "digital asset wallet", "digital asset trading",
         "genius act", "tokenized deposit", "tokenized deposits", "tokenised deposit",
-        "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
-        "tokenization", "tokenisation", "tokenized", "tokenised",
+        "tokenised deposits", "blockchain", "distributed ledger", "XRP", "XRPL",
+        "Ripple", "RLUSD", "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA",
         "crypto exchange", "crypto transfers", "tokenized stock", "tokenized stocks",
-        "tokenised stock", "tokenised stocks",
-        "CLARITY Act", "Digital Asset Market Clarity Act",
+        "tokenised stock", "tokenised stocks", "tokenized securities",
+        "tokenised securities", "CLARITY Act", "Digital Asset Market Clarity Act",
         "crypto market structure", "digital asset market structure",
         "crypto legislation",
     )) or bool(entities & {
@@ -153,6 +161,9 @@ def _classify(item, combined: str) -> list[str]:
         "Avalanche", "Polygon", "Binance", "Kraken", "Uniswap", "Aave",
         "CoinDCX", "MEXC Global", "Bitget", "OKX",
     })
+    digital_asset_in_title = any(
+        _contains(item.title, phrase) for phrase in ("digital asset", "digital assets")
+    )
     # A bare mention of "digital commodities" in a long regulatory document is
     # not enough to make an unrelated securities filing crypto-relevant. Keep it
     # when the article title is about digital commodities, or when the supplied
@@ -166,7 +177,10 @@ def _classify(item, combined: str) -> list[str]:
             "digital commodity", "digital commodities",
         ))
     )
-    digital_asset_topic = digital_asset_topic or digital_commodity_in_title or commodity_trust_context
+    digital_asset_topic = (
+        digital_asset_topic or digital_asset_in_title
+        or digital_commodity_in_title or commodity_trust_context
+    )
     legislative_topic = any(_contains(combined, phrase) for phrase in (
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "crypto market structure", "digital asset market structure",
