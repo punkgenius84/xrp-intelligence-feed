@@ -903,3 +903,51 @@ def test_jpmorgan_conventional_b2b_payables_expansion_is_not_core_crypto_relevan
 
     assert "institutional_payment_action" in item.relevance_categories
     assert score < 30
+
+
+def test_incidental_digital_assets_phrase_does_not_promote_generic_securities_filing():
+    item = NewsItem(
+        title=(
+            "Self-Regulatory Organizations; NYSE American LLC; Notice of Filing "
+            "and Immediate Effectiveness of Proposed Change to Binary Options Rules"
+        ),
+        summary=(
+            "The filing concerns binary options over issuer-reported key performance "
+            "indicators. It uses the phrase digital assets once in a general background "
+            "passage unrelated to the proposed rule change."
+        ),
+        url="https://example.test/nyse-american-binary-kpi-options",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert "relevant_regulatory_digital_asset_payments" not in item.relevance_categories
+    assert score < 30, f"incidental body-only digital-assets phrase qualified: {score}, {reasons}"
+
+
+def test_specific_digital_asset_custody_guidance_remains_relevant():
+    item = NewsItem(
+        title="SEC Issues Digital Asset Custody Guidance for Broker-Dealers",
+        summary=(
+            "The SEC issued guidance for broker-dealers holding digital assets in custody."
+        ),
+        url="https://example.test/sec-digital-asset-custody",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert "SEC" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"specific custody guidance fell below the gate: {score}, {reasons}"
