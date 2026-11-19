@@ -160,6 +160,44 @@ def _contains_anchor(text: str, anchor: str) -> bool:
     ))
 
 
+def _publisher_attribution_matches(claim_text: str, publisher_text: str) -> bool:
+    """Allow publisher evidence only when the claim identifies the publication itself."""
+    publisher = " ".join(publisher_text.split())
+    if not publisher:
+        return False
+    match = re.search(
+        r"(?<![a-z0-9])" + re.escape(publisher) + r"(?![a-z0-9])",
+        claim_text,
+        flags=re.IGNORECASE,
+    )
+    if match is None:
+        return False
+
+    # The publisher name must be used as an attribution/source descriptor,
+    # not as the actor performing an approval, filing, payment, or other event.
+    suffix = claim_text[match.end():].lstrip(" ,:-—")
+    next_word = re.match(r"([A-Za-z]+)", suffix)
+    attribution_nouns = {
+        "notice", "release", "article", "report", "filing", "statement",
+        "announcement", "publication", "document", "bulletin", "order",
+        "guidance", "circular", "update", "letter", "story", "post",
+    }
+    if next_word and next_word.group(1).casefold() in attribution_nouns:
+        return True
+
+    prefix = claim_text[:match.start()].casefold()
+    return any(
+        re.search(pattern, prefix)
+        for pattern in (
+            r"\\baccording to\\s*$",
+            r"\\breported by\\s*$",
+            r"\\bpublished by\\s*$",
+            r"\\bissued by\\s*$",
+            r"\\bfrom\\s*$",
+        )
+    )
+
+
 def _validate_claim_grounding(
     analysis: IntelligenceAnalysis,
     evidence_text: dict[str, str],
@@ -173,9 +211,20 @@ def _validate_claim_grounding(
             for reference in cited_references
             if not reference.endswith("publisher")
         )
+        publisher_references = [
+            reference for reference in cited_references
+            if reference.endswith("publisher")
+            and _publisher_attribution_matches(
+                claim.text, evidence_text.get(reference, "")
+            )
+        ]
         missing_anchors = [
             anchor for anchor in sorted(_claim_anchor_tokens(claim.text))
             if not _contains_anchor(cited_text, anchor)
+            and not any(
+                _contains_anchor(evidence_text.get(reference, ""), anchor)
+                for reference in publisher_references
+            )
         ]
 
         # A model sometimes cites the summary while taking a concrete name, date,
@@ -191,6 +240,16 @@ def _validate_claim_grounding(
                 ),
                 None,
             )
+            if supporting_reference is None:
+                supporting_reference = next(
+                    (
+                        reference for reference, text in evidence_text.items()
+                        if reference.endswith("publisher")
+                        and _publisher_attribution_matches(claim.text, text)
+                        and _contains_anchor(text, anchor)
+                    ),
+                    None,
+                )
             if supporting_reference is None:
                 excerpt = " ".join(claim.text.split())[:180]
                 raise LLMError(
