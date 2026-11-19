@@ -741,6 +741,8 @@ def test_single_member_cluster_uses_single_source_analysis_contract(capsys):
     assert '"source summary"' in captured["user"]
     assert "source-1 summary" not in captured["user"]
     assert "status=success" in output
+    assert "Intelligence candidate:" in output
+    assert "Intelligence claim accepted:" in output
 
 
 def test_select_items_prioritizes_direct_xrp_over_higher_scoring_generic_context():
@@ -786,3 +788,63 @@ def test_select_items_prefers_newer_item_within_same_priority_and_score():
     newer.published_at = datetime.now(timezone.utc)
 
     assert [candidate.candidate_id for candidate in select_items([older, newer], config)] == ["newer"]
+
+
+@pytest.mark.parametrize(
+    ("claims", "expected_diagnostic"),
+    [
+        ([], "model_claims=[]"),
+        (
+            [{
+                "text": "J.P. Morgan expanded its payments offering to Ireland.",
+                "certainty": "high",
+                "evidence": ["source summary"],
+            }],
+            "Ireland",
+        ),
+    ],
+)
+def test_repeated_validation_failure_logs_model_claims_and_stops_early(
+    claims, expected_diagnostic, capsys
+):
+    import json
+
+    from intelligence.llm.enrichment import _generate_validated_analysis
+
+    response_content = json.dumps({
+        "event_type": "announcement",
+        "event_summary": "The source describes a business update.",
+        "significance": "The update may be relevant to institutional payments.",
+        "entities": [],
+        "claims": claims,
+    })
+
+    class Provider:
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, **kwargs):
+            self.calls += 1
+            return LLMResponse(response_content, model="test-model")
+
+    provider = Provider()
+
+    def reject_every_attempt(_analysis):
+        raise LLMError(
+            "LLM analysis rejected: claim contains an unsupported evidence anchor 'ireland'"
+        )
+
+    with pytest.raises(LLMError, match="attempts=2"):
+        _generate_validated_analysis(
+            provider,
+            "test prompt",
+            source_url="https://example.test/article",
+            allowed_evidence={"source summary"},
+            validator=reject_every_attempt,
+            error_prefix="LLM analysis rejected",
+        )
+
+    output = capsys.readouterr().out
+    assert provider.calls == 2
+    assert "Intelligence validation attempt rejected:" in output
+    assert expected_diagnostic in output
