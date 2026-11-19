@@ -353,6 +353,36 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     thresholds = validate_thresholds(read_object(thresholds_path, "thresholds"))
     weights = thresholds["weights"]
     combined = f"{item.title} {item.summary}"
+
+    # Google News discovery sometimes yields a The Block ETF landing-page title
+    # ("Price, Flows & Assets") with no article facts or reported figures. It is
+    # a data-page pointer, not an event announcement. Keep it out of the event
+    # queue unless the supplied summary actually contains reportable metrics or
+    # a concrete development.
+    title_is_etf_metrics_page = (
+        "price, flows & assets" in item.title.casefold()
+        and any(_contains(item.title, kind) for kind in ("ETF", "ETP", "Trust"))
+    )
+    summary_is_discovery_stub = item.summary.casefold().lstrip().startswith(
+        "google news discovery; publisher attribution:"
+    )
+    summary_has_reportable_metric = bool(re.search(
+        r"(?:[$€£]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:%|million|billion|thousand|m|b)\b)",
+        item.summary,
+        re.IGNORECASE,
+    ))
+    if (
+        title_is_etf_metrics_page
+        and summary_is_discovery_stub
+        and not summary_has_reportable_metric
+    ):
+        item.relevance_score = 0
+        item.score_reasons = [
+            "non-event ETF metrics landing page has no reportable figures or new development"
+        ]
+        item.score_signals = ["filter:non_event_etf_metrics_page"]
+        item.relevance_categories = []
+        return 0, item.score_reasons
     categories = _classify(item, combined)
     direct = bool(set(item.detected_entities) & {"XRP", "Ripple", "RLUSD"})
     regulatory_relevance = bool(set(categories) & {

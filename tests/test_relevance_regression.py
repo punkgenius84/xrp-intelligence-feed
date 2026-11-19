@@ -971,3 +971,49 @@ def test_explicit_digital_asset_headline_remains_relevant_without_body_expansion
     assert "SEC" in item.detected_entities
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
     assert score >= 30, f"explicit digital-asset headline fell below gate: {score}, {reasons}"
+
+
+def test_etf_price_flows_landing_page_without_facts_is_not_an_intelligence_event():
+    item = NewsItem(
+        title="iShares Bitcoin Premium Income ETF (BITA) Price, Flows & Assets",
+        summary=(
+            "Google News discovery; publisher attribution: The Block. "
+            "iShares Bitcoin Premium Income ETF (BITA) Price, Flows & Assets The Block"
+        ),
+        url="https://example.test/the-block/bita-price-flows-assets",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        source_quality="secondary",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert score == 0
+    assert item.relevance_categories == []
+    assert "filter:non_event_etf_metrics_page" in item.score_signals
+    assert "no reportable figures or new development" in reasons[0]
+
+
+def test_etf_metrics_page_with_actual_reported_figures_is_not_blanket_filtered():
+    item = NewsItem(
+        title="Franklin Templeton XRP ETF (XRPZ) Price, Flows & Assets",
+        summary=(
+            "Google News discovery; publisher attribution: The Block. "
+            "The fund reports $42 million in XRP holdings and $12 million of net inflows this week."
+        ),
+        url="https://example.test/the-block/xrpz-price-flows-assets",
+        source="The Block",
+        source_id="theblock-google-news-discovery",
+        source_quality="secondary",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, _ = score_relevance(item)
+
+    assert "filter:non_event_etf_metrics_page" not in item.score_signals
+    assert score > 0
