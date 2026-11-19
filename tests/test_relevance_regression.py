@@ -798,3 +798,76 @@ def test_bank_charter_commentary_without_named_banking_regulator_stays_below_gat
 
     assert "institutional_bank_charter_action" not in item.relevance_categories
     assert score < 30
+
+
+def test_generic_securities_notice_with_incidental_digital_asset_language_stays_below_gate():
+    item = NewsItem(
+        title="NYSE Arca Proposes Change to Franklin Responsibly Sourced Gold ETF",
+        summary=(
+            "The filing concerns exchange listing rules for shares and securities. "
+            "It includes generic references to digital assets and digital commodities "
+            "in broad market-risk language, but does not concern a crypto asset, "
+            "tokenized instrument, stablecoin, blockchain, or digital-asset service."
+        ),
+        url="https://example.test/franklin-gold-etf-rule",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-generic-securities-notice",
+        authority_tier=1,
+        source_quality="primary",
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "relevant_regulatory_digital_asset_payments" not in item.relevance_categories
+    assert "regulatory_tokenization_action" not in item.relevance_categories
+    assert score < 30, f"generic securities filing unexpectedly qualified: {score}, {reasons}"
+
+
+def test_mas_tokenized_bill_cbdc_issuance_remains_relevant():
+    item = NewsItem(
+        title=(
+            "MAS Announces Successful Issuance of Tokenised MAS Bills on the Singapore "
+            "Dollar Test Network Using Wholesale Central Bank Digital Currency"
+        ),
+        summary=(
+            "The Monetary Authority of Singapore announced successful issuance of "
+            "tokenised MAS bills using wholesale central bank digital currency."
+        ),
+        url="https://example.test/mas-tokenised-bills",
+        source="Singapore Government Press Centre",
+        source_id="sgpc-media-releases-api",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "Monetary Authority of Singapore" in item.detected_entities
+    assert score >= 30, f"material CBDC tokenization action fell below gate: {score}, {reasons}"
+
+
+def test_regulatory_digital_asset_custody_guidance_remains_relevant():
+    item = NewsItem(
+        title="SEC Issues Digital Asset Custody Guidance for Broker-Dealers",
+        summary=(
+            "The SEC issued guidance for broker-dealers holding digital assets in custody."
+        ),
+        url="https://example.test/sec-digital-asset-custody",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-digital-asset-guidance",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "SEC" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"specific digital-asset custody action fell below gate: {score}, {reasons}"
