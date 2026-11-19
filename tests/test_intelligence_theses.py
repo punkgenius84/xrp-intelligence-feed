@@ -312,3 +312,98 @@ def test_xrp_escrow_supply_thesis_opens_with_grounded_escrow_events():
     ]
     assert len(escrow) == 1
     assert "Gross releases" in escrow[0]["mechanism"]
+
+
+
+def test_xrpl_auto_bridging_thesis_requires_a_reported_xrp_routing_claim():
+    state = {"events": {
+        "event-1": _event(
+            "XRPL DEX liquidity improves with auto-bridging",
+            "XRP",
+            "publisher-a",
+            claim_text="The XRP Ledger DEX added a new liquidity feature.",
+        ),
+        "event-2": _event(
+            "XRP intermediary routing discussed for XRPL DEX",
+            "XRP",
+            "publisher-b",
+            claim_text="The article discusses decentralized exchange routing.",
+        ),
+    }}
+    update_theses(state, "2026-11-18T12:00:00+00:00")
+    assert not any(
+        record["theme"] == "xrpl_dex_xrp_autobridging"
+        for record in state["theses"].values()
+    )
+
+
+def test_xrpl_auto_bridging_thesis_opens_only_from_independent_grounded_claims():
+    state = {"events": {
+        "event-1": _event(
+            "XRPL DEX auto-bridging routes through XRP",
+            "XRP",
+            "publisher-a",
+            claim_text="The XRP Ledger can auto-bridge some decentralized exchange trades through XRP.",
+        ),
+        "event-2": _event(
+            "XRP can serve as intermediary currency on XRPL DEX",
+            "XRP",
+            "publisher-b",
+            claim_text="The source describes XRP as the intermediary currency for auto-bridging on the XRP Ledger DEX.",
+        ),
+    }}
+    opened = update_theses(state, "2026-11-18T12:00:00+00:00")
+    dex = [
+        record for record in opened
+        if record["theme"] == "xrpl_dex_xrp_autobridging" and record["entity"] == "XRP"
+    ]
+    assert len(dex) == 1
+    assert dex[0]["independent_source_count"] == 2
+    assert "conditional on relative prices and liquidity" in dex[0]["mechanism"]
+
+
+def test_spot_xrp_etf_thesis_requires_explicit_spot_holding_claims():
+    state = {"events": {
+        "event-1": _event(
+            "A new XRP ETF offers price exposure",
+            "XRP",
+            "publisher-a",
+            claim_text="The ETF offers exposure to XRP price movements.",
+        ),
+        "event-2": _event(
+            "XRP-linked fund launches",
+            "XRP",
+            "publisher-b",
+            claim_text="The exchange-traded product tracks XRP.",
+        ),
+    }}
+    update_theses(state, "2026-11-18T12:00:00+00:00")
+    assert not any(
+        record["theme"] == "institutional_xrp_market_access"
+        for record in state["theses"].values()
+    )
+
+
+def test_spot_xrp_etf_thesis_requires_independent_spot_holding_developments():
+    state = {"events": {
+        "event-1": _event(
+            "Bitwise spot XRP ETF begins trading",
+            "XRP",
+            "publisher-a",
+            claim_text="The Bitwise ETF will hold spot XRP.",
+        ),
+        "event-2": _event(
+            "Grayscale XRP Trust ETF",
+            "XRP",
+            "publisher-b",
+            claim_text="The trust holds XRP to reflect the value of the XRP held by the trust.",
+        ),
+    }}
+    opened = update_theses(state, "2026-11-18T12:00:00+00:00")
+    etf = [
+        record for record in opened
+        if record["theme"] == "institutional_xrp_market_access" and record["entity"] == "XRP"
+    ]
+    assert len(etf) == 1
+    assert etf[0]["independent_source_count"] == 2
+    assert "do not demonstrate on-ledger usage" in etf[0]["mechanism"]
