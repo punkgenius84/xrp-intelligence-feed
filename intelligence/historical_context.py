@@ -8,7 +8,7 @@ from typing import Any
 
 
 DEFAULT_CONTEXT_PATH = Path("config/historical_context.json")
-MAX_CONTEXT_RECORDS = 4
+MAX_CONTEXT_RECORDS = 6
 
 
 class HistoricalContextError(ValueError):
@@ -39,7 +39,41 @@ def load_historical_context(path: str | Path = DEFAULT_CONTEXT_PATH) -> list[dic
                 raise HistoricalContextError(f"historical context {record['id']} field {key} must be a non-empty string list")
         if not record["source_url"].startswith("https://"):
             raise HistoricalContextError(f"historical context {record['id']} source_url must use HTTPS")
+        topic = record.get("topic")
+        if topic is not None and (not isinstance(topic, str) or not topic.strip()):
+            raise HistoricalContextError(f"historical context {record['id']} topic must be a non-empty string")
+        priority = record.get("priority")
+        if priority is not None and (not isinstance(priority, int) or isinstance(priority, bool) or not 1 <= priority <= 5):
+            raise HistoricalContextError(f"historical context {record['id']} priority must be an integer from 1 to 5")
+        related_urls = record.get("related_source_urls", [])
+        if not isinstance(related_urls, list) or any(
+            not isinstance(url, str) or not url.startswith("https://") for url in related_urls
+        ):
+            raise HistoricalContextError(f"historical context {record['id']} related_source_urls must contain HTTPS URLs")
     return records
+
+
+_GENERIC_CONTEXT_ALIASES = {
+    "xrp", "ripple", "xrpl", "xrp ledger", "ripple labs",
+}
+
+
+def _context_alias_weight(alias: str) -> int:
+    normalized = " ".join(alias.casefold().split())
+    if normalized in _GENERIC_CONTEXT_ALIASES:
+        return 1
+    words = re.findall(r"[a-z0-9]+", normalized)
+    if len(words) >= 2:
+        return 3 + min(2, len(words) - 2)
+    return 2
+
+
+def _context_recency_bonus(value: str) -> int:
+    match = re.match(r"^(\d{4})", value)
+    if not match:
+        return 0
+    year = int(match.group(1))
+    return min(6, max(0, year - 2020))
 
 
 def select_historical_context(
@@ -48,26 +82,53 @@ def select_historical_context(
     path: str | Path = DEFAULT_CONTEXT_PATH,
     max_records: int = MAX_CONTEXT_RECORDS,
 ) -> list[dict[str, Any]]:
-    """Return only sourced records whose aliases occur in the current item.
+    """Return a bounded, ranked, topic-diverse set of matching sourced records.
 
+    Specific product/program aliases outrank generic mentions of Ripple or XRP.
+    Curated priority and recency prevent old broad matches from displacing newer,
+    directly relevant milestones. A small topic-diversity preference preserves useful
+    strategic breadth without filling the prompt with unrelated history.
     Context is historical background, never evidence that a relationship remains active.
     """
     if max_records < 0:
         raise ValueError("max_records must be non-negative")
+    if max_records == 0:
+        return []
     text = f"{title}\n{summary}"
     records = load_historical_context(path)
-    matches: list[tuple[int, str, dict[str, Any]]] = []
+    matches: list[tuple[int, str, str, dict[str, Any]]] = []
     for record in records:
         matched = {
             alias.casefold()
             for alias in record["aliases"]
-            if re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", text, flags=re.IGNORECASE)
+            if re.search(r"(?<!\w)" + re.escape(alias.strip()) + r"(?!\w)", text, flags=re.IGNORECASE)
         }
-        if matched:
-            matches.append((-len(matched), record["date"], record))
-    matches.sort(key=lambda item: (item[0], item[1], item[2]["id"]))
-    return [record for _, _, record in matches[:max_records]]
+        if not matched:
+            continue
+        alias_score = sum(_context_alias_weight(alias) for alias in matched)
+        priority = record.get("priority", 2)
+        score = alias_score * 4 + priority * 3 + _context_recency_bonus(record["date"])
+        topic = record.get("topic", "historical")
+        matches.append((score, topic, record["date"], record))
 
+    selected: list[dict[str, Any]] = []
+    topic_counts: dict[str, int] = {}
+    remaining = matches[:]
+    while remaining and len(selected) < max_records:
+        best_index = max(
+            range(len(remaining)),
+            key=lambda index: (
+                remaining[index][0]
+                + (5 if topic_counts.get(remaining[index][1], 0) == 0 else 0)
+                - topic_counts.get(remaining[index][1], 0) * 5,
+                remaining[index][2],
+                remaining[index][3]["id"],
+            ),
+        )
+        _, topic, _, record = remaining.pop(best_index)
+        selected.append(record)
+        topic_counts[topic] = topic_counts.get(topic, 0) + 1
+    return selected
 
 
 _PRIOR_CONTEXT_STOPWORDS = {
@@ -228,10 +289,13 @@ def format_historical_context(records: list[dict[str, Any]]) -> str:
     ]
     for record in records:
         lines.append(
-            f"- [{record['date']}] Entities: {', '.join(record['entities'])}. "
+            f"- [{record['date']}] topic={record.get('topic', 'historical')} "
+            f"priority={record.get('priority', 2)}/5. "
+            f"Entities: {', '.join(record['entities'])}. "
             f"Relationship: {record['relationship']} "
             f"Classification: {record['classification']}. "
-            f"Status caution: {record['status']}. Source: {record['source_url']}"
+            f"Status caution: {record['status']}. "
+            f"Sources: {'; '.join([record['source_url'], *record.get('related_source_urls', [])])}"
         )
     lines.append(
         "Use this background only to recognize historical connections and explain possible significance. "
