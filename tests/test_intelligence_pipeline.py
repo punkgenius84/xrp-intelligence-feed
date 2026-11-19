@@ -225,7 +225,7 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
                 '{"event_type":"announcement","event_summary":"Source-backed event",'
                 '"significance":"Relevant to the monitored domain.",'
                 '"entities":["Ripple"],"claims":[{"text":"The source reports an announcement.",'
-                '"certainty":"high","evidence":["source-1 summary"]}]}',
+                '"certainty":"high","evidence":["source summary"]}]}',
                 model="test-model",
             )
 
@@ -602,7 +602,7 @@ def test_cluster_enrichment_includes_prior_events_only_as_context():
                 '"significance":"This could matter for institutional payments.",'
                 '"entities":["Ripple"],'
                 '"claims":[{"text":"The source reports a cross-border settlement service.",'
-                '"evidence":["source-1 summary"]}]}',
+                '"evidence":["source summary"]}]}',
                 model="test-model",
             )
 
