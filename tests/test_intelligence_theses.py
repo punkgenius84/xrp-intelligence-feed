@@ -203,16 +203,16 @@ def test_xrp_bridge_asset_thesis_requires_source_grounded_xrp_bridge_claim():
 def test_xrp_bridge_asset_thesis_opens_only_from_two_independent_grounded_xrp_claims():
     state = {"events": {
         "event-1": _event(
-            "XRPL auto-bridging uses XRP as an intermediary currency",
+            "XRP is used as a bridge asset through ODL in a new corridor",
             "XRP",
             "publisher-a",
-            claim_text="The XRP Ledger automatically bridges some DEX trades through XRP when the composite route is better.",
+            claim_text="The source states that XRP is used as a bridge asset through ODL in the corridor.",
         ),
         "event-2": _event(
-            "XRP auto-bridging improves XRPL DEX currency routing",
+            "ODL uses XRP as the bridge currency for cross-border payment flows",
             "XRP",
             "publisher-b",
-            claim_text="XRP is used as the intermediary currency for auto-bridging on the XRPL decentralized exchange.",
+            claim_text="The source states that ODL uses XRP as a bridge currency for cross-border payments.",
         ),
     }}
     opened = update_theses(state, "2026-11-18T12:00:00+00:00")
