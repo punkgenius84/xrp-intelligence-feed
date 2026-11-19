@@ -229,13 +229,13 @@ def test_xrp_bridge_asset_thesis_opens_only_from_two_independent_grounded_xrp_cl
 def test_xrpl_amm_thesis_requires_a_reported_xrpl_amm_claim():
     state = {"events": {
         "event-1": _event(
-            "XRP Ledger expands its DeFi ecosystem",
+            "XRP Ledger AMM activity expands its DeFi ecosystem",
             "XRP",
             "publisher-a",
             claim_text="The XRP Ledger expanded its decentralized finance ecosystem.",
         ),
         "event-2": _event(
-            "XRPL liquidity improves",
+            "XRPL AMM liquidity improves",
             "XRP",
             "publisher-b",
             claim_text="The source describes stronger XRPL liquidity.",
@@ -272,14 +272,14 @@ def test_xrpl_amm_thesis_opens_from_independent_reported_amm_developments():
 def test_xrp_escrow_supply_thesis_requires_a_reported_escrow_claim():
     state = {"events": {
         "event-1": _event(
-            "Ripple reports quarterly XRP holdings",
+            "Ripple reports quarterly XRP escrow balances",
             "XRP",
             "publisher-a",
             claim_text="Ripple reported its XRP holdings.",
             significance="The report could relate to escrow releases.",
         ),
         "event-2": _event(
-            "XRP supply dynamics draw attention",
+            "XRP escrow supply dynamics draw attention",
             "XRP",
             "publisher-b",
             claim_text="The report describes XRP supply dynamics.",
