@@ -66,7 +66,8 @@ _THEMES = {
         "watch": ("AMM trading volume and fees", "share of pools with XRP as a constituent", "LP composition, withdrawal activity, and realized pool performance"),
     },
     "xrp_escrow_supply": {
-        "terms": ("xrp escrow", "escrow release", "monthly xrp escrow", "55 billion xrp"),
+        "terms": ("xrp escrow", "escrow release", "monthly xrp escrow", "55 billion xrp",
+                  "re-escrow", "re-escrows", "re-escrowed"),
         "mechanism": "Ripple's historic escrow schedule governs gross releases of previously created XRP; unused releases can be re-escrowed. Gross releases must be distinguished from net changes in circulating supply, Ripple's liquid holdings, transfers to counterparties, and open-market sales.",
         "watch": ("latest dated Ripple holdings and escrow disclosures", "validated on-ledger escrow releases and re-escrows", "net changes in liquid/distributed XRP rather than gross scheduled unlocks alone"),
     },
