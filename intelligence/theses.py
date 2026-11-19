@@ -184,6 +184,7 @@ def _theme_has_required_reported_claim(theme: str, event: dict[str, Any]) -> boo
         "institutional_xrp_market_access": (
             ("xrp",),
             ("etf", "exchange-traded fund", "exchange traded fund"),
+            ("spot", "xrp held by the trust", "trust holds xrp", "holds xrp tokens"),
             ("hold", "holds", "holding", "held"),
         ),
     }
