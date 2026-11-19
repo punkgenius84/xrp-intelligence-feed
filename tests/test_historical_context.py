@@ -330,7 +330,7 @@ def test_context_pack_includes_spot_xrp_etp_market_access_with_product_caveats()
     records = load_historical_context()
     etp = [record for record in records if record["id"] == "xrp-spot-etf-market-access-2025"]
     assert len(etp) == 1
-    assert "Bitwise ETF" in etp[0]["relationship"]
+    assert "Bitwise announced that its XRP ETF" in etp[0]["relationship"]
     assert "Grayscale XRP Trust ETF" in etp[0]["relationship"]
     assert "exact structure" in etp[0]["relationship"]
     assert "futures-based" in etp[0]["status"]
