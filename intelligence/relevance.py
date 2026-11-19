@@ -132,20 +132,33 @@ def _classify(item, combined: str) -> list[str]:
         "Coinbase", "Chainlink", "CoinDCX", "MEXC Global", "Bitget", "OKX",
         "Lighter", "Kava",
     }
+    # Do not let incidental securities boilerplate (for example, a generic
+    # reference to "digital assets" or "digital commodities" in a gold/stock ETF
+    # notice) turn an ordinary listing-rule filing into crypto intelligence.
+    # The broad terms remain valid when the headline itself is specifically about
+    # digital assets; otherwise require a concrete crypto, CBDC, custody, payment,
+    # blockchain, or tokenization mechanism in the article text.
     digital_asset_topic = any(_contains(combined, term) for term in (
-        "digital asset", "digital assets", "cryptocurrency", "cryptocurrencies",
-        "CBDC", "central bank digital currency", "central bank digital currencies",
-        "crypto", "stablecoin", "stablecoins", "payment stablecoin",
-        "virtual currency", "digital money", "digital asset service provider",
+        "cryptocurrency", "cryptocurrencies", "crypto asset", "crypto assets",
+        "crypto", "CBDC", "central bank digital currency",
+        "central bank digital currencies", "stablecoin", "stablecoins",
+        "payment stablecoin", "virtual currency", "virtual asset", "digital money",
+        "digital asset service provider", "digital asset custody",
+        "digital assets custody", "digital asset payment", "digital asset payments",
+        "digital asset settlement", "digital asset infrastructure",
+        "digital asset exchange", "digital asset wallet",
         "genius act", "tokenized deposit", "tokenized deposits", "tokenised deposit",
-        "tokenised deposits", "blockchain", "XRP", "XRPL", "Ripple", "RLUSD",
-        "tokenization", "tokenisation", "tokenized", "tokenised",
+        "tokenised deposits", "blockchain", "distributed ledger", "XRP", "XRPL",
+        "Ripple", "RLUSD", "tokenization", "tokenisation", "tokenized", "tokenised",
         "real world asset", "real-world asset", "RWA",
         "crypto exchange", "crypto transfers", "tokenized stock", "tokenized stocks",
-        "tokenised stock", "tokenised stocks",
-        "CLARITY Act", "Digital Asset Market Clarity Act",
-        "market structure", "crypto market structure", "digital asset market structure",
-        "digital commodity", "digital commodities", "crypto legislation",
+        "tokenised stock", "tokenised stocks", "tokenized securities",
+        "tokenised securities", "CLARITY Act", "Digital Asset Market Clarity Act",
+        "crypto market structure", "digital asset market structure",
+        "crypto legislation",
+    )) or any(_contains(item.title, term) for term in (
+        "digital asset", "digital assets", "digital commodity",
+        "digital commodities",
     )) or bool(entities & {
         "Binance", "Kraken", "Uniswap", "Aave", "CoinDCX",
         "MEXC Global", "Bitget", "OKX",
