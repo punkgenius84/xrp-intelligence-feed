@@ -741,3 +741,48 @@ def test_single_member_cluster_uses_single_source_analysis_contract(capsys):
     assert '"source summary"' in captured["user"]
     assert "source-1 summary" not in captured["user"]
     assert "status=success" in output
+
+
+def test_select_items_prioritizes_direct_xrp_over_higher_scoring_generic_context():
+    config = load_intelligence_config()
+    config = config.__class__(
+        enabled=True,
+        model=config.model,
+        max_items_per_run=2,
+        min_relevance_score=30,
+        timeout_seconds=45,
+    )
+    direct = item(55, "direct-xrp-etf")
+    direct.title = "Franklin Templeton XRP ETF market update"
+    direct.detected_entities = ["XRP", "Franklin Templeton"]
+    direct.relevance_categories = ["direct_xrp_xrpl"]
+    general = item(92, "generic-regulatory")
+    general.title = "General institutional digital asset policy update"
+    general.relevance_categories = ["relevant_regulatory_digital_asset_payments"]
+    payment = item(80, "institutional-payments")
+    payment.relevance_categories = ["institutional_payment_action"]
+
+    selected = select_items([general, payment, direct], config)
+
+    assert [candidate.candidate_id for candidate in selected] == [
+        "direct-xrp-etf", "generic-regulatory",
+    ]
+
+
+def test_select_items_prefers_newer_item_within_same_priority_and_score():
+    from datetime import timedelta
+
+    config = load_intelligence_config()
+    config = config.__class__(
+        enabled=True,
+        model=config.model,
+        max_items_per_run=1,
+        min_relevance_score=30,
+        timeout_seconds=45,
+    )
+    older = item(60, "older")
+    newer = item(60, "newer")
+    older.published_at = datetime.now(timezone.utc) - timedelta(days=2)
+    newer.published_at = datetime.now(timezone.utc)
+
+    assert [candidate.candidate_id for candidate in select_items([older, newer], config)] == ["newer"]
