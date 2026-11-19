@@ -110,6 +110,8 @@ def _classify(item, combined: str) -> list[str]:
         "seeks answers", "investigates", "investigation", "investigations", "probes", "probe",
         "subpoena", "subpoenas", "files suit", "filed suit", "sues", "charged", "charges",
         "alleges", "allegation", "inquiry", "inquiries",
+        "urge", "urges", "urged", "calls on", "call on", "called on",
+        "presses", "pressed",
         "report", "reports", "reported", "recommends", "recommended",
         "propose", "proposes", "proposed", "identified", "identifies", "issues", "issued", "publishes", "published", "regulation", "regulations", "pre-published", "prepublished", "consultation",
         "join", "targets 2030", "network buildout", "buildout target",
@@ -144,18 +146,33 @@ def _classify(item, combined: str) -> list[str]:
         "crypto exchange", "crypto transfers", "tokenized stock", "tokenized stocks",
         "tokenised stock", "tokenised stocks",
         "CLARITY Act", "Digital Asset Market Clarity Act",
-        "market structure", "crypto market structure", "digital asset market structure",
-        "digital commodity", "digital commodities", "crypto legislation",
+        "crypto market structure", "digital asset market structure",
+        "crypto legislation",
     )) or bool(entities & {
-        "Binance", "Kraken", "Uniswap", "Aave", "CoinDCX",
-        "MEXC Global", "Bitget", "OKX",
+        "XRP", "RLUSD", "Bitcoin", "Ethereum", "Solana", "Cardano",
+        "Avalanche", "Polygon", "Tether", "Circle", "Binance", "Kraken",
+        "Uniswap", "Aave", "CoinDCX", "MEXC Global", "Bitget", "OKX",
     })
+    # A bare mention of "digital commodities" in a long regulatory document is
+    # not enough to make an unrelated securities filing crypto-relevant. Keep it
+    # when the article title is about digital commodities, or when the supplied
+    # text identifies commodity-based trust shares that actually hold them.
+    digital_commodity_in_title = any(
+        _contains(item.title, phrase) for phrase in ("digital commodity", "digital commodities")
+    )
+    commodity_trust_context = (
+        _contains(combined, "commodity-based trust shares")
+        and any(_contains(combined, phrase) for phrase in (
+            "digital commodity", "digital commodities",
+        ))
+    )
+    digital_asset_topic = digital_asset_topic or digital_commodity_in_title or commodity_trust_context
     legislative_topic = any(_contains(combined, phrase) for phrase in (
         "CLARITY Act", "Digital Asset Market Clarity Act",
         "crypto market structure", "digital asset market structure",
         "market structure legislation", "market structure bill",
-        "digital asset bill", "crypto bill", "Digital Commodity Intermediaries Act",
-        "Responsible Financial Innovation Act", "FIT21",
+        "digital asset bill", "crypto bill", "GENIUS Act",
+        "Digital Commodity Intermediaries Act", "Responsible Financial Innovation Act", "FIT21",
     ))
     legislative_action = any(_contains(combined, term) for term in (
         "talks", "talk", "negotiations", "negotiation", "negotiates", "negotiated",
@@ -165,6 +182,8 @@ def _classify(item, combined: str) -> list[str]:
         "threatens", "threaten", "threatened", "delayed", "delays", "shelved",
         "advances", "advanced", "reintroduced", "released text", "release text",
         "proposal", "proposed", "discussions", "discussed", "progress",
+        "urge", "urges", "urged", "calls on", "call on", "called on",
+        "presses", "pressed",
         "election", "elections", "midterm", "midterms", "congressional",
         "congress", "senate", "house majority", "democratic sweep",
         "republican sweep", "party control", "control of congress",
@@ -328,9 +347,18 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
     government_relevance = bool(set(categories) & {
         "government_digital_asset_action", "government_payment_action",
     })
+    institutional_payment_rail_context = any(_contains(combined, term) for term in (
+        "cross-border", "cross border", "settlement", "payment network",
+        "payment networks", "payment infrastructure", "payment system",
+        "payment systems", "real-time payments", "instant payments",
+        "clearing", "correspondent banking", "fedwire", "swift",
+    ))
     institutional_relevance = (
         "institutional_digital_asset_payment" in categories
-        or "institutional_payment_action" in categories
+        or (
+            "institutional_payment_action" in categories
+            and institutional_payment_rail_context
+        )
         or "institutional_tokenization_action" in categories
     )
     topical = (
