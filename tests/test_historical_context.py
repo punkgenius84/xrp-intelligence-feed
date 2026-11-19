@@ -332,7 +332,7 @@ def test_context_pack_includes_spot_xrp_etp_market_access_with_product_caveats()
     assert len(etp) == 1
     assert "Bitwise announced that its XRP ETF" in etp[0]["relationship"]
     assert "Grayscale XRP Trust ETF" in etp[0]["relationship"]
-    assert "exact structure" in etp[0]["relationship"]
+    assert "without checking the specific prospectus" in etp[0]["relationship"]
     assert "futures-based" in etp[0]["status"]
     assert len(etp[0]["related_source_urls"]) == 2
 
