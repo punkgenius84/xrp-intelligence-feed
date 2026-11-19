@@ -48,8 +48,8 @@ def event_signature_keys(event: object) -> set[str]:
         if not isinstance(title, str):
             continue
         normalized = unicodedata.normalize("NFKC", title).casefold()
-        normalized = re.sub(r"https?://\\S+", " ", normalized)
-        normalized = " ".join(re.findall(r"[\\w]+", normalized))
+        normalized = re.sub(r"https?://\S+", " ", normalized)
+        normalized = " ".join(re.findall(r"[\w]+", normalized))
         words = normalized.split()
         if len(words) < 5 or normalized in _GENERIC_TITLES:
             continue
@@ -58,8 +58,8 @@ def event_signature_keys(event: object) -> set[str]:
     summary = getattr(event, "summary", "")
     if isinstance(summary, str):
         normalized_summary = unicodedata.normalize("NFKC", summary).casefold()
-        normalized_summary = re.sub(r"https?://\\S+", " ", normalized_summary)
-        normalized_summary = " ".join(re.findall(r"[\\w]+", normalized_summary))
+        normalized_summary = re.sub(r"https?://\S+", " ", normalized_summary)
+        normalized_summary = " ".join(re.findall(r"[\w]+", normalized_summary))
         if len(normalized_summary.split()) >= 8:
             summary_key = "event-summary:" + normalized_summary
             signatures.add(hashlib.sha256(summary_key.encode("utf-8")).hexdigest())
