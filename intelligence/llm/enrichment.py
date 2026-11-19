@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import replace
 from typing import Callable
@@ -468,6 +469,35 @@ def _validation_retry_guidance(validation_error: str, attempt: int) -> str:
     )
 
 
+def _model_output_diagnostic(content: str) -> str:
+    """Return bounded claim-level model output for CI logs without dumping full prompts."""
+    raw = str(content or "")
+    parsed = None
+    candidate = raw.strip()
+    if candidate.startswith("```"):
+        candidate = re.sub(r"^\`\`\`(?:json)?\s*|\s*\`\`\`$", "", candidate, flags=re.IGNORECASE)
+    try:
+        parsed = json.loads(candidate)
+    except (TypeError, json.JSONDecodeError):
+        parsed = None
+
+    if isinstance(parsed, dict) and isinstance(parsed.get("claims"), list):
+        claims = []
+        for claim in parsed["claims"][:5]:
+            if not isinstance(claim, dict):
+                claims.append({"claim": str(claim)[:240]})
+                continue
+            claims.append({
+                "text": str(claim.get("text", ""))[:400],
+                "evidence": claim.get("evidence", []) if isinstance(claim.get("evidence", []), list) else [],
+                "certainty": str(claim.get("certainty", ""))[:24],
+            })
+        return "model_claims=" + json.dumps(claims, ensure_ascii=False, separators=(",", ":"))
+
+    excerpt = " ".join(raw.split())[:1000]
+    return f"model_output_excerpt={excerpt!r}" if excerpt else "model_output_empty=true"
+
+
 def _generate_validated_analysis(
     provider: LLMProvider,
     user_prompt: str,
@@ -477,21 +507,25 @@ def _generate_validated_analysis(
     validator: Callable[[IntelligenceAnalysis], IntelligenceAnalysis],
     error_prefix: str,
 ) -> IntelligenceAnalysis:
-    """Retry invalid model output twice; provider failures and failed evidence checks stay fail-closed."""
+    """Retry invalid output, preserve claim-level diagnostics, and fail closed."""
     validation_error = ""
+    previous_normalized_error = ""
+    attempt_errors: list[str] = []
     for attempt in range(3):
         prompt = (
             user_prompt if attempt == 0
             else user_prompt + _validation_retry_guidance(validation_error, attempt)
         )
+        response_content = ""
         try:
             response = provider.generate(
                 system=SYSTEM_PROMPT,
                 user=prompt,
                 options={"temperature": 0},
             )
+            response_content = response.content
             analysis = parse_analysis(
-                response.content,
+                response_content,
                 source_url=source_url,
                 model=response.model,
                 allowed_evidence=allowed_evidence,
@@ -503,8 +537,25 @@ def _generate_validated_analysis(
             raise
         except (LLMError, ValueError) as exc:
             validation_error = str(exc)
-            if attempt == 2:
-                raise LLMError(f"{error_prefix}: {exc}") from exc
+            normalized_error = " ".join(validation_error.casefold().split())
+            repeated_error = bool(
+                previous_normalized_error and normalized_error == previous_normalized_error
+            )
+            attempt_errors.append(validation_error[:500])
+            diagnostic = _model_output_diagnostic(response_content)
+            print(
+                "Intelligence validation attempt rejected: "
+                f"source={source_url} attempt={attempt + 1}/3 "
+                f"reason={validation_error[:500]} {diagnostic}"
+            )
+            if attempt == 2 or repeated_error:
+                errors = " | ".join(attempt_errors[-3:])
+                raise LLMError(
+                    f"{error_prefix}: {exc}; attempts={len(attempt_errors)}; "
+                    f"repeated_validation_error={str(repeated_error).lower()}; "
+                    f"validation_errors={errors}; {diagnostic}"
+                ) from exc
+            previous_normalized_error = normalized_error
     raise AssertionError("unreachable")
 
 
