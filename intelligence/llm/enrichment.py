@@ -171,6 +171,7 @@ def _validate_claim_grounding(
         cited_text = " ".join(
             evidence_text.get(reference, "")
             for reference in cited_references
+            if not reference.endswith("publisher")
         )
         missing_anchors = [
             anchor for anchor in sorted(_claim_anchor_tokens(claim.text))
@@ -185,7 +186,8 @@ def _validate_claim_grounding(
             supporting_reference = next(
                 (
                     reference for reference, text in evidence_text.items()
-                    if _contains_anchor(text, anchor)
+                    if not reference.endswith("publisher")
+                    and _contains_anchor(text, anchor)
                 ),
                 None,
             )
@@ -396,7 +398,7 @@ def _validation_retry_guidance(validation_error: str, attempt: int) -> str:
 
     final_attempt = (
         " This is the final validation retry: prefer one minimal, directly supported "
-        "reported-fact claim over a longer answer. Do not guess or relax the evidence rules."
+        "reported-fact claim over a longer answer. Do not relax the evidence rules, guess, or fill gaps."
         if attempt >= 2 else ""
     )
     return (
