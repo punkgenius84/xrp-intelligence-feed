@@ -5,7 +5,7 @@ The intelligence extractor receives two deliberately separate inputs:
 - **Current article evidence**: the only permitted evidence for claims about what the current source reports.
 - **Curated historical background**: source-linked records used to recognize old relationships and interpret why a new development may matter.
 
-The historical pack is `config/historical_context.json`. It is not a 180-day feed cache. It has no rolling expiration and is selected by entity aliases in the current title and summary. At most four matching records are added to a model prompt.
+The historical pack is `config/historical_context.json`. It is not a 180-day feed cache. It has no rolling expiration and is selected by entity aliases in the current title and summary. At most six matching records are added to a model prompt. Selection ranks specific product/program matches above generic mentions of XRP or Ripple, uses curator priority and recency, and adds a small topic-diversity preference so older generic history does not crowd out directly relevant newer developments.
 
 ## Rules that must remain true
 
@@ -25,7 +25,7 @@ The historical pack is `config/historical_context.json`. It is not a 180-day fee
 - Add/update tests for the relationship and its status.
 - Review context selection and prompt output before allowing any intelligence publication.
 
-This is a curated foundation, not an exhaustive history. Expansion should be research-driven, prioritized by relationships likely to help connect new bank, payments, regulatory, stablecoin, custody, tokenization, and XRPL developments.
+This is a curated foundation, not an exhaustive history. Expansion is research-driven and includes both commercial milestones and XRP/XRPL protocol mechanics. Each entry carries a topic and curator priority to improve retrieval; newer facts and dynamic metrics must be rechecked against current primary sources.
 
 
 ## Current coverage added in the institutional-history expansion
@@ -58,3 +58,20 @@ python scripts/evaluate_intelligence.py
 ```
 
 Select one case with `--case <id>`, or override the installed model with `--model <ollama-model>`. The runner checks expected event types and required/forbidden text patterns against the model's validated analysis. It is a repeatable quality screen, not a proof of correctness: inspect the full model output and source material, update expectations only when primary-source evidence supports the change, and keep `INTELLIGENCE_PUBLISH=false` until scheduled shadow output has been reviewed.
+
+
+## XRP and XRPL mechanics added in the long-term context expansion
+
+The expanded pack now includes source-linked reference records for:
+
+- XRP as XRPL's native asset, the 2012 launch, validator consensus, and the distinction between Ripple, XRP, and the ledger.
+- XRP transaction-cost destruction versus XRP held in account/object reserves, including validator fee voting and the need to recheck current parameters.
+- XRPL's native DEX and conditional auto-bridging through XRP when that route is more competitive.
+- XLS-30 AMM activation, LP tokens and trading-fee mechanics, asset-pair composition, and liquidity-provider exchange-rate risk.
+- The original 55-billion-XRP escrow schedule, including the difference between gross releases, re-escrows, liquid balances, and net circulating-supply changes.
+- The November 2025 launch of U.S. XRP exchange-traded products, with spot-holding Bitwise and Grayscale trust structures distinguished from products whose precise holdings and redemption mechanics need prospectus-level review.
+- ODL's explicitly documented XRP bridge-asset mechanism, kept distinct from Ripple Payments flows that use RLUSD or other settlement methods.
+- RLUSD as an issued stablecoin on XRPL and other networks, distinct from native XRP.
+- Ripple National Trust Bank's OCC-recorded effective date and trust-bank scope; BNY's announced support for XRP and RLUSD custody; and C2FO's announced XRPL trade-finance initiative that specifies RLUSD settlement.
+
+The persistent thesis tracker also adds separate XRP-specific themes for confirmed ODL/bridge-asset use, XRPL auto-bridging, XRPL AMM liquidity, and XRP escrow/supply events, and verified spot-XRP ETF market-access developments. These themes require an evidence-linked reported-fact claim containing the relevant XRP/XRPL mechanism; significance-only model speculation cannot open them. Thesis evidence still requires multiple distinct validated events and multiple independent source IDs.

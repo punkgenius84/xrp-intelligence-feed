@@ -40,7 +40,9 @@
       "relationship": "Ripple reported that a 12-bank R3 consortium was trialing XRP for cross-border payments and liquidity.",
       "classification": "XRP-specific trial",
       "status": "historical; trial does not establish current production use",
-      "source_url": "https://ripple.com/insights/ripple-and-r3-team-up-with-12-banks-to-trial-xrp-for-cross-border-payments/"
+      "source_url": "https://ripple.com/insights/ripple-and-r3-team-up-with-12-banks-to-trial-xrp-for-cross-border-payments/",
+      "topic": "xrp_payments",
+      "priority": 3
     },
     {
       "id": "ripple-institutional-network-2016",
@@ -67,7 +69,9 @@
       "relationship": "Ripple announced these financial institutions had joined its payment network and described successful real-money pilots. This announcement concerned Ripple's network, not proof that every institution used XRP.",
       "classification": "Ripple network relationship; XRP use not established by this source",
       "status": "historical; current product and relationship status requires fresh confirmation",
-      "source_url": "https://ripple.com/ripple-press/financial-institutions-join-ripples-global-network/"
+      "source_url": "https://ripple.com/ripple-press/financial-institutions-join-ripples-global-network/",
+      "topic": "ripple_network",
+      "priority": 2
     },
     {
       "id": "amex-santander-ripplenet-2017",
@@ -85,7 +89,9 @@
       "relationship": "American Express FX International Payments worked with Ripple and Santander UK on a blockchain-enabled US-to-UK business payment channel through Ripple's network.",
       "classification": "Ripple network/payment-channel relationship; XRP use not established by this source",
       "status": "historical announcement; do not assume ongoing service",
-      "source_url": "https://ripple.com/insights/american-express-joins-ripplenet-giving-visibility-and-speed-to-global-commercial-payments/"
+      "source_url": "https://ripple.com/insights/american-express-joins-ripplenet-giving-visibility-and-speed-to-global-commercial-payments/",
+      "topic": "ripple_network",
+      "priority": 2
     },
     {
       "id": "moneygram-xrp-odl-2018-2021",
@@ -101,7 +107,9 @@
       "relationship": "MoneyGram announced a plan to use XRP in payment flows through xRapid, later associated with On-Demand Liquidity (ODL); Ripple reported Bitso as a key exchange partner for the US-Mexico corridor. MoneyGram suspended use of Ripple's platform in February 2021. Ripple and MoneyGram announced on March 8, 2021 that they had decided to end their current partnership agreement; Ripple's statement page is dated March 9. Both companies said they were committed to revisiting the relationship in the future.",
       "classification": "XRP/ODL commercial use with explicit end-of-partnership record",
       "status": "platform use suspended in February 2021; decision to end the current partnership announced March 8, 2021 (Ripple statement page dated March 9); both companies said they were committed to revisiting the relationship. This does not establish a later renewed partnership.",
-      "source_url": "https://ripple.com/ripple-press/our-statement-on-partnering-with-moneygram/"
+      "source_url": "https://ripple.com/ripple-press/our-statement-on-partnering-with-moneygram/",
+      "topic": "xrp_payments",
+      "priority": 5
     },
     {
       "id": "odl-customer-expansion-2019",
@@ -124,7 +132,9 @@
       "relationship": "Ripple reported more than two dozen ODL customers and named goLance, Viamericas, FlashFX, and Interbank Peru among customers committed to using ODL. ODL was described as using XRP as a bridge asset; this is a historical snapshot.",
       "classification": "historical ODL/XRP customer evidence",
       "status": "historical; current customer status and live corridors require fresh confirmation",
-      "source_url": "https://ripple.com/ripple-press/ripple-announces-more-than-300-customers-ripplenet-growth/"
+      "source_url": "https://ripple.com/ripple-press/ripple-announces-more-than-300-customers-ripplenet-growth/",
+      "topic": "xrp_payments",
+      "priority": 4
     },
     {
       "id": "ripple-tranglo-odl-2021",
@@ -138,7 +148,9 @@
       "relationship": "Ripple announced an agreement to acquire a 40% stake in Tranglo, describing the relationship as supporting cross-border payments and expanding ODL corridors using XRP.",
       "classification": "corporate investment and ODL/XRP-related payments",
       "status": "historical announcement; do not infer current ownership percentage, operations, or corridor activity without newer evidence",
-      "source_url": "https://ripple.com/insights/ripple-acquires-40-stake-in-asias-leading-cross-border-payments-specialist-tranglo/"
+      "source_url": "https://ripple.com/insights/ripple-acquires-40-stake-in-asias-leading-cross-border-payments-specialist-tranglo/",
+      "topic": "xrp_payments",
+      "priority": 4
     },
     {
       "id": "palau-ripple-xrpl-exploration-2021",
@@ -153,7 +165,9 @@
       "relationship": "Ripple and the Republic of Palau announced a partnership to explore a digital-currency strategy, cross-border payments, and a possible USD-backed digital currency with use cases on the XRP Ledger.",
       "classification": "government partnership/exploration; not proof of a launched national stablecoin",
       "status": "historical exploration announcement; implementation and current status require fresh confirmation",
-      "source_url": "https://ripple.com/ripple-press/republic-of-palau-partners-with-ripple-to-develop-digital-currency-strategy-2/"
+      "source_url": "https://ripple.com/ripple-press/republic-of-palau-partners-with-ripple-to-develop-digital-currency-strategy-2/",
+      "topic": "government_digitization",
+      "priority": 3
     },
     {
       "id": "xrpl-ripple-distinction",
@@ -172,7 +186,9 @@
       "relationship": "Ripple's own explanation states that the XRP Ledger is decentralized and would continue to exist if Ripple ceased to exist. Ripple is a company; XRP is the digital asset; XRPL is the ledger/network. They are related but not interchangeable.",
       "classification": "foundational architecture distinction",
       "status": "foundational context; use to avoid conflating company, asset, and network",
-      "source_url": "https://ripple.com/insights/continued-decentralization-xrp-ledger-consensus-protocol/"
+      "source_url": "https://ripple.com/insights/continued-decentralization-xrp-ledger-consensus-protocol/",
+      "topic": "xrp_fundamentals",
+      "priority": 5
     },
     {
       "id": "sbi-remit-coinsph-odl-japan-2021",
@@ -191,7 +207,9 @@
       "relationship": "Ripple announced a live On-Demand Liquidity implementation connecting SBI Remit with Coins.ph and SBI VC Trade for Japan-to-Philippines remittances; Ripple explicitly described XRP as the digital asset used to avoid pre-funding.",
       "classification": "XRP-specific live ODL deployment announced by Ripple",
       "status": "historical launch evidence; current corridor, volumes, counterparties, and ongoing XRP usage require newer confirmation",
-      "source_url": "https://ripple.com/ripple-press/ripple-launches-on-demand-liquidity-with-sbi-remit-to-accelerate-and-grow-cross-border-payments-from-japan/"
+      "source_url": "https://ripple.com/ripple-press/ripple-launches-on-demand-liquidity-with-sbi-remit-to-accelerate-and-grow-cross-border-payments-from-japan/",
+      "topic": "xrp_payments",
+      "priority": 5
     },
     {
       "id": "rlusd-global-launch-2024",
@@ -209,7 +227,9 @@
       "relationship": "Ripple announced RLUSD would become available on global exchanges from December 17, 2024, describing it as a USD-denominated stablecoin backed by dollar deposits, U.S. government bonds, and cash equivalents.",
       "classification": "Ripple-issued USD stablecoin launch",
       "status": "launch announcement; current supply, reserve composition, distribution, and use must be verified from newer disclosures; RLUSD is not XRP",
-      "source_url": "https://ripple.com/ripple-press/raising-the-standard-for-stablecoins-ripple-usd-launches-globally/"
+      "source_url": "https://ripple.com/ripple-press/raising-the-standard-for-stablecoins-ripple-usd-launches-globally/",
+      "topic": "stablecoin",
+      "priority": 5
     },
     {
       "id": "rlusd-ripple-payments-integration-2025",
@@ -229,7 +249,9 @@
       "relationship": "Ripple announced RLUSD integration into Ripple Payments and named BKK Forex and iSend as select customers using it in payment flows for cross-border treasury operations.",
       "classification": "stablecoin integration into enterprise payments; not evidence that XRP was the settlement asset in these flows",
       "status": "historical launch/use snapshot; current customers and flow composition require fresh confirmation",
-      "source_url": "https://ripple.com/ripple-press/ripple-integrates-rlusd-into-ripple-payments-driving-enterprise-demand-and-utility/"
+      "source_url": "https://ripple.com/ripple-press/ripple-integrates-rlusd-into-ripple-payments-driving-enterprise-demand-and-utility/",
+      "topic": "stablecoin",
+      "priority": 4
     },
     {
       "id": "bny-rlusd-reserve-custody-2025",
@@ -249,7 +271,9 @@
       "relationship": "Ripple announced that BNY was selected for primary custody of RLUSD reserves.",
       "classification": "institutional stablecoin-reserve custody relationship; not evidence of BNY using XRP for settlement",
       "status": "announced July 2025; verify current custody arrangements and scope from newer evidence",
-      "source_url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/"
+      "source_url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/",
+      "topic": "institutional_custody",
+      "priority": 4
     },
     {
       "id": "dbs-franklin-tokenized-fund-rlusd-xrpl-2025",
@@ -271,7 +295,9 @@
       "relationship": "DBS, Franklin Templeton, and Ripple announced an MoU for trading and lending solutions involving Franklin Templeton's tokenized money-market fund on the XRP Ledger and stablecoins including RLUSD; the announcement described sgBENJI trading on DBS Digital Exchange and exploring token use as collateral.",
       "classification": "tokenized fund and stablecoin institutional initiative on XRPL; not evidence that XRP itself is the fund settlement or collateral asset",
       "status": "announced MoU and planned/exploratory solutions; do not treat all proposed functionality as launched without newer confirmation",
-      "source_url": "https://ripple.com/ripple-press/dbs-franklin-templeton-to-launch-trading-and-lending-solutions-tokenised-mmf-ripple-stablecoin-rlusd/"
+      "source_url": "https://ripple.com/ripple-press/dbs-franklin-templeton-to-launch-trading-and-lending-solutions-tokenised-mmf-ripple-stablecoin-rlusd/",
+      "topic": "tokenization",
+      "priority": 5
     },
     {
       "id": "securitize-buidl-vbill-rlusd-xrpl-2025",
@@ -296,7 +322,9 @@
       "relationship": "Ripple and Securitize announced smart-contract functionality allowing holders of BlackRock's BUIDL and VanEck's VBILL tokenized funds to exchange shares for RLUSD; Ripple also said Securitize was integrating with XRPL to expand access.",
       "classification": "tokenized fund liquidity/off-ramp integration using RLUSD; not proof of XRP use as settlement asset",
       "status": "announcement said BUIDL support was available and VBILL support would follow; verify present implementation and supported chains before claiming current scope",
-      "source_url": "https://ripple.com/ripple-press/ripple-and-securitize-enable-rlusd-smart-sontract-functionality-for-blackrock-buidl-and-vaneck-vbill-tokenized-funds/"
+      "source_url": "https://ripple.com/ripple-press/ripple-and-securitize-enable-rlusd-smart-sontract-functionality-for-blackrock-buidl-and-vaneck-vbill-tokenized-funds/",
+      "topic": "tokenization",
+      "priority": 4
     },
     {
       "id": "ripple-sec-appeals-dismissed-2025",
@@ -324,7 +352,9 @@
       "relationship": "The SEC reported that it and Ripple jointly stipulated to dismiss the SEC appeal and Ripple cross-appeal, resolving the civil enforcement action. The district court's final judgment, including a $125,035,150 civil penalty and an injunction against Ripple violating Securities Act registration provisions, remained in effect.",
       "classification": "regulatory/legal milestone; appeal dismissal does not erase the final judgment or mean every XRP-related transaction has the same legal treatment",
       "status": "official SEC release dated August 7, 2025; use the SEC's procedural description and do not summarize the outcome as an unconditional ruling that all XRP sales are legally identical",
-      "source_url": "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-26369"
+      "source_url": "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-26369",
+      "topic": "regulatory_legal",
+      "priority": 5
     },
     {
       "id": "hidden-road-ripple-prime-acquisition-2025",
@@ -347,7 +377,9 @@
       "relationship": "Ripple announced that its acquisition of Hidden Road had closed and that the business was now Ripple Prime, a multi-asset institutional prime brokerage, clearing, and financing platform. Ripple also said RLUSD was being used as collateral for some prime-brokerage products and described plans for Hidden Road post-trade activity to migrate across XRPL; these are distinct from proof that XRP is used as collateral or settlement in every product.",
       "classification": "completed corporate acquisition and institutional prime-brokerage expansion; RLUSD collateral and XRPL migration are separate claims",
       "status": "Ripple announced acquisition completion on October 24, 2025; verify current product scope and implementation before describing planned XRPL migration as complete",
-      "source_url": "https://ripple.com/insights/ripple-closes-hidden-road-acquisition/"
+      "source_url": "https://ripple.com/insights/ripple-closes-hidden-road-acquisition/",
+      "topic": "prime_brokerage",
+      "priority": 5
     },
     {
       "id": "ripple-gtreasury-acquisition-2025",
@@ -366,7 +398,9 @@
       "relationship": "Ripple announced a $1 billion acquisition of GTreasury, expanding its business into enterprise treasury-management software and corporate finance workflows.",
       "classification": "corporate acquisition and treasury-management expansion; not by itself evidence of XRP adoption by GTreasury customers",
       "status": "initial acquisition announcement dated October 16, 2025; later Ripple material describes the acquisition as closed, but specific customer digital-asset usage requires separate evidence",
-      "source_url": "https://ripple.com/ripple-press/ripple-breaks-into-corporate-treasury-with-gtreasury-acquisition/"
+      "source_url": "https://ripple.com/ripple-press/ripple-breaks-into-corporate-treasury-with-gtreasury-acquisition/",
+      "topic": "corporate_treasury",
+      "priority": 4
     },
     {
       "id": "ripple-treasury-native-digital-assets-2026",
@@ -388,7 +422,9 @@
       "relationship": "Ripple announced the launch of Digital Asset Accounts and Unified Treasury within Ripple Treasury, enabling enterprise treasury teams to view and manage fiat and digital-asset balances, including XRP and RLUSD, through its treasury-management platform.",
       "classification": "enterprise treasury product launch with digital-asset support; capability availability is not evidence that all customers use XRP or RLUSD",
       "status": "launch announced April 1, 2026; availability varies by geography and service provider, and actual customer usage requires specific evidence",
-      "source_url": "https://ripple.com/ripple-press/ripple-treasury-launches-the-first-treasury-management-system-tms-with-native-digital-asset-capabilities/"
+      "source_url": "https://ripple.com/ripple-press/ripple-treasury-launches-the-first-treasury-management-system-tms-with-native-digital-asset-capabilities/",
+      "topic": "corporate_treasury",
+      "priority": 5
     },
     {
       "id": "ripple-prime-brevan-howard-2026",
@@ -407,7 +443,9 @@
       "relationship": "Ripple and Brevan Howard announced an expanded relationship under which Ripple Prime would provide multi-asset prime brokerage, clearing, and financing services to Brevan Howard funds.",
       "classification": "institutional prime-brokerage relationship; not evidence of XRP purchases, XRP settlement, or direct XRP exposure",
       "status": "relationship expansion announced October 6, 2026; scope beyond the stated prime-brokerage services requires separate confirmation",
-      "source_url": "https://ripple.com/ripple-press/ripple-and-brevan-howard-deepen-relationship/"
+      "source_url": "https://ripple.com/ripple-press/ripple-and-brevan-howard-deepen-relationship/",
+      "topic": "prime_brokerage",
+      "priority": 3
     },
     {
       "id": "ripple-full-mica-casp-authorization-2026",
@@ -430,7 +468,366 @@
       "relationship": "Ripple announced that Luxembourg's CSSF had authorized its Crypto Asset Service Provider license under MiCA, following preliminary approval in June 2026, enabling regulated cryptoasset services across the European Economic Area subject to applicable service and entity conditions.",
       "classification": "regulatory authorization milestone; not evidence that every Ripple product or XRP-related activity is available in every country",
       "status": "full CASP authorization announced July 6, 2026; verify jurisdiction, legal entity, and service-specific availability before claiming a particular service is live",
-      "source_url": "https://ripple.com/ripple-press/ripple-receives-full-eu-mica-casp-license/"
+      "source_url": "https://ripple.com/ripple-press/ripple-receives-full-eu-mica-casp-license/",
+      "topic": "regulatory_legal",
+      "priority": 5
+    },
+    {
+      "id": "xrp-ledger-native-asset-and-consensus",
+      "date": "2012-06",
+      "entities": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "native asset",
+        "100 billion XRP",
+        "XRP Ledger consensus",
+        "XRP Ledger launched"
+      ],
+      "relationship": "The XRP Ledger launched in June 2012 with XRP as its native asset. The ledger's documented design uses validator-based consensus rather than proof-of-work mining; XRP is native to the ledger while Ripple is a separate company. The original supply was 100 billion XRP, and the ledger's transaction rules do not create additional XRP. This foundational context must not be confused with Ripple's separate products, issued tokens, or later commercial deployments.",
+      "classification": "foundational protocol and asset identity; native XRP is distinct from issued tokens and from Ripple the company",
+      "status": "foundational facts; use current XRPL documentation for protocol behavior and avoid treating this as evidence of current transaction volumes, demand, or Ripple control of the network",
+      "source_url": "https://xrpl.org/about/history",
+      "related_source_urls": [
+        "https://xrpl.org/about/xrp",
+        "https://xrpl.org/docs/concepts/consensus-protocol"
+      ],
+      "topic": "xrp_fundamentals",
+      "priority": 5
+    },
+    {
+      "id": "xrp-transaction-fees-and-reserves",
+      "date": "2026-11-18",
+      "entities": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "transaction fee",
+        "transaction cost",
+        "drops",
+        "account reserve",
+        "owner reserve",
+        "fee voting",
+        "reserve requirements"
+      ],
+      "relationship": "Every transaction included in a validated XRP Ledger version destroys the XRP amount specified as its transaction cost; the fee is not paid to validators or another recipient and can vary with network load. XRPL accounts and owned ledger objects also require XRP reserves, which are held aside rather than destroyed and whose parameters can change through validator fee voting. These are native protocol-level roles for XRP, but low base fees and reserve requirements alone do not establish substantial market demand; actual network activity, fee levels, and reserve settings matter.",
+      "classification": "XRP-native transaction-cost burn and reserve mechanics; distinguish destroyed fees from XRP temporarily held as reserves",
+      "status": "current protocol documentation checked 2026-11-18; base fees, load factors, and reserve values are changeable and must be read from current ledger settings rather than hard-coded",
+      "source_url": "https://xrpl.org/docs/concepts/transactions/transaction-cost",
+      "related_source_urls": [
+        "https://xrpl.org/docs/concepts/accounts/reserves",
+        "https://xrpl.org/docs/concepts/consensus-protocol/fee-voting"
+      ],
+      "topic": "xrp_fundamentals",
+      "priority": 5
+    },
+    {
+      "id": "xrpl-xrp-auto-bridging-and-dex",
+      "date": "2026-11-18",
+      "entities": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "auto-bridging",
+        "auto bridging",
+        "bridge currency",
+        "intermediary currency",
+        "decentralized exchange",
+        "XRPL DEX",
+        "cross-currency payment path"
+      ],
+      "relationship": "The XRP Ledger has a native decentralized exchange with order-book offers and cross-currency payment paths. Auto-bridging can route a token-to-token offer through XRP when the combined XRP-based route offers a better rate than direct liquidity; payment pathfinding can also find paths with a similar effect. This creates a possible on-ledger utility for XRP as an intermediary asset, but routing is price- and liquidity-dependent: not every trade or payment uses XRP, and protocol capability is not proof of actual volume.",
+      "classification": "native XRPL DEX and conditional XRP auto-bridging utility; path use depends on comparative liquidity and execution price",
+      "status": "current protocol documentation checked 2026-11-18; do not infer that every cross-currency payment is routed through XRP or that feature availability proves material market usage",
+      "source_url": "https://xrpl.org/docs/concepts/tokens/decentralized-exchange/autobridging",
+      "related_source_urls": [
+        "https://xrpl.org/docs/concepts/tokens/decentralized-exchange"
+      ],
+      "topic": "xrp_utility",
+      "priority": 5
+    },
+    {
+      "id": "xrpl-amm-xls30-liquidity",
+      "date": "2024-03-22",
+      "entities": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "AMM",
+        "XLS-30",
+        "automated market maker",
+        "AMM liquidity pool",
+        "LP tokens",
+        "liquidity provider"
+      ],
+      "relationship": "The XLS-30 AMM amendment went live on XRPL Mainnet on March 22, 2024, integrating automated market makers with the existing order-book DEX. An AMM pool holds two assets; at most one can be XRP, so some pools contain XRP while others are token-to-token. Liquidity providers receive LP tokens representing their share and may receive trading fees, but returns are not guaranteed and providers bear exchange-rate and pool-composition risk. AMM activity only directly involves XRP in a pool when XRP is one of the pool's assets; AMM adoption by itself is not proof of XRP payment or bridge-asset demand.",
+      "classification": "live XRPL native AMM/DEX infrastructure; distinguishes potential XRP-paired liquidity from token-only pools and explains LP risk",
+      "status": "XLS-30 activation confirmed March 22, 2024; protocol details remain subject to later amendments and implementation changes, and LP fees do not guarantee positive returns",
+      "source_url": "https://xrpl.org/blog/2024/deep-dive-into-amm-integration",
+      "related_source_urls": [
+        "https://xrpl.org/docs/concepts/tokens/decentralized-exchange/automated-market-makers",
+        "https://xrpl.org/blog/2024/amm-status-update"
+      ],
+      "topic": "xrpl_defi_liquidity",
+      "priority": 5
+    },
+    {
+      "id": "xrp-escrow-supply-mechanics",
+      "date": "2017-12-16",
+      "entities": [
+        "XRP",
+        "Ripple",
+        "XRP Ledger",
+        "XRPL"
+      ],
+      "aliases": [
+        "XRP",
+        "Ripple",
+        "XRP escrow",
+        "escrow release",
+        "55 billion XRP",
+        "one billion XRP",
+        "monthly escrow",
+        "re-escrow"
+      ],
+      "relationship": "In December 2017 Ripple announced that 55 billion XRP, or 55% of the original 100-billion XRP supply, had been locked into on-ledger escrow contracts. The original schedule allowed up to one billion XRP to be released each month over 55 months; Ripple said unused amounts would be placed into new escrow contracts rather than automatically entering circulation. Gross escrow releases therefore must not be equated with net new circulating supply or open-market sales. Current escrow balances, Ripple-held amounts, and distributions require the latest dated disclosures and ledger data.",
+      "classification": "historical XRP supply-management mechanism; gross scheduled releases are not the same as net circulating supply or sales",
+      "status": "original escrow terms announced December 16, 2017; the schedule's original 55-month period has elapsed, so use current quarterly disclosures and on-ledger escrow data for present balances",
+      "source_url": "https://ripple.com/insights/explanation-ripples-xrp-escrow/",
+      "related_source_urls": [
+        "https://xrpl.org/blog/2017/explanation-of-ripples-xrp-escrow",
+        "https://xrpl.org/docs/concepts/payment-types/escrow"
+      ],
+      "topic": "xrp_supply",
+      "priority": 5
+    },
+    {
+      "id": "xrp-odl-bridge-asset-mechanics",
+      "date": "2026-11-18",
+      "entities": [
+        "XRP",
+        "Ripple",
+        "On-Demand Liquidity",
+        "ODL",
+        "Ripple Payments"
+      ],
+      "aliases": [
+        "XRP",
+        "Ripple",
+        "ODL",
+        "On-Demand Liquidity",
+        "XRP bridge asset",
+        "XRP bridge currency",
+        "bridge currency",
+        "Ripple Payments"
+      ],
+      "relationship": "Ripple's product documentation describes On-Demand Liquidity (ODL) as a liquidity-management solution that uses XRP as a bridge currency to source liquidity on demand and move value between currencies without pre-funding balances in every destination market. This is a specific XRP-enabled payment path, not proof that every Ripple Payments flow, customer, corridor, or stablecoin settlement uses XRP. Current usage must be established with live corridors, named customers, transaction volumes, and explicit settlement-asset disclosures.",
+      "classification": "documented XRP bridge-asset use case in ODL; distinct from RippleNet membership, fiat-only payment flows, and RLUSD settlement",
+      "status": "current product documentation checked 2026-11-18; actual corridor availability, customer participation, and XRP settlement volumes require current evidence",
+      "source_url": "https://docs.ripple.com/products/payments-odl/introduction/products",
+      "related_source_urls": [
+        "https://xrpl.org/about/xrp"
+      ],
+      "topic": "xrp_payments",
+      "priority": 5
+    },
+    {
+      "id": "xrpl-issued-tokens-and-rlusd-distinction",
+      "date": "2026-11-18",
+      "entities": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "RLUSD",
+        "Ripple"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP Ledger",
+        "XRPL",
+        "RLUSD",
+        "Ripple USD",
+        "issued token",
+        "trust line",
+        "stablecoin",
+        "RLUSD on XRPL"
+      ],
+      "relationship": "XRP is the XRP Ledger's native asset. Other assets, including RLUSD, are issued tokens with an issuer and token-specific controls; Ripple's RLUSD documentation describes native issuance on XRPL using the ledger's issued-token functionality and issuance on several EVM-compatible networks. RLUSD is a USD-backed stablecoin, not XRP. RLUSD settlement on XRPL creates ledger activity but does not by itself establish XRP bridge-asset use, XRP trading demand, or XRP as the settlement asset; any XRP role must be separately demonstrated.",
+      "classification": "native XRP versus issuer-controlled token distinction; RLUSD stablecoin use must not be attributed to XRP",
+      "status": "current Ripple and XRPL documentation checked 2026-11-18; supported RLUSD networks and legal availability can change and must be verified against current issuer documentation",
+      "source_url": "https://docs.ripple.com/products/stablecoin/overview/supported-chains-and-networks",
+      "related_source_urls": [
+        "https://docs.ripple.com/products/stablecoin/developer-resources/rlusd-on-the-xrpl",
+        "https://xrpl.org/docs/concepts/tokens"
+      ],
+      "topic": "stablecoin",
+      "priority": 5
+    },
+    {
+      "id": "xrpl-amendment-governance",
+      "date": "2026-11-18",
+      "entities": [
+        "XRP Ledger",
+        "XRPL",
+        "validators"
+      ],
+      "aliases": [
+        "XRP Ledger",
+        "XRPL",
+        "validator",
+        "validators",
+        "amendment",
+        "amendment voting",
+        "80% support",
+        "protocol upgrade"
+      ],
+      "relationship": "Changes to XRPL transaction processing are introduced through amendments and are approved by the network's trusted-validator voting process, not by a company announcement alone. XRPL documentation states that an amendment must maintain more than 80% support for two weeks to activate. This protocol-governance process is separate from the consensus rounds that validate ordinary ledgers and transactions.",
+      "classification": "network governance and protocol-change mechanism; distinguishes validator amendment approval from routine transaction consensus",
+      "status": "current XRPL documentation checked 2026-11-18; amendment status and validator support must be checked live for any specific upgrade",
+      "source_url": "https://xrpl.org/docs/concepts/networks-and-servers/amendments",
+      "related_source_urls": [
+        "https://xrpl.org/resources/known-amendments",
+        "https://xrpl.org/docs/concepts/consensus-protocol"
+      ],
+      "topic": "xrpl_governance",
+      "priority": 4
+    },
+    {
+      "id": "ripple-national-trust-bank-2026",
+      "date": "2026-10-26",
+      "entities": [
+        "Ripple",
+        "Ripple National Trust Bank",
+        "RNTB",
+        "OCC",
+        "RLUSD"
+      ],
+      "aliases": [
+        "Ripple",
+        "Ripple National Trust Bank",
+        "RNTB",
+        "national trust bank",
+        "trust bank charter",
+        "OCC",
+        "Office of the Comptroller of the Currency",
+        "RLUSD"
+      ],
+      "relationship": "The OCC's application record lists Ripple National Trust Bank as a new national trust bank charter, approved December 12, 2025 and consummated/effective October 26, 2026. Ripple's announcement describes the approved activities as management of segregated RLUSD reserves, serving as collateral trustee for those reserves, and fiduciary digital-asset custody. This is a national trust bank, not proof of a full-service commercial deposit-taking bank, and the charter does not by itself establish that the bank uses XRP for payments or settlement.",
+      "classification": "effective federal national trust bank charter and institutional custody/reserve-management milestone; specific approved activities must not be generalized into universal banking powers or XRP usage",
+      "status": "OCC application record shows consummated/effective October 26, 2026; service scope, launch status, and geographic/customer availability require current OCC and bank disclosures",
+      "source_url": "https://apps.occ.gov/CAS/home/details?FilingID=RjzoD2gxmYOv&FilingSubtypeID=1093&FilingTypeID=2",
+      "related_source_urls": [
+        "https://ripple.com/ripple-press/ripple-receives-final-occ-approval-to-establish-national-trust-bank/"
+      ],
+      "topic": "institutional_banking",
+      "priority": 5
+    },
+    {
+      "id": "bny-xrp-rlusd-institutional-custody-2026",
+      "date": "2026-10-27",
+      "entities": [
+        "BNY",
+        "Ripple",
+        "XRP",
+        "RLUSD",
+        "XRP Ledger"
+      ],
+      "aliases": [
+        "BNY",
+        "Bank of New York Mellon",
+        "Ripple",
+        "XRP",
+        "RLUSD",
+        "Digital Asset Custody",
+        "tokenized trade finance"
+      ],
+      "relationship": "Ripple and BNY announced an expanded digital-asset collaboration on October 27, 2026. Ripple's announcement says BNY now supports both XRP and RLUSD on its Digital Asset Custody platform, building on BNY's earlier role as primary custodian for RLUSD reserves and its custody relationship with Ripple Prime. The parties also said they would explore institutional blockchain use cases including tokenized trade finance. Custody support establishes safekeeping capability, not by itself XRP purchases, settlement usage, custody balances, or production tokenized-trade-finance volume.",
+      "classification": "institutional custody support for both XRP and RLUSD, plus exploratory tokenized-trade-finance work; custody is not settlement adoption",
+      "status": "announced October 27, 2026; distinguish platform support from named client usage, assets under custody, transaction volumes, and production trade-finance deployments",
+      "source_url": "https://ripple.com/ripple-press/ripple-expands-collaboration-with-bny-across-custody-and-tokenized-trade-finance/",
+      "topic": "institutional_custody",
+      "priority": 5
+    },
+    {
+      "id": "c2fo-xrpl-rlusd-trade-finance-2026",
+      "date": "2026-10-27",
+      "entities": [
+        "C2FO",
+        "Ripple",
+        "XRP Ledger",
+        "XRPL",
+        "RLUSD"
+      ],
+      "aliases": [
+        "C2FO",
+        "Ripple",
+        "XRP Ledger",
+        "XRPL",
+        "RLUSD",
+        "C2FO Instant Pay",
+        "Instant Pay",
+        "trade finance"
+      ],
+      "relationship": "C2FO and Ripple announced an initiative to bring financing and settlement activity supporting C2FO Instant Pay onto the XRP Ledger, with RLUSD specified as the settlement asset. This is a concrete XRPL trade-finance and stablecoin use-case announcement, but the stated settlement asset is RLUSD, not XRP. Do not infer XRP bridge-asset use, XRP collateral, or live production volume from the XRPL deployment announcement.",
+      "classification": "announced XRPL trade-finance initiative using RLUSD for settlement; not evidence of XRP as settlement or bridge asset",
+      "status": "initiative announced October 27, 2026; distinguish announced deployment plans from a production launch, live invoice volume, or separate XRP usage",
+      "source_url": "https://ripple.com/ripple-press/c2fo-and-ripple-partner-to-modernize-trade-finance-using-the-xrp-ledger/",
+      "topic": "tokenization_and_trade_finance",
+      "priority": 5
+    },
+    {
+      "id": "xrp-spot-etf-market-access-2025",
+      "date": "2025-11-20",
+      "entities": [
+        "XRP",
+        "Bitwise",
+        "Grayscale",
+        "Franklin Templeton",
+        "NYSE Arca"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP ETF",
+        "spot XRP ETF",
+        "XRP spot ETF",
+        "XRP exchange-traded fund",
+        "Bitwise XRP ETF",
+        "Bitwise XRP",
+        "GXRP",
+        "Grayscale XRP Trust ETF",
+        "Franklin XRP ETF",
+        "XRPZ"
+      ],
+      "relationship": "The U.S. exchange-traded-product market for XRP broadened in November 2025. Bitwise announced that its XRP ETF began trading on NYSE on November 20, 2025 and explicitly stated that the fund would hold spot XRP. Grayscale XRP Trust ETF (GXRP) began trading on NYSE Arca on November 24, 2025; its SEC filings describe shares whose value is based on XRP held by the trust and creation/redemption mechanics involving XRP or cash acquisition of XRP. Franklin Templeton launched XRPZ on November 24, 2025 as an exchange-traded product providing exposure to XRP price movements; do not assume all XRP-linked ETPs have identical holdings, custody, or creation/redemption structures without checking the specific prospectus and filings. Spot-backed funds can hold XRP as trust assets, but ETF ownership is not the same as direct XRP ownership by every shareholder, and fund flows do not prove XRP is being used for payments, liquidity bridging, or XRPL transactions.",
+      "classification": "institutional market-access milestone through XRP-linked exchange-traded products; distinguish spot-holding trusts from products whose exact structure requires prospectus verification",
+      "status": "Bitwise announced spot XRP holdings and NYSE trading from November 20, 2025; Grayscale GXRP began NYSE Arca trading November 24, 2025 and SEC filings describe XRP held by the trust; Franklin XRPZ also launched November 24, 2025. Current holdings, AUM, custody, cash/in-kind creation/redemption and any futures-based or derivative exposure must be checked in each product's latest SEC filings and prospectus.",
+      "source_url": "https://bitwiseinvestments.com/newsroom/bitwise-xrp-etf-ticker-xrp-begins-trading-on-nyse",
+      "related_source_urls": [
+        "https://www.sec.gov/Archives/edgar/data/2037427/000203742726000007/ck0002037427-20260630.htm",
+        "https://www.franklintempleton.com/press-releases/news-room/2025/franklin-templeton-launches-franklin-xrp-etf-xrpz"
+      ],
+      "topic": "institutional_market_access",
+      "priority": 5
     }
   ]
 }
