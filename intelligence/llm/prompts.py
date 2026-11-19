@@ -63,6 +63,7 @@ def build_user_prompt(*, title: str, summary: str, source: str, historical_conte
         f"SUMMARY: {summary[:12000]}",
         "--- END UNTRUSTED ARTICLE ---",
     ]
+    parts.append("Analyze only this supplied material.")
     parts.extend([
         "",
         "SINGLE-SOURCE OUTPUT CONTRACT:",
