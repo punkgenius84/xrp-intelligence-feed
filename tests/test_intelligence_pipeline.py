@@ -803,7 +803,8 @@ def test_rejected_model_attempts_log_exact_claims_and_evidence(capsys):
     assert "Intelligence selected candidate" in output
     assert "Ripple announces an institutional partnership" in output
     assert "model_attempt_audit" in output
-    assert "attempt_1" in output and "attempt_3" in output
+    assert "attempt_1" in output and "attempt_2" in output
+    assert "attempt_3" not in output
     assert "Ripple announced a $5 billion institutional partnership." in output
     assert "source summary" in output
     assert "unsupported evidence anchor" in output
