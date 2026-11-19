@@ -203,16 +203,16 @@ def test_xrp_bridge_asset_thesis_requires_source_grounded_xrp_bridge_claim():
 def test_xrp_bridge_asset_thesis_opens_only_from_two_independent_grounded_xrp_claims():
     state = {"events": {
         "event-1": _event(
-            "XRP bridge asset corridor goes live through ODL",
+            "XRPL auto-bridging uses XRP as an intermediary currency",
             "XRP",
             "publisher-a",
-            claim_text="The source states that XRP is used as a bridge asset through ODL.",
+            claim_text="The XRP Ledger automatically bridges some DEX trades through XRP when the composite route is better.",
         ),
         "event-2": _event(
-            "XRP used as bridge currency in cross-border ODL flows",
+            "XRP auto-bridging improves XRPL DEX currency routing",
             "XRP",
             "publisher-b",
-            claim_text="The source states that XRP serves as the bridge currency for ODL flows.",
+            claim_text="XRP is used as the intermediary currency for auto-bridging on the XRPL decentralized exchange.",
         ),
     }}
     opened = update_theses(state, "2026-11-18T12:00:00+00:00")
@@ -396,7 +396,7 @@ def test_spot_xrp_etf_thesis_requires_independent_spot_holding_developments():
             "Grayscale XRP Trust ETF",
             "XRP",
             "publisher-b",
-            claim_text="The trust holds XRP to reflect the value of the XRP held by the trust.",
+            claim_text="The Grayscale XRP Trust ETF holds XRP to reflect the value of the XRP held by the trust.",
         ),
     }}
     opened = update_theses(state, "2026-11-18T12:00:00+00:00")
