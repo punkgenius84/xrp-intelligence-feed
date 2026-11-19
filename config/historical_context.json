@@ -794,6 +794,40 @@
       "source_url": "https://ripple.com/ripple-press/c2fo-and-ripple-partner-to-modernize-trade-finance-using-the-xrp-ledger/",
       "topic": "tokenization_and_trade_finance",
       "priority": 5
+    },
+    {
+      "id": "xrp-spot-etf-market-access-2025",
+      "date": "2025-11-20",
+      "entities": [
+        "XRP",
+        "Bitwise",
+        "Grayscale",
+        "Franklin Templeton",
+        "NYSE Arca"
+      ],
+      "aliases": [
+        "XRP",
+        "XRP ETF",
+        "spot XRP ETF",
+        "XRP spot ETF",
+        "XRP exchange-traded fund",
+        "Bitwise XRP ETF",
+        "Bitwise XRP",
+        "GXRP",
+        "Grayscale XRP Trust ETF",
+        "Franklin XRP ETF",
+        "XRPZ"
+      ],
+      "relationship": "The U.S. exchange-traded-product market for XRP broadened in November 2025. Bitwise announced that its XRP ETF began trading on NYSE on November 20, 2025 and explicitly stated that the fund would hold spot XRP. Grayscale XRP Trust ETF (GXRP) began trading on NYSE Arca on November 24, 2025; its SEC filings describe shares whose value is based on XRP held by the trust and creation/redemption mechanics involving XRP or cash acquisition of XRP. Franklin Templeton launched XRPZ on November 24, 2025 as an exchange-traded product providing exposure to XRP price movements; do not assume all XRP-linked ETPs have identical holdings, custody, or creation/redemption structures without checking the specific prospectus and filings. Spot-backed funds can hold XRP as trust assets, but ETF ownership is not the same as direct XRP ownership by every shareholder, and fund flows do not prove XRP is being used for payments, liquidity bridging, or XRPL transactions.",
+      "classification": "institutional market-access milestone through XRP-linked exchange-traded products; distinguish spot-holding trusts from products whose exact structure requires prospectus verification",
+      "status": "Bitwise announced spot XRP holdings and NYSE trading from November 20, 2025; Grayscale GXRP began NYSE Arca trading November 24, 2025 and SEC filings describe XRP held by the trust; Franklin XRPZ also launched November 24, 2025. Current holdings, AUM, custody, cash/in-kind creation/redemption and any futures-based or derivative exposure must be checked in each product's latest SEC filings and prospectus.",
+      "source_url": "https://bitwiseinvestments.com/newsroom/bitwise-xrp-etf-ticker-xrp-begins-trading-on-nyse",
+      "related_source_urls": [
+        "https://www.sec.gov/Archives/edgar/data/2037427/000203742726000007/ck0002037427-20260630.htm",
+        "https://www.franklintempleton.com/press-releases/news-room/2025/franklin-templeton-launches-franklin-xrp-etf-xrpz"
+      ],
+      "topic": "institutional_market_access",
+      "priority": 5
     }
   ]
 }
