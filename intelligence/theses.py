@@ -182,9 +182,8 @@ def _theme_has_required_reported_claim(theme: str, event: dict[str, Any]) -> boo
         ),
         "institutional_xrp_market_access": (
             ("xrp",),
-            ("spot",),
             ("etf", "exchange-traded fund", "exchange traded fund"),
-            ("hold", "holds", "holding"),
+            ("hold", "holds", "holding", "held"),
         ),
     }
     required = requirements.get(theme)
