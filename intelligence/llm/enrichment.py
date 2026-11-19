@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import replace
 from typing import Callable
@@ -468,6 +469,38 @@ def _validation_retry_guidance(validation_error: str, attempt: int) -> str:
     )
 
 
+def _model_output_audit(content: str) -> str:
+    """Return a bounded, non-authoritative summary of the model's attempted claims."""
+    compact = " ".join((content or "").split())
+    try:
+        payload = json.loads(content)
+    except (TypeError, ValueError):
+        return f"unparsed_output={compact[:240]!r}"
+
+    if not isinstance(payload, dict):
+        return f"response_type={type(payload).__name__}"
+
+    raw_claims = payload.get("claims")
+    claims = []
+    if isinstance(raw_claims, list):
+        for claim in raw_claims[:5]:
+            if isinstance(claim, dict):
+                evidence = claim.get("evidence", [])
+                claims.append({
+                    "text": " ".join(str(claim.get("text", "")).split())[:280],
+                    "evidence": evidence[:5] if isinstance(evidence, list) else str(evidence)[:120],
+                })
+            else:
+                claims.append({"invalid_claim_value": str(claim)[:160]})
+    else:
+        claims = f"invalid_claims_field:{type(raw_claims).__name__}"
+
+    return (
+        f"event_type={str(payload.get('event_type', ''))[:80]!r} "
+        f"claims={json.dumps(claims, ensure_ascii=False)[:900]}"
+    )
+
+
 def _generate_validated_analysis(
     provider: LLMProvider,
     user_prompt: str,
@@ -479,17 +512,20 @@ def _generate_validated_analysis(
 ) -> IntelligenceAnalysis:
     """Retry invalid model output twice; provider failures and failed evidence checks stay fail-closed."""
     validation_error = ""
+    attempt_audits: list[str] = []
     for attempt in range(3):
         prompt = (
             user_prompt if attempt == 0
             else user_prompt + _validation_retry_guidance(validation_error, attempt)
         )
+        response_audit = "no model response"
         try:
             response = provider.generate(
                 system=SYSTEM_PROMPT,
                 user=prompt,
                 options={"temperature": 0},
             )
+            response_audit = _model_output_audit(response.content)
             analysis = parse_analysis(
                 response.content,
                 source_url=source_url,
@@ -503,8 +539,15 @@ def _generate_validated_analysis(
             raise
         except (LLMError, ValueError) as exc:
             validation_error = str(exc)
+            attempt_audits.append(
+                f"attempt_{attempt + 1}: validation={validation_error[:360]!r}; "
+                f"model_output={response_audit}"
+            )
             if attempt == 2:
-                raise LLMError(f"{error_prefix}: {exc}") from exc
+                audit = " || ".join(attempt_audits)[:2600]
+                raise LLMError(
+                    f"{error_prefix}: {exc}; model_attempt_audit=[{audit}]"
+                ) from exc
     raise AssertionError("unreachable")
 
 

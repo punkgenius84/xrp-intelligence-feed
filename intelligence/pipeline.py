@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import timezone
 from hashlib import sha256
+import json
 import time
 
 from models import NewsItem
@@ -18,6 +20,31 @@ def event_id_for(item: NewsItem) -> str:
     return "evt-" + sha256(identity.encode("utf-8")).hexdigest()[:24]
 
 
+def _selection_specificity(item: NewsItem) -> int:
+    """Use subject specificity only to break equal-score selection ties."""
+    categories = set(getattr(item, "relevance_categories", []) or [])
+    if categories & {
+        "direct_xrp_xrpl", "direct_ripple", "rlusd_stablecoin",
+        "ripple_payments_network", "direct_ripple_institutional_action",
+    }:
+        return 0
+    if categories & {
+        "xrp_protocol_development", "xrp_ledger_tokenization_development",
+        "institutional_digital_asset_payment", "institutional_tokenization_action",
+        "regulatory_tokenization_action", "government_tokenization_action",
+        "government_digital_asset_action", "legislative_digital_asset_action",
+    }:
+        return 1
+    return 2
+
+
+def _published_timestamp(item: NewsItem) -> float:
+    value = item.published_at or item.collected_at
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.timestamp()
+
+
 def select_items(
     items: list[NewsItem],
     config: IntelligenceRuntimeConfig,
@@ -30,7 +57,9 @@ def select_items(
     eligible.sort(
         key=lambda item: (
             -item.relevance_score,
-            item.published_at or item.collected_at,
+            _selection_specificity(item),
+            -_published_timestamp(item),
+            getattr(item, "title", "").casefold(),
         )
     )
     return eligible[:config.max_items_per_run]
@@ -122,19 +151,60 @@ def enrich_clusters(
     events: list[IntelligenceEvent] = []
     failures: list[str] = []
     selected = select_items(items, config)
+    near_misses = sorted(
+        (item for item in items if item.relevance_score < config.min_relevance_score),
+        key=lambda item: (
+            -item.relevance_score,
+            -_published_timestamp(item),
+            getattr(item, "title", "").casefold(),
+        ),
+    )[:10]
 
     clusters = cluster_related_items(selected)
     print(
         "Intelligence enrichment: "
         f"selected_items={len(selected)} clusters={len(clusters)} "
-        f"provider_timeout_seconds={config.timeout_seconds}"
+        f"provider_timeout_seconds={config.timeout_seconds} candidate_items={len(items)}"
     )
+    if near_misses:
+        print(
+            "Intelligence relevance near-misses: "
+            f"threshold={config.min_relevance_score} showing={len(near_misses)} "
+            f"of={sum(item.relevance_score < config.min_relevance_score for item in items)}"
+        )
+        for item in near_misses:
+            print(
+                f"  near_miss score={item.relevance_score} "
+                f"source={item.source!r} source_id={item.source_id!r} "
+                f"categories={','.join(item.relevance_categories) or 'none'} "
+                f"title={item.title[:300]!r}"
+            )
+            if item.summary:
+                print(f"    source_summary_excerpt={' '.join(item.summary.split())[:420]!r}")
+            for reason in item.score_reasons[:4]:
+                print(f"    score_reason={reason}")
+
+    for rank, item in enumerate(selected, start=1):
+        print(
+            f"Intelligence selected candidate: rank={rank}/{len(selected)} "
+            f"score={item.relevance_score} source={item.source!r} "
+            f"source_id={item.source_id!r} "
+            f"categories={','.join(item.relevance_categories) or 'none'} "
+            f"title={item.title[:300]!r}"
+        )
+        print(f"  source_url={item.url[:500]!r}")
+        if item.summary:
+            print(f"  source_summary_excerpt={' '.join(item.summary.split())[:420]!r}")
+        for reason in item.score_reasons[:6]:
+            print(f"  score_reason={reason}")
+
     for index, cluster in enumerate(clusters, start=1):
         started = time.monotonic()
         identity = cluster.cluster_id
+        member_titles = " | ".join(item.title[:180] for item in cluster.members)
         print(
             f"Intelligence cluster start: {index}/{len(clusters)} "
-            f"id={identity} members={len(cluster.members)}"
+            f"id={identity} members={len(cluster.members)} titles={member_titles[:520]!r}"
         )
         try:
             if len(cluster.members) == 1:
@@ -163,6 +233,20 @@ def enrich_clusters(
             print(
                 f"Intelligence cluster complete: {index}/{len(clusters)} "
                 f"id={identity} status=success elapsed_ms={round((time.monotonic() - started) * 1000)}"
+            )
+            claim_audit = [
+                {
+                    "text": " ".join(claim.text.split())[:280],
+                    "certainty": claim.certainty,
+                    "evidence": list(claim.evidence),
+                }
+                for claim in analysis.claims[:5]
+            ]
+            print(
+                f"Intelligence accepted analysis: id={identity} "
+                f"event_type={analysis.event_type!r} "
+                f"summary={analysis.event_summary[:240]!r} "
+                f"claims={json.dumps(claim_audit, ensure_ascii=False)[:1600]}"
             )
         except LLMError as exc:
             failures.append(f"{identity}: {exc}")

@@ -741,3 +741,69 @@ def test_single_member_cluster_uses_single_source_analysis_contract(capsys):
     assert '"source summary"' in captured["user"]
     assert "source-1 summary" not in captured["user"]
     assert "status=success" in output
+
+
+
+def test_select_items_prefers_direct_xrp_when_relevance_scores_tie():
+    config = load_intelligence_config()
+    config = config.__class__(
+        enabled=True,
+        model=config.model,
+        max_items_per_run=1,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+    general = item(70, "general-institutional-story")
+    direct = item(70, "direct-xrp-story")
+    direct.relevance_categories = ["direct_xrp_xrpl"]
+
+    selected = select_items([general, direct], config)
+
+    assert [candidate.candidate_id for candidate in selected] == ["direct-xrp-story"]
+
+
+def test_rejected_model_attempts_log_exact_claims_and_evidence(capsys):
+    from intelligence.pipeline import enrich_clusters
+
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=1,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+    candidate = NewsItem(
+        title="Ripple announces an institutional partnership",
+        url="https://example.test/ripple-partnership",
+        source="Official Example",
+        source_id="official-example",
+        summary="Ripple announced an institutional partnership.",
+        relevance_score=90,
+        candidate_id="unsupported-claim-case",
+        published_at=datetime.now(timezone.utc),
+    )
+    invalid_response = (
+        '{"event_type":"partnership",'
+        '"event_summary":"Ripple announced an institutional partnership.",'
+        '"significance":"The source describes an institutional relationship.",'
+        '"entities":["Ripple"],'
+        '"claims":[{"text":"Ripple announced a $5 billion institutional partnership.",'
+        '"certainty":"high","evidence":["source summary"]}]}'
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(invalid_response, model="test-model")
+
+    events, failures = enrich_clusters([candidate], Provider(), config)
+    output = capsys.readouterr().out
+
+    assert events == []
+    assert len(failures) == 1
+    assert "Intelligence selected candidate" in output
+    assert "Ripple announces an institutional partnership" in output
+    assert "model_attempt_audit" in output
+    assert "attempt_1" in output and "attempt_3" in output
+    assert "Ripple announced a $5 billion institutional partnership." in output
+    assert "source summary" in output
+    assert "unsupported evidence anchor" in output
