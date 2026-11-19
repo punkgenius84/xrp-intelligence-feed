@@ -163,8 +163,8 @@ def enrich_clusters(
     clusters = cluster_related_items(selected)
     print(
         "Intelligence enrichment: "
-        f"candidate_items={len(items)} selected_items={len(selected)} "
-        f"clusters={len(clusters)} provider_timeout_seconds={config.timeout_seconds}"
+        f"selected_items={len(selected)} clusters={len(clusters)} "
+        f"provider_timeout_seconds={config.timeout_seconds} candidate_items={len(items)}"
     )
     if near_misses:
         print(
