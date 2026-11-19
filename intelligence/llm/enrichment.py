@@ -475,7 +475,12 @@ def _model_output_diagnostic(content: str) -> str:
     parsed = None
     candidate = raw.strip()
     if candidate.startswith("```"):
-        candidate = re.sub(r"^\`\`\`(?:json)?\s*|\s*\`\`\`$", "", candidate, flags=re.IGNORECASE)
+        lines = candidate.splitlines()
+        if lines and lines[0].lstrip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        candidate = "\n".join(lines).strip()
     try:
         parsed = json.loads(candidate)
     except (TypeError, json.JSONDecodeError):
