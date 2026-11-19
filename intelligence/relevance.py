@@ -150,8 +150,8 @@ def _classify(item, combined: str) -> list[str]:
         "crypto legislation",
     )) or bool(entities & {
         "XRP", "RLUSD", "Bitcoin", "Ethereum", "Solana", "Cardano",
-        "Avalanche", "Polygon", "Tether", "Circle", "Binance", "Kraken",
-        "Uniswap", "Aave", "CoinDCX", "MEXC Global", "Bitget", "OKX",
+        "Avalanche", "Polygon", "Binance", "Kraken", "Uniswap", "Aave",
+        "CoinDCX", "MEXC Global", "Bitget", "OKX",
     })
     # A bare mention of "digital commodities" in a long regulatory document is
     # not enough to make an unrelated securities filing crypto-relevant. Keep it
