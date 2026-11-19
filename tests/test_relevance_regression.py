@@ -806,8 +806,8 @@ def test_generic_securities_notice_with_incidental_digital_asset_language_stays_
         summary=(
             "The filing concerns exchange listing rules for shares and securities. "
             "It includes generic references to digital assets and digital commodities "
-            "in broad market-risk language, but does not concern a crypto asset, "
-            "tokenized instrument, stablecoin, blockchain, or digital-asset service."
+            "in broad market-risk language, but does not concern a specific crypto "
+            "asset, stablecoin, blockchain, or digital-asset service."
         ),
         url="https://example.test/franklin-gold-etf-rule",
         source="U.S. Securities and Exchange Commission",
