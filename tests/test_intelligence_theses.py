@@ -322,12 +322,14 @@ def test_xrpl_auto_bridging_thesis_requires_a_reported_xrp_routing_claim():
             "XRP",
             "publisher-a",
             claim_text="The XRP Ledger DEX added a new liquidity feature.",
+            significance="This could enable XRP to act as an intermediary currency if routing conditions favor it.",
         ),
         "event-2": _event(
             "XRP auto-bridging considered for XRPL DEX",
             "XRP",
             "publisher-b",
             claim_text="The article discusses the XRP Ledger decentralized exchange and routing.",
+            significance="The feature could auto-bridge trades through XRP in the future.",
         ),
     }}
     update_theses(state, "2026-11-18T12:00:00+00:00")
@@ -346,7 +348,7 @@ def test_xrpl_auto_bridging_thesis_opens_only_from_independent_grounded_claims()
             claim_text="The XRP Ledger can auto-bridge some decentralized exchange trades through XRP.",
         ),
         "event-2": _event(
-            "XRP can serve as intermediary currency on XRPL DEX",
+            "XRPL auto-bridging uses XRP as intermediary currency on the DEX",
             "XRP",
             "publisher-b",
             claim_text="The source describes XRP as the intermediary currency for auto-bridging on the XRP Ledger DEX.",
@@ -369,6 +371,7 @@ def test_spot_xrp_etf_thesis_requires_explicit_spot_holding_claims():
             "XRP",
             "publisher-a",
             claim_text="The ETF offers exposure to XRP price movements.",
+            significance="This could increase spot XRP demand through market access.",
         ),
         "event-2": _event(
             "A futures-based XRP ETF launches",
