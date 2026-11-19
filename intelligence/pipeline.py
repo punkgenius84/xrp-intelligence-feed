@@ -22,7 +22,7 @@ def event_id_for(item: NewsItem) -> str:
 
 def _selection_specificity(item: NewsItem) -> int:
     """Use subject specificity only to break equal-score selection ties."""
-    categories = set(item.relevance_categories)
+    categories = set(getattr(item, "relevance_categories", []) or [])
     if categories & {
         "direct_xrp_xrpl", "direct_ripple", "rlusd_stablecoin",
         "ripple_payments_network", "direct_ripple_institutional_action",
@@ -59,7 +59,7 @@ def select_items(
             -item.relevance_score,
             _selection_specificity(item),
             -_published_timestamp(item),
-            item.title.casefold(),
+            getattr(item, "title", "").casefold(),
         )
     )
     return eligible[:config.max_items_per_run]
@@ -156,7 +156,7 @@ def enrich_clusters(
         key=lambda item: (
             -item.relevance_score,
             -_published_timestamp(item),
-            item.title.casefold(),
+            getattr(item, "title", "").casefold(),
         ),
     )[:10]
 
