@@ -377,7 +377,7 @@ def test_spot_xrp_etf_thesis_requires_explicit_spot_holding_claims():
             "A futures-based XRP ETF launches",
             "XRP",
             "publisher-b",
-            claim_text="The exchange-traded product tracks XRP price movements.",
+            claim_text="The futures-based ETF holds cash-settled futures contracts that reference XRP.",
         ),
     }}
     update_theses(state, "2026-11-18T12:00:00+00:00")
