@@ -71,8 +71,8 @@ _THEMES = {
         "watch": ("latest dated Ripple holdings and escrow disclosures", "validated on-ledger escrow releases and re-escrows", "net changes in liquid/distributed XRP rather than gross scheduled unlocks alone"),
     },
     "institutional_xrp_market_access": {
-        "terms": ("spot xrp etf", "xrp spot etf", "xrp exchange-traded fund", "xrp exchange traded fund",
-                  "bitwise xrp", "g(xrp)", "g(xrp)", "xrpz"),
+        "terms": ("spot xrp etf", "xrp spot etf", "xrp etf", "xrp exchange-traded fund",
+                  "xrp exchange traded fund", "grayscale xrp trust etf", "bitwise xrp", "gxrp", "xrpz"),
         "mechanism": "Spot-backed XRP exchange-traded products can broaden access through brokerage accounts and institutional wrappers; funds that actually hold spot XRP require custody of XRP as trust assets. The structure varies by product, and some XRP-linked funds may use derivatives or cash-based processes. Fund AUM and flows measure wrapper demand and do not demonstrate on-ledger usage, payment volume, or direct XRP acquisition by every shareholder.",
         "watch": ("latest trust XRP holdings and custodian disclosures", "net creations/redemptions and cash versus in-kind order mechanics", "AUM and flows by product, without conflating futures-based products with spot holdings"),
     },
@@ -170,7 +170,7 @@ def _theme_has_required_reported_claim(theme: str, event: dict[str, Any]) -> boo
         ),
         "xrpl_dex_xrp_autobridging": (
             ("xrp", "xrpl", "xrp ledger"),
-            ("auto-bridg", "automatic bridging", "intermediary currency", "decentralized exchange", "dex"),
+            ("auto-bridg", "automatic bridging", "intermediary currency"),
         ),
         "xrpl_amm_liquidity": (
             ("xrp", "xrpl", "xrp ledger"),
