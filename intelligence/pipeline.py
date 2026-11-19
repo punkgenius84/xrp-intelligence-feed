@@ -137,7 +137,12 @@ def enrich_clusters(
             f"id={identity} members={len(cluster.members)}"
         )
         try:
-            analysis = analyze_cluster(cluster, provider, historical_events, historical_theses)
+            if len(cluster.members) == 1:
+                analysis = analyze_item(
+                    cluster.members[0], provider, historical_events, historical_theses
+                )
+            else:
+                analysis = analyze_cluster(cluster, provider, historical_events, historical_theses)
             member_ids = [
                 item.candidate_id or item.fingerprint
                 for item in cluster.members
