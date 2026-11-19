@@ -434,3 +434,85 @@ def test_crypto_entity_stock_plan_without_onchain_context_is_not_relevant():
     assert "Ethereum" in item.detected_entities
     assert "crypto_ecosystem_action" not in item.relevance_categories
     assert score < 30
+
+
+
+def test_claim_anchor_tokenizer_keeps_b2b_as_one_identifier():
+    from intelligence.llm.enrichment import _claim_anchor_tokens
+
+    anchors = _claim_anchor_tokens("J.P. Morgan Payments delivers a full-suite B2B experience")
+
+    assert "b2b" in anchors
+    assert "2b" not in anchors
+
+
+def test_b2b_claim_can_repair_title_evidence_without_weakening_grounding():
+    from intelligence.llm.base import LLMResponse
+
+    source = NewsItem(
+        title="J.P. Morgan Payments delivers a full-suite B2B payment experience",
+        url="https://example.test/jpm-b2b",
+        source="J.P. Morgan",
+        source_id="jpmorgan-payments-newsroom",
+        summary="Clients can access a supplier payment experience across Virtual Card, Premium ACH, ACH and Check.",
+        published_at=datetime.now(timezone.utc),
+    )
+
+    class Provider:
+        def generate(self, **kwargs):
+            return LLMResponse(
+                '{"event_type":"announcement",'
+                '"event_summary":"J.P. Morgan Payments delivers a full-suite B2B payment experience.",'
+                '"significance":"The announcement describes a supplier payment capability.",'
+                '"entities":["J.P. Morgan"],'
+                '"claims":[{"text":"J.P. Morgan Payments delivers a full-suite B2B payment experience.",'
+                '"certainty":"high","evidence":["source summary"]}]}',
+                model="test-model",
+            )
+
+    analysis = analyze_item(source, Provider())
+
+    assert analysis.claims[0].evidence == ["source summary", "source title"]
+
+
+def test_analyze_item_retries_with_targeted_grounding_feedback():
+    from intelligence.llm.base import LLMResponse
+
+    source = NewsItem(
+        title="Ripple announces an institutional payments partnership",
+        url="https://example.test/ripple-partnership",
+        source="Official Example",
+        source_id="official-example",
+        summary="Ripple announced an institutional payments partnership.",
+        published_at=datetime.now(timezone.utc),
+    )
+    prompts = []
+
+    class Provider:
+        def __init__(self):
+            self.responses = [
+                '{"event_type":"partnership","event_summary":"Ripple announced a partnership.",'
+                '"significance":"The source describes an institutional relationship.",'
+                '"entities":["Ripple"],"claims":[]}',
+                '{"event_type":"partnership","event_summary":"Ripple announced a partnership.",'
+                '"significance":"The source describes an institutional relationship.",'
+                '"entities":["Ripple"],"claims":[{"text":"Ripple announced a $5 billion partnership.",'
+                '"certainty":"high","evidence":["source summary"]}]}',
+                '{"event_type":"partnership","event_summary":"Ripple announced an institutional payments partnership.",'
+                '"significance":"The relationship may expand institutional payment capabilities.",'
+                '"entities":["Ripple"],"claims":[{"text":"Ripple announced an institutional payments partnership.",'
+                '"certainty":"high","evidence":["source summary"]}]}',
+            ]
+
+        def generate(self, **kwargs):
+            prompts.append(kwargs["user"])
+            return LLMResponse(self.responses.pop(0), model="test-model")
+
+    analysis = analyze_item(source, Provider())
+
+    assert len(analysis.claims) == 1
+    assert len(prompts) == 3
+    assert "SINGLE-SOURCE OUTPUT CONTRACT" in prompts[0]
+    assert "omitted the required reported-fact claims" in prompts[1]
+    assert "unsupported evidence anchor" in prompts[2]
+    assert "Do not relax the evidence rules" in prompts[2]
