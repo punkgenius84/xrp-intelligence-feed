@@ -48,6 +48,28 @@ _THEMES = {
         "mechanism": "Repeated corridor and FX settlement deployments can indicate a shift toward faster, more interoperable liquidity and payment infrastructure.",
         "watch": ("production corridor launch", "measured settlement volume and cost", "disclosed liquidity or settlement assets"),
     },
+    "xrp_bridge_asset_liquidity": {
+        "terms": ("xrp bridge asset", "xrp as a bridge", "xrp bridge currency",
+                  "on-demand liquidity", "odl"),
+        "mechanism": "When a source-confirmed payment flow explicitly uses XRP as a bridge asset, the mechanism can create demand for XRP liquidity and inventory in the relevant corridor. The economic effect depends on live corridor activity, turnover, market-maker depth, spreads, and the portion of flows that actually settle through XRP; Ripple Payments and RLUSD flows must not be assumed to use XRP.",
+        "watch": ("named live ODL/XRP corridors", "reported XRP settlement volume and turnover", "market-maker liquidity and on/off-ramp depth"),
+    },
+    "xrpl_dex_xrp_autobridging": {
+        "terms": ("auto-bridging", "auto bridging", "automatic bridging", "xrp intermediary currency",
+                  "xrp bridge currency", "xrpl decentralized exchange", "xrp ledger dex"),
+        "mechanism": "XRPL's order-book DEX and payment-path engine can route some cross-currency trades through XRP when the composite route is more competitive. This is conditional on relative prices and liquidity and does not mean every DEX trade or payment uses XRP.",
+        "watch": ("validated on-ledger auto-bridged trade volume", "XRP pair depth and spreads", "share of cross-currency paths that actually include XRP"),
+    },
+    "xrpl_amm_liquidity": {
+        "terms": ("automated market maker", "xrpl amm", "xls-30", "amm liquidity pool", "amm pool"),
+        "mechanism": "XRPL AMMs add pool-based liquidity to the native DEX. Pools may pair XRP with an issued token or may be token-to-token, so AMM growth is not automatically XRP demand. LP returns depend on collected fees and pool composition, while relative-price moves can create losses.",
+        "watch": ("AMM trading volume and fees", "share of pools with XRP as a constituent", "LP composition, withdrawal activity, and realized pool performance"),
+    },
+    "xrp_escrow_supply": {
+        "terms": ("xrp escrow", "escrow release", "monthly xrp escrow", "55 billion xrp"),
+        "mechanism": "Ripple's historic escrow schedule governs gross releases of previously created XRP; unused releases can be re-escrowed. Gross releases must be distinguished from net changes in circulating supply, Ripple's liquid holdings, transfers to counterparties, and open-market sales.",
+        "watch": ("latest dated Ripple holdings and escrow disclosures", "validated on-ledger escrow releases and re-escrows", "net changes in liquid/distributed XRP rather than gross scheduled unlocks alone"),
+    },
 }
 
 _NEGATIVE_WORDS = (
@@ -112,6 +134,51 @@ def _has_reported_negative_evidence(event: dict[str, Any]) -> bool:
     return _has_confirmed_negative(_clean(event.get("summary")))
 
 
+def _has_grounded_theme_claim(
+    event: dict[str, Any],
+    required_groups: tuple[tuple[str, ...], ...],
+) -> bool:
+    """Require a source-cited reported fact for XRP-specific strategic themes."""
+    claims = event.get("claims")
+    if not isinstance(claims, list):
+        return False
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        if _clean(claim.get("claim_type", "reported_fact")).casefold() != "reported_fact":
+            continue
+        evidence = claim.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            continue
+        text = _clean(claim.get("text")).casefold()
+        if text and all(any(term in text for term in group) for group in required_groups):
+            return True
+    return False
+
+
+def _theme_has_required_reported_claim(theme: str, event: dict[str, Any]) -> bool:
+    requirements = {
+        "xrp_bridge_asset_liquidity": (
+            ("xrp",),
+            ("bridge asset", "bridge currency", "on-demand liquidity", "odl"),
+        ),
+        "xrpl_dex_xrp_autobridging": (
+            ("xrp", "xrpl", "xrp ledger"),
+            ("auto-bridg", "automatic bridging", "intermediary currency", "decentralized exchange", "dex"),
+        ),
+        "xrpl_amm_liquidity": (
+            ("xrp", "xrpl", "xrp ledger"),
+            ("amm", "automated market maker", "xls-30"),
+        ),
+        "xrp_escrow_supply": (
+            ("xrp",),
+            ("escrow", "escrow release", "re-escrow"),
+        ),
+    }
+    required = requirements.get(theme)
+    return True if required is None else _has_grounded_theme_claim(event, required)
+
+
 def _event_sources(event: dict[str, Any]) -> set[str]:
     return {
         _clean(item.get("source_id"))
@@ -156,6 +223,7 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
         matched_themes = [
             (theme, spec) for theme, spec in _THEMES.items()
             if any(term in lowered for term in spec["terms"])
+            and _theme_has_required_reported_claim(theme, event)
         ]
         if not matched_themes:
             continue
