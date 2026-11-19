@@ -736,3 +736,65 @@ def test_generic_bank_website_outage_does_not_clear_relevance_gate():
     score, _ = score_relevance(item)
     assert "financial_infrastructure_disruption" not in item.relevance_categories
     assert score < 30
+
+
+
+def test_occ_bank_charter_actions_clear_narrow_institutional_regulatory_gate():
+    item = NewsItem(
+        title="Comptroller Gould says OCC approved 28 charter applications",
+        summary=(
+            "The Office of the Comptroller of the Currency approved 28 charter "
+            "applications, including national bank and trust bank charters."
+        ),
+        url="https://www.occ.gov/news-issuances/news-releases/example-charter-update.html",
+        source="Office of the Comptroller of the Currency",
+        source_id="occ-news-releases",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, reasons = score_relevance(item)
+
+    assert "OCC" in item.detected_entities
+    assert "institutional_bank_charter_action" in item.relevance_categories
+    assert score >= 30, f"material OCC charter action should clear gate: {score}, {reasons}"
+
+
+def test_generic_bank_news_does_not_clear_bank_charter_gate():
+    item = NewsItem(
+        title="OCC outlines bank supervision priorities and financial innovation",
+        summary="The regulator discussed supervisory focus areas and responsible innovation.",
+        url="https://www.occ.gov/news-issuances/news-releases/example-supervision.html",
+        source="Office of the Comptroller of the Currency",
+        source_id="occ-news-releases",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+
+    assert "institutional_bank_charter_action" not in item.relevance_categories
+    assert score < 30
+
+
+def test_bank_charter_commentary_without_named_banking_regulator_stays_below_gate():
+    item = NewsItem(
+        title="Regional lender seeks a national bank charter",
+        summary="The company submitted a charter application to expand its banking services.",
+        url="https://example.test/regional-lender-charter",
+        source="Regional Business News",
+        source_id="regional-business-news",
+        authority_tier=2,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    classify_source_quality(item)
+    score, _ = score_relevance(item)
+
+    assert "institutional_bank_charter_action" not in item.relevance_categories
+    assert score < 30

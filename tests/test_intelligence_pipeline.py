@@ -225,7 +225,7 @@ def test_run_pipeline_enriches_only_when_enabled(monkeypatch, tmp_path):
                 '{"event_type":"announcement","event_summary":"Source-backed event",'
                 '"significance":"Relevant to the monitored domain.",'
                 '"entities":["Ripple"],"claims":[{"text":"The source reports an announcement.",'
-                '"certainty":"high","evidence":["source-1 summary"]}]}',
+                '"certainty":"high","evidence":["source summary"]}]}',
                 model="test-model",
             )
 
@@ -602,7 +602,7 @@ def test_cluster_enrichment_includes_prior_events_only_as_context():
                 '"significance":"This could matter for institutional payments.",'
                 '"entities":["Ripple"],'
                 '"claims":[{"text":"The source reports a cross-border settlement service.",'
-                '"evidence":["source-1 summary"]}]}',
+                '"evidence":["source summary"]}]}',
                 model="test-model",
             )
 
@@ -680,3 +680,64 @@ def test_no_enrichment_failures_do_not_change_seen_state():
     )
     assert retry_ids == []
     assert seen == {"fp", "event"}
+
+
+
+def test_single_member_cluster_uses_single_source_analysis_contract(capsys):
+    import json
+    import intelligence.pipeline as pipeline
+    from intelligence.llm.base import LLMResponse
+
+    config = load_intelligence_config().__class__(
+        enabled=True,
+        model="test-model",
+        max_items_per_run=1,
+        min_relevance_score=50,
+        timeout_seconds=5,
+    )
+    candidate = item(90, "single-source")
+    candidate.title = "Ripple announces an institutional payments partnership"
+    candidate.summary = "Ripple announced an institutional payments partnership."
+    candidate.source = "Official Example"
+    candidate.source_id = "official-example"
+
+    captured = {}
+
+    class Provider:
+        def generate(self, **kwargs):
+            captured["user"] = kwargs["user"]
+            return LLMResponse(
+                json.dumps({
+                    "event_type": "partnership",
+                    "event_summary": "Ripple announced an institutional payments partnership.",
+                    "significance": "The relationship may expand institutional payment capabilities.",
+                    "entities": ["Ripple"],
+                    "claims": [{
+                        "text": "Ripple announced an institutional payments partnership.",
+                        "certainty": "high",
+                        "evidence": ["source summary"],
+                    }],
+                }),
+                model="test-model",
+            )
+
+    original_cluster_analysis = pipeline.analyze_cluster
+
+    def reject_cluster_path(*args, **kwargs):
+        raise AssertionError("a one-member cluster must use analyze_item")
+
+    pipeline.analyze_cluster = reject_cluster_path
+    try:
+        events, failures = pipeline.enrich_clusters([candidate], Provider(), config)
+    finally:
+        pipeline.analyze_cluster = original_cluster_analysis
+
+    output = capsys.readouterr().out
+    assert failures == []
+    assert len(events) == 1
+    assert events[0].member_ids == ["single-source"]
+    assert events[0].evidence[0].source_id == "official-example"
+    assert "SINGLE-SOURCE OUTPUT CONTRACT" in captured["user"]
+    assert '"source summary"' in captured["user"]
+    assert "source-1 summary" not in captured["user"]
+    assert "status=success" in output

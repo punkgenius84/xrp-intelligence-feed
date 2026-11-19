@@ -177,6 +177,33 @@ def _classify(item, combined: str) -> list[str]:
     payment_topic = any(_contains(combined, term) for term in (
         "payment", "payments", "cross-border settlement", "settlement",
     ))
+
+    # Bank-chartering is relevant institutional-regulatory infrastructure only
+    # when a recognized banking regulator is named and a concrete charter action
+    # is described. This intentionally excludes generic bank/business news.
+    bank_charter_topic = any(_contains(combined, term) for term in (
+        "bank charter", "bank charters", "banking charter", "banking charters",
+        "charter application", "charter applications", "charter applicant",
+        "charter applicants", "national bank charter", "national bank charters",
+        "trust bank charter", "national trust bank", "de novo bank",
+    ))
+    banking_authority_text = f"{combined} {getattr(item, 'source', '')}"
+    banking_authority = bool(entities & {"OCC", "Federal Reserve", "FDIC"}) or any(
+        _contains(banking_authority_text, authority) for authority in (
+            "OCC", "Office of the Comptroller of the Currency",
+            "Comptroller of the Currency", "Federal Reserve",
+            "Federal Deposit Insurance Corporation", "FDIC",
+        )
+    )
+    bank_charter_action = any(_contains(combined, term) for term in (
+        "approves", "approved", "conditionally approves", "conditionally approved",
+        "grants", "granted", "denies", "denied", "receives", "received",
+        "files", "filed", "submits", "submitted", "withdraws", "withdrawn",
+        "reviews", "reviewed", "seeks", "sought", "announces", "announced",
+        "accepts", "accepted",
+    ))
+    if bank_charter_topic and banking_authority and bank_charter_action:
+        categories.append("institutional_bank_charter_action")
     if regulatory and action and digital_asset_topic:
         categories.append("relevant_regulatory_digital_asset_payments")
     elif regulatory and action and payment_topic:
@@ -317,6 +344,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         or "legislative_digital_asset_action" in categories
         or "direct_ripple_institutional_action" in categories
         or "financial_infrastructure_disruption" in categories
+        or "institutional_bank_charter_action" in categories
     )
 
     score = 0
@@ -363,6 +391,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         "legislative_digital_asset_action",
         "direct_ripple_institutional_action",
         "financial_infrastructure_disruption",
+        "institutional_bank_charter_action",
     }
     matched_action_categories = action_bonus_categories.intersection(categories)
     if matched_action_categories:
