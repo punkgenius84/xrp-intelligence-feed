@@ -367,7 +367,7 @@ def score_relevance(item, keywords_path: str | Path = "config/keywords.json",
         "google news discovery; publisher attribution:"
     )
     summary_has_reportable_metric = bool(re.search(
-        r"(?:[$€£]\\s*\\d|\\b\\d+(?:[.,]\\d+)?\\s*(?:%|million|billion|thousand|m|b)\\b)",
+        r"(?:[$€£]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:%|million|billion|thousand|m|b)\b)",
         item.summary,
         re.IGNORECASE,
     ))
