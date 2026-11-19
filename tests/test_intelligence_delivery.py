@@ -400,18 +400,83 @@ def test_intelligence_delivery_suppresses_same_publisher_headline_with_new_event
     assert store.load() == []
 
 
+def test_intelligence_delivery_suppresses_same_event_summary_across_publisher_title_variants(
+    tmp_path, monkeypatch
+):
+    from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
+
+    history_path = tmp_path / "intelligence_delivery_history.json"
+    history = JsonIntelligenceDeliveryHistory(history_path)
+    monkeypatch.setattr(main, "JsonIntelligenceDeliveryHistory", lambda: history)
+    store = JsonIntelligenceOutboxState(tmp_path / "intelligence_outbox.json")
+    settings = SimpleNamespace(
+        dry_run=False,
+        webhook_url="https://discord.com/api/webhooks/test/token",
+        max_posts=5,
+    )
+    sent = []
+
+    class FakeWebhook:
+        def __init__(self, url):
+            self.url = url
+
+        def send(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(main, "DiscordWebhook", FakeWebhook)
+    shared_summary = (
+        "MAS announces successful issuance of tokenised MAS bills on the "
+        "Singapore Dollar Test Network using wholesale central bank digital currency."
+    )
+    first = event(event_id="evt-mas-official", summary=shared_summary)
+    first.evidence = [replace(
+        first.evidence[0],
+        source="Singapore Government Press Centre",
+        title=(
+            "MAS Announces Successful Issuance of Tokenised MAS Bills on the Singapore "
+            "Dollar Test Network Using Wholesale Central Bank Digital Currency — "
+            "Singapore Government Press Centre"
+        ),
+    )]
+    second = event(event_id="evt-mas-aggregator", summary=shared_summary)
+    second.evidence = [replace(
+        second.evidence[0],
+        source="Monetary Authority of Singapore",
+        title=(
+            "MAS Announces Successful Issuance of Tokenised MAS Bills on the Singapore "
+            "Dollar Test Network Using Wholesale Central Bank Digital Currency - "
+            "Monetary Authority of Singapore — Monetary Authority of Singapore"
+        ),
+    )]
+
+    assert main.publish_intelligence_events(
+        [first], settings, publish_enabled=True, outbox_store=store
+    ) == 1
+    assert main.publish_intelligence_events(
+        [second], settings, publish_enabled=True, outbox_store=store
+    ) == 0
+    assert len(sent) == 1
+    assert store.load() == []
+
+
 def test_intelligence_delivery_allows_changed_followup_headline(tmp_path):
     from storage.intelligence_delivery_history import JsonIntelligenceDeliveryHistory
 
     history = JsonIntelligenceDeliveryHistory(tmp_path / "intelligence_delivery_history.json")
-    original = event(event_id="evt-original")
+    original = event(
+        event_id="evt-original",
+        summary="MAS announces a cross-border digital asset settlement connectivity initiative with Deutsche Bundesbank.",
+    )
     original.evidence = [replace(
         original.evidence[0],
         title="MAS and Deutsche Bundesbank announce cross-border digital asset settlement connectivity",
     )]
     history.record_events([original])
 
-    followup = event(event_id="evt-followup")
+    followup = event(
+        event_id="evt-followup",
+        summary="MAS launches an expanded cross-border digital asset settlement pilot with three new banks.",
+    )
     followup.evidence = [replace(
         followup.evidence[0],
         title="MAS launches expanded cross-border digital asset settlement pilot with new banks",
