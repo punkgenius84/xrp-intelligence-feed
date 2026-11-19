@@ -798,3 +798,108 @@ def test_bank_charter_commentary_without_named_banking_regulator_stays_below_gat
 
     assert "institutional_bank_charter_action" not in item.relevance_categories
     assert score < 30
+
+
+# Run-710 regression fixtures: policy advocacy should not be missed, while
+# generic securities references should not be mistaken for digital-asset subjects.
+def test_genius_act_state_stablecoin_issuer_safe_harbor_request_clears_relevance_gate():
+    item = NewsItem(
+        title=(
+            "Lummis, Gillibrand and colleagues urge Treasury to give state "
+            "stablecoin issuers equal footing with federal issuers"
+        ),
+        summary=(
+            "The senators ask Treasury to provide a safe harbor for state stablecoin "
+            "issuers whose regulatory regimes are substantially similar to the federal "
+            "framework as section 3 of the GENIUS Act takes effect."
+        ),
+        url="https://www.lummis.senate.gov/press-releases/state-stablecoin-issuer-safe-harbor/",
+        source="Senator Cynthia Lummis",
+        source_id="senator-lummis-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert "Treasury" in item.detected_entities
+    assert "government_digital_asset_action" in item.relevance_categories
+    assert "legislative_digital_asset_action" in item.relevance_categories
+    assert score >= 30, f"GENIUS Act stablecoin policy request should clear gate: {score}, {reasons}"
+
+
+def test_nasdaq_digital_commodity_trust_listing_rule_clears_relevance_gate():
+    item = NewsItem(
+        title=(
+            "SEC approves Nasdaq ISE criteria for options on Commodity-Based Trust "
+            "Shares holding digital commodities"
+        ),
+        summary=(
+            "The order approves listing criteria for options on Commodity-Based Trust "
+            "Shares that hold one or more digital commodities."
+        ),
+        url="https://www.sec.gov/files/rules/sro/ise/2026/digital-commodity-trust-options.pdf",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert "SEC" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"digital-commodity trust listing rules should clear gate: {score}, {reasons}"
+
+
+def test_incidental_digital_commodity_phrase_does_not_promote_ordinary_kpi_options():
+    item = NewsItem(
+        title="SEC approves NYSE American binary options on issuer key performance indicators",
+        summary=(
+            "The proposed change concerns binary options tied to issuer-reported key "
+            "performance indicators. A passing background reference to digital commodities "
+            "does not describe the subject of this filing."
+        ),
+        url="https://www.sec.gov/example/nyse-american-binary-kpi-options",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, _ = score_relevance(item)
+
+    assert "relevant_regulatory_digital_asset_payments" not in item.relevance_categories
+    assert score < 30
+
+
+def test_jpmorgan_conventional_b2b_payables_expansion_is_not_core_crypto_relevance():
+    item = NewsItem(
+        title=(
+            "J.P. Morgan Payments delivers a full-suite B2B payment experience "
+            "with expanded Strategic Payables capabilities"
+        ),
+        summary=(
+            "Clients can access supplier payments through Virtual Card, Premium ACH, "
+            "ACH and Check in a single payment file through an enterprise resource "
+            "planning system and the Paymode supplier network."
+        ),
+        url="https://www.jpmorgan.com/payments/newsroom/strategic-payables-b2b-payments",
+        source="J.P. Morgan",
+        source_id="jpmorgan-payments-newsroom",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, _ = score_relevance(item)
+
+    assert "institutional_payment_action" in item.relevance_categories
+    assert score < 30
