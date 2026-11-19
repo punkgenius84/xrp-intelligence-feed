@@ -220,7 +220,8 @@ def test_second_invalid_model_response_is_still_rejected():
     provider = FakeProvider()
     with pytest.raises(LLMError, match="LLM output is not valid JSON"):
         analyze_item(item(), provider)
-    assert provider.calls == 3
+    # Repeating the identical parse failure is not worth a third full Ollama call.
+    assert provider.calls == 2
 
 
 def test_evidence_bundle_is_deterministic_and_deduplicated():
