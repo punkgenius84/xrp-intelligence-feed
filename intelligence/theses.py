@@ -70,6 +70,12 @@ _THEMES = {
         "mechanism": "Ripple's historic escrow schedule governs gross releases of previously created XRP; unused releases can be re-escrowed. Gross releases must be distinguished from net changes in circulating supply, Ripple's liquid holdings, transfers to counterparties, and open-market sales.",
         "watch": ("latest dated Ripple holdings and escrow disclosures", "validated on-ledger escrow releases and re-escrows", "net changes in liquid/distributed XRP rather than gross scheduled unlocks alone"),
     },
+    "institutional_xrp_market_access": {
+        "terms": ("spot xrp etf", "xrp spot etf", "xrp exchange-traded fund", "xrp exchange traded fund",
+                  "bitwise xrp", "g(xrp)", "g(xrp)", "xrpz"),
+        "mechanism": "Spot-backed XRP exchange-traded products can broaden access through brokerage accounts and institutional wrappers; funds that actually hold spot XRP require custody of XRP as trust assets. The structure varies by product, and some XRP-linked funds may use derivatives or cash-based processes. Fund AUM and flows measure wrapper demand and do not demonstrate on-ledger usage, payment volume, or direct XRP acquisition by every shareholder.",
+        "watch": ("latest trust XRP holdings and custodian disclosures", "net creations/redemptions and cash versus in-kind order mechanics", "AUM and flows by product, without conflating futures-based products with spot holdings"),
+    },
 }
 
 _NEGATIVE_WORDS = (
@@ -174,9 +180,30 @@ def _theme_has_required_reported_claim(theme: str, event: dict[str, Any]) -> boo
             ("xrp",),
             ("escrow", "escrow release", "re-escrow"),
         ),
+        "institutional_xrp_market_access": (
+            ("xrp",),
+            ("spot",),
+            ("etf", "exchange-traded fund", "exchange traded fund"),
+            ("hold", "holds", "holding"),
+        ),
     }
     required = requirements.get(theme)
     return True if required is None else _has_grounded_theme_claim(event, required)
+
+
+_XRP_ASSET_THEMES = {
+    "xrp_bridge_asset_liquidity",
+    "xrpl_dex_xrp_autobridging",
+    "xrpl_amm_liquidity",
+    "xrp_escrow_supply",
+    "institutional_xrp_market_access",
+}
+
+
+def _theme_entity_allowed(theme: str, entity: str) -> bool:
+    if theme in _XRP_ASSET_THEMES:
+        return entity.casefold().strip() in {"xrp", "xrpl", "xrp ledger"}
+    return True
 
 
 def _event_sources(event: dict[str, Any]) -> set[str]:
@@ -232,6 +259,8 @@ def update_theses(state: dict[str, Any], updated_at: str) -> list[dict[str, Any]
             continue
         for theme, spec in matched_themes:
             for entity in entities:
+                if not _theme_entity_allowed(theme, entity):
+                    continue
                 thesis_id = _thesis_id(theme, entity)
                 bucket = buckets.setdefault(thesis_id, {
                     "theme": theme, "entity": entity, "spec": spec,
