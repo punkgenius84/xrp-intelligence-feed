@@ -69,8 +69,9 @@ The expanded pack now includes source-linked reference records for:
 - XRPL's native DEX and conditional auto-bridging through XRP when that route is more competitive.
 - XLS-30 AMM activation, LP tokens and trading-fee mechanics, asset-pair composition, and liquidity-provider exchange-rate risk.
 - The original 55-billion-XRP escrow schedule, including the difference between gross releases, re-escrows, liquid balances, and net circulating-supply changes.
+- The November 2025 launch of U.S. XRP exchange-traded products, with spot-holding Bitwise and Grayscale trust structures distinguished from products whose precise holdings and redemption mechanics need prospectus-level review.
 - ODL's explicitly documented XRP bridge-asset mechanism, kept distinct from Ripple Payments flows that use RLUSD or other settlement methods.
 - RLUSD as an issued stablecoin on XRPL and other networks, distinct from native XRP.
 - Ripple National Trust Bank's OCC-recorded effective date and trust-bank scope; BNY's announced support for XRP and RLUSD custody; and C2FO's announced XRPL trade-finance initiative that specifies RLUSD settlement.
 
-The persistent thesis tracker also adds separate XRP-specific themes for confirmed ODL/bridge-asset use, XRPL auto-bridging, XRPL AMM liquidity, and XRP escrow/supply events. These themes require an evidence-linked reported-fact claim containing the relevant XRP/XRPL mechanism; significance-only model speculation cannot open them. Thesis evidence still requires multiple distinct validated events and multiple independent source IDs.
+The persistent thesis tracker also adds separate XRP-specific themes for confirmed ODL/bridge-asset use, XRPL auto-bridging, XRPL AMM liquidity, and XRP escrow/supply events, and verified spot-XRP ETF market-access developments. These themes require an evidence-linked reported-fact claim containing the relevant XRP/XRPL mechanism; significance-only model speculation cannot open them. Thesis evidence still requires multiple distinct validated events and multiple independent source IDs.
