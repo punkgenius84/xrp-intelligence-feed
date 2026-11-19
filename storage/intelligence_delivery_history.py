@@ -60,7 +60,7 @@ def event_signature_keys(event: object) -> set[str]:
         normalized_summary = unicodedata.normalize("NFKC", summary).casefold()
         normalized_summary = re.sub(r"https?://\S+", " ", normalized_summary)
         normalized_summary = " ".join(re.findall(r"[\w]+", normalized_summary))
-        if len(normalized_summary.split()) >= 8:
+        if len(normalized_summary.split()) >= 10:
             summary_key = "event-summary:" + normalized_summary
             signatures.add(hashlib.sha256(summary_key.encode("utf-8")).hexdigest())
 
