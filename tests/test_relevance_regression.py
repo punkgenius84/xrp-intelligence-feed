@@ -951,3 +951,23 @@ def test_specific_digital_asset_custody_guidance_remains_relevant():
     assert "SEC" in item.detected_entities
     assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
     assert score >= 30, f"specific custody guidance fell below the gate: {score}, {reasons}"
+
+
+def test_explicit_digital_asset_headline_remains_relevant_without_body_expansion():
+    item = NewsItem(
+        title="SEC Issues New Digital Asset Guidance",
+        summary="The Commission issued a new guidance statement.",
+        url="https://example.test/sec-digital-asset-guidance",
+        source="U.S. Securities and Exchange Commission",
+        source_id="sec-press-releases",
+        source_quality="primary",
+        authority_tier=1,
+        published_at=STAMP,
+    )
+
+    detect_entities(item)
+    score, reasons = score_relevance(item)
+
+    assert "SEC" in item.detected_entities
+    assert "relevant_regulatory_digital_asset_payments" in item.relevance_categories
+    assert score >= 30, f"explicit digital-asset headline fell below gate: {score}, {reasons}"
