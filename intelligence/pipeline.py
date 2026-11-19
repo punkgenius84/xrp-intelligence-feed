@@ -20,8 +20,8 @@ def event_id_for(item: NewsItem) -> str:
 
 def _selection_priority(item: NewsItem) -> int:
     """Prefer direct XRP/Ripple developments over broader ecosystem context."""
-    categories = set(item.relevance_categories)
-    entities = set(item.detected_entities)
+    categories = set(getattr(item, "relevance_categories", []) or [])
+    entities = set(getattr(item, "detected_entities", []) or [])
 
     if entities & {"XRP", "Ripple", "RLUSD"} or categories & {
         "direct_xrp_xrpl", "direct_ripple", "rlusd_stablecoin",
@@ -67,7 +67,7 @@ def select_items(
         key=lambda item: (
             _selection_priority(item),
             -item.relevance_score,
-            0 if item.source_quality == "primary" else 1,
+            0 if getattr(item, "source_quality", "") == "primary" else 1,
             -(item.published_at or item.collected_at).timestamp(),
         )
     )
