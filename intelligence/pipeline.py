@@ -18,6 +18,42 @@ def event_id_for(item: NewsItem) -> str:
     return "evt-" + sha256(identity.encode("utf-8")).hexdigest()[:24]
 
 
+def _selection_priority(item: NewsItem) -> int:
+    """Prefer direct XRP/Ripple developments over broader ecosystem context."""
+    categories = set(item.relevance_categories)
+    entities = set(item.detected_entities)
+
+    if entities & {"XRP", "Ripple", "RLUSD"} or categories & {
+        "direct_xrp_xrpl", "direct_ripple", "rlusd_stablecoin",
+        "xrp_protocol_development", "xrp_ledger_tokenization_development",
+        "direct_ripple_institutional_action",
+    }:
+        return 0
+
+    if categories & {
+        "relevant_regulatory_digital_asset_payments",
+        "government_digital_asset_action",
+        "institutional_digital_asset_payment",
+        "regulatory_tokenization_action",
+        "government_tokenization_action",
+        "institutional_tokenization_action",
+        "legislative_digital_asset_action",
+        "crypto_ecosystem_action",
+        "institutional_bank_charter_action",
+    }:
+        return 1
+
+    if categories & {
+        "institutional_payment_action",
+        "relevant_regulatory_payment_action",
+        "government_payment_action",
+        "financial_infrastructure_disruption",
+    }:
+        return 2
+
+    return 3
+
+
 def select_items(
     items: list[NewsItem],
     config: IntelligenceRuntimeConfig,
@@ -29,8 +65,10 @@ def select_items(
     ]
     eligible.sort(
         key=lambda item: (
+            _selection_priority(item),
             -item.relevance_score,
-            item.published_at or item.collected_at,
+            0 if item.source_quality == "primary" else 1,
+            -(item.published_at or item.collected_at).timestamp(),
         )
     )
     return eligible[:config.max_items_per_run]
@@ -136,6 +174,15 @@ def enrich_clusters(
             f"Intelligence cluster start: {index}/{len(clusters)} "
             f"id={identity} members={len(cluster.members)}"
         )
+        for item in cluster.members:
+            print(
+                "Intelligence candidate: "
+                f"id={item.candidate_id or item.fingerprint} "
+                f"score={item.relevance_score} "
+                f"categories={','.join(item.relevance_categories) or 'none'} "
+                f"source={item.source[:100]!r} "
+                f"title={item.title[:280]!r} url={item.url}"
+            )
         try:
             if len(cluster.members) == 1:
                 analysis = analyze_item(
@@ -160,6 +207,12 @@ def enrich_clusters(
             event.member_ids = member_ids
             event.supersedes = supersedes
             events.append(event)
+            for claim in analysis.claims:
+                print(
+                    "Intelligence claim accepted: "
+                    f"cluster={identity} certainty={claim.certainty} "
+                    f"evidence={','.join(claim.evidence)} text={claim.text[:500]!r}"
+                )
             print(
                 f"Intelligence cluster complete: {index}/{len(clusters)} "
                 f"id={identity} status=success elapsed_ms={round((time.monotonic() - started) * 1000)}"
